@@ -6,6 +6,8 @@
     <title>Weide &amp; Klima - Farm Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * {
             margin: 0;
@@ -416,6 +418,192 @@
             gap: 8px;
         }
 
+        /* Alert KPI cards (K3, K4) */
+        .alert-kpi-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .alert-kpi-card {
+            flex: 1;
+            min-width: 280px;
+            border-radius: 12px;
+            padding: 20px 24px;
+            border: 1px solid #e5e7eb;
+            transition: transform 0.15s;
+        }
+
+        .alert-kpi-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .alert-kpi-card.alert-green {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-color: #bbf7d0;
+        }
+
+        .alert-kpi-card.alert-yellow {
+            background: linear-gradient(135deg, #fefce8, #fef9c3);
+            border-color: #fde68a;
+        }
+
+        .alert-kpi-card.alert-orange {
+            background: linear-gradient(135deg, #fff7ed, #ffedd5);
+            border-color: #fed7aa;
+        }
+
+        .alert-kpi-card.alert-red {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border-color: #fecaca;
+        }
+
+        .alert-kpi-card.alert-gray {
+            background: #f8f9fa;
+        }
+
+        .alert-kpi-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .alert-kpi-icon {
+            font-size: 1.6em;
+            line-height: 1;
+        }
+
+        .alert-kpi-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .alert-kpi-value {
+            font-size: 2.2em;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 4px;
+        }
+
+        .alert-kpi-label {
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .alert-kpi-sub {
+            font-size: 0.8em;
+            color: #6b7280;
+        }
+
+        /* Stocking utilization bar (W1 enhanced) */
+        .utilization-bar-container {
+            background: #e5e7eb;
+            border-radius: 8px;
+            height: 24px;
+            overflow: hidden;
+            position: relative;
+            margin: 12px 0 8px 0;
+        }
+
+        .utilization-bar-fill {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.6s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: 700;
+            color: white;
+            min-width: 40px;
+        }
+
+        .utilization-bar-fill.bar-green { background: #22c55e; }
+        .utilization-bar-fill.bar-yellow { background: #eab308; }
+        .utilization-bar-fill.bar-red { background: #ef4444; }
+
+        /* Camp stocking table */
+        .camp-stocking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 0.9em;
+        }
+
+        .camp-stocking-table th {
+            background: #f8f9fa;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .camp-stocking-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #4b5563;
+        }
+
+        .camp-stocking-table tr:hover {
+            background: #f9fafb;
+        }
+
+        /* Map */
+        .map-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .map-controls .btn {
+            background: #2E75B6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.2s;
+        }
+
+        .map-controls .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .map-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+            padding: 10px 0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+            color: #374151;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            border: 1px solid #d1d5db;
+            flex-shrink: 0;
+        }
+
+        #farm-map {
+            z-index: 0;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             body { padding: 10px; }
@@ -443,6 +631,10 @@
             }
 
             .chart-container { height: 250px; }
+
+            #farm-map { height: 350px; }
+
+            .map-legend { gap: 8px; }
         }
     </style>
 </head>
@@ -465,6 +657,21 @@
     <div class="toolbar">
         <span id="last-update">Wird geladen...</span>
         <button onclick="loadAll()">Aktualisieren</button>
+    </div>
+
+    <!-- Farm Map -->
+    <div class="section">
+        <div class="section-title">
+            <span class="section-icon">&#x1F5FA;&#xFE0F;</span>
+            Farmkarte &mdash; Camps &amp; Weidezustand
+        </div>
+        <div class="map-controls">
+            <button class="btn" onclick="toggleNDVI()" disabled title="NDVI-Daten werden in Kuerze verfuegbar">
+                &#x1F6F0;&#xFE0F; NDVI Overlay (bald verfuegbar)
+            </button>
+        </div>
+        <div id="farm-map" style="height: 500px; border-radius: 8px;"></div>
+        <div id="map-legend" class="map-legend"></div>
     </div>
 
     <!-- W1: Stocking Rate -->
@@ -573,6 +780,75 @@
         </table>
 
         <div class="no-data" id="forecast-nodata" style="display:none;">Keine Prognosedaten vorhanden.</div>
+    </div>
+
+    <!-- K3 + K4: Weather Alert KPIs -->
+    <div class="section">
+        <div class="section-title">
+            <span class="section-icon">&#x26A0;&#xFE0F;</span>
+            Wetter-Warnungen (K3 / K4)
+        </div>
+        <div class="alert-kpi-row">
+            <!-- K3: Consecutive Dry Days -->
+            <div class="alert-kpi-card alert-gray" id="k3-card">
+                <div class="alert-kpi-header">
+                    <span class="alert-kpi-icon">&#x2600;&#xFE0F;</span>
+                    <span class="alert-kpi-title">Trockentage in Folge (K3)</span>
+                </div>
+                <div class="alert-kpi-value" id="k3-value"><span class="loading-spinner"></span></div>
+                <div class="alert-kpi-label" id="k3-label">Wird geladen...</div>
+                <div class="alert-kpi-sub" id="k3-sub">Letzte 90 Tage, Tage mit &lt; 1 mm</div>
+            </div>
+
+            <!-- K4: Heat Stress Risk -->
+            <div class="alert-kpi-card alert-gray" id="k4-card">
+                <div class="alert-kpi-header">
+                    <span class="alert-kpi-icon">&#x1F321;&#xFE0F;</span>
+                    <span class="alert-kpi-title">Hitzestress-Risiko (K4)</span>
+                </div>
+                <div class="alert-kpi-value" id="k4-value"><span class="loading-spinner"></span></div>
+                <div class="alert-kpi-label" id="k4-label">Wird geladen...</div>
+                <div class="alert-kpi-sub" id="k4-sub">Naechste 14 Tage, Tage &gt; 35 &deg;C</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- W1 Enhanced: Stocking Rate with Utilization Bar + Per-Camp -->
+    <div class="section">
+        <div class="section-title">
+            <span class="section-icon">&#x1F404;</span>
+            Besatzdichte Detail (W1)
+        </div>
+
+        <!-- Farm-total utilization bar -->
+        <div id="w1-total-container">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+                <span style="font-weight:600; color:#374151;">Farm gesamt</span>
+                <span style="font-size:0.9em; color:#6b7280;" id="w1-total-label"><span class="loading-spinner"></span></span>
+            </div>
+            <div class="utilization-bar-container">
+                <div class="utilization-bar-fill bar-green" id="w1-total-bar" style="width:0%"></div>
+            </div>
+            <div style="font-size:0.8em; color:#9ca3af;" id="w1-total-sub"></div>
+        </div>
+
+        <!-- Per-camp stocking table -->
+        <div class="subsection-title" id="w1-camp-title" style="display:none;">
+            &#x1F3D5;&#xFE0F; Besatzdichte je Camp
+        </div>
+        <table class="camp-stocking-table" id="w1-camp-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Camp</th>
+                    <th>Tiere (gesch.)</th>
+                    <th>Flaeche (ha)</th>
+                    <th>Auslastung</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="w1-camp-tbody"></tbody>
+        </table>
+        <div class="no-data" id="w1-camp-nodata" style="display:none;">Keine Camp-Zuordnung vorhanden. Herd-Eintraege mit Camp-Zuordnung erfassen, um die Besatzdichte je Camp zu sehen.</div>
     </div>
 
     <div class="footer">
@@ -1035,6 +1311,398 @@ async function loadSeasonalForecast() {
     }
 }
 
+// ── Farm Map ────────────────────────────────────────────────────
+let farmMap = null;
+let campLayer = null;
+
+async function loadMap() {
+    try {
+        // Initialize map once
+        if (!farmMap) {
+            farmMap = L.map('farm-map').setView([-21.6056, 16.9011], 13);
+
+            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(farmMap);
+
+            const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri'
+            });
+
+            L.control.layers({
+                'Karte': osm,
+                'Satellit': satellite
+            }).addTo(farmMap);
+        }
+
+        // Remove old camp layer if refreshing
+        if (campLayer) {
+            farmMap.removeLayer(campLayer);
+            campLayer = null;
+        }
+
+        // Load GeoJSON from RPC function
+        const { data: geojsonData, error } = await supabase.rpc('get_camps_geojson');
+
+        if (error) {
+            console.error('Map GeoJSON error:', error);
+            return;
+        }
+
+        if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
+            document.getElementById('map-legend').innerHTML =
+                '<span style="color:#9ca3af; font-style:italic;">Keine Camp-Geometrien vorhanden. Camps muessen mit Polygonen erfasst werden.</span>';
+            return;
+        }
+
+        // Load latest veld observations
+        const { data: veld } = await supabase
+            .from('veld_observations')
+            .select('camp_name, condition_score, snapshot_date')
+            .order('snapshot_date', { ascending: false });
+
+        const latestVeld = {};
+        if (veld) {
+            veld.forEach(v => {
+                if (!latestVeld[v.camp_name]) latestVeld[v.camp_name] = v;
+            });
+        }
+
+        const conditionColors = {
+            1: '#dc2626',
+            2: '#f97316',
+            3: '#eab308',
+            4: '#22c55e',
+            5: '#15803d'
+        };
+
+        const conditionLabels = {
+            1: 'Kritisch',
+            2: 'Schlecht',
+            3: 'Mittel',
+            4: 'Gut',
+            5: 'Exzellent'
+        };
+
+        function campStyle(campName) {
+            const score = latestVeld[campName]?.condition_score;
+            return {
+                fillColor: conditionColors[score] || '#9ca3af',
+                weight: 2,
+                color: '#374151',
+                fillOpacity: 0.5
+            };
+        }
+
+        // Add GeoJSON layer
+        campLayer = L.geoJSON(geojsonData, {
+            style: function(feature) {
+                return campStyle(feature.properties.name);
+            },
+            onEachFeature: function(feature, layer) {
+                const p = feature.properties;
+                const veldData = latestVeld[p.name];
+                const score = veldData?.condition_score;
+                const scoreText = score
+                    ? score + '/5 &mdash; ' + (conditionLabels[score] || '')
+                    : 'Keine Bewertung';
+                const scoreColor = conditionColors[score] || '#9ca3af';
+
+                let popupContent = '<div style="min-width:180px;">';
+                popupContent += '<strong style="font-size:1.1em;">' + escHtml(p.name) + '</strong><br>';
+                if (p.parent_camp) {
+                    popupContent += '<span style="color:#6b7280;font-size:0.85em;">Hauptcamp: ' + escHtml(p.parent_camp) + '</span><br>';
+                }
+                popupContent += '<br>';
+                popupContent += '<strong>Flaeche:</strong> ' + (p.area_ha || '\u2014') + ' ha<br>';
+                popupContent += '<strong>Weidezustand:</strong> <span style="color:' + scoreColor + ';font-weight:600;">' + scoreText + '</span><br>';
+                if (p.purpose) {
+                    popupContent += '<strong>Nutzung:</strong> ' + escHtml(p.purpose) + '<br>';
+                }
+                popupContent += '</div>';
+
+                layer.bindPopup(popupContent);
+            }
+        }).addTo(farmMap);
+
+        // Fit bounds
+        const bounds = campLayer.getBounds();
+        if (bounds.isValid()) {
+            farmMap.fitBounds(bounds, { padding: [20, 20] });
+        }
+
+        // Render legend
+        const legendEl = document.getElementById('map-legend');
+        const legendItems = [
+            { score: 5, label: '5 &mdash; Exzellent', color: '#15803d' },
+            { score: 4, label: '4 &mdash; Gut', color: '#22c55e' },
+            { score: 3, label: '3 &mdash; Mittel', color: '#eab308' },
+            { score: 2, label: '2 &mdash; Schlecht', color: '#f97316' },
+            { score: 1, label: '1 &mdash; Kritisch', color: '#dc2626' },
+            { score: 0, label: 'Keine Daten', color: '#9ca3af' }
+        ];
+        legendEl.innerHTML = legendItems.map(item =>
+            '<div class="legend-item">' +
+            '<div class="legend-color" style="background:' + item.color + ';"></div>' +
+            '<span>' + item.label + '</span>' +
+            '</div>'
+        ).join('');
+
+    } catch (err) {
+        console.error('Map load error:', err);
+    }
+}
+
+// NDVI toggle placeholder
+function toggleNDVI() {
+    // Will be implemented when Sentinel-2 NDVI data is available
+}
+
+// ── K3: Consecutive Dry Days ────────────────────────────────────
+async function loadK3() {
+    const card = document.getElementById('k3-card');
+    const valueEl = document.getElementById('k3-value');
+    const labelEl = document.getElementById('k3-label');
+    const subEl = document.getElementById('k3-sub');
+
+    try {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 90);
+
+        const { data } = await supabase
+            .from('weather_observations')
+            .select('observation_date, rainfall_mm')
+            .gte('observation_date', cutoff.toISOString().split('T')[0])
+            .order('observation_date', { ascending: false });
+
+        if (!data?.length) {
+            valueEl.textContent = '\u2014';
+            labelEl.textContent = 'Keine Wetterdaten';
+            card.className = 'alert-kpi-card alert-gray';
+            return;
+        }
+
+        // Count consecutive days with < 1mm from today backwards
+        let dryDays = 0;
+        for (const obs of data) {
+            if ((obs.rainfall_mm || 0) < 1) dryDays++;
+            else break;
+        }
+
+        valueEl.textContent = dryDays + ' Tage';
+
+        // Determine alert level
+        // Check if we're in rain season (Oct-Apr for Namibia)
+        const month = new Date().getMonth() + 1;
+        const inRainSeason = month >= 10 || month <= 4;
+
+        let alertClass, alertLabel;
+        if (dryDays < 30) {
+            alertClass = 'alert-green';
+            alertLabel = 'Normal';
+        } else if (dryDays <= 45) {
+            alertClass = 'alert-yellow';
+            alertLabel = 'Aufmerksamkeit';
+        } else if (dryDays <= 60) {
+            alertClass = 'alert-orange';
+            alertLabel = 'Besorgniserregend';
+        } else {
+            alertClass = 'alert-red';
+            alertLabel = inRainSeason
+                ? 'Kritisch \u2014 Destocking pruefen'
+                : 'Kritisch (Trockenzeit)';
+        }
+
+        card.className = 'alert-kpi-card ' + alertClass;
+        labelEl.textContent = alertLabel;
+        subEl.textContent = 'Letzte 90 Tage analysiert' + (inRainSeason ? ' (Regensaison)' : ' (Trockensaison)');
+    } catch (err) {
+        console.error('K3 error:', err);
+        valueEl.textContent = '\u2014';
+        labelEl.textContent = 'Fehler';
+        card.className = 'alert-kpi-card alert-gray';
+    }
+}
+
+// ── K4: Heat Stress Risk ────────────────────────────────────────
+async function loadK4() {
+    const card = document.getElementById('k4-card');
+    const valueEl = document.getElementById('k4-value');
+    const labelEl = document.getElementById('k4-label');
+    const subEl = document.getElementById('k4-sub');
+
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const in14 = new Date();
+        in14.setDate(in14.getDate() + 14);
+
+        const { data } = await supabase
+            .from('weather_observations')
+            .select('observation_date, temperature_max_c')
+            .eq('source', 'open-meteo-forecast')
+            .gte('observation_date', today)
+            .lte('observation_date', in14.toISOString().split('T')[0]);
+
+        if (!data?.length) {
+            valueEl.textContent = '\u2014';
+            labelEl.textContent = 'Keine Prognosedaten';
+            card.className = 'alert-kpi-card alert-gray';
+            return;
+        }
+
+        const hotDays = data.filter(d => d.temperature_max_c > 35).length;
+        valueEl.textContent = hotDays + (hotDays === 1 ? ' Tag' : ' Tage');
+
+        let alertClass, alertLabel;
+        if (hotDays === 0) {
+            alertClass = 'alert-green';
+            alertLabel = 'Kein Risiko';
+        } else if (hotDays <= 3) {
+            alertClass = 'alert-yellow';
+            alertLabel = 'Leichtes Risiko';
+        } else if (hotDays <= 5) {
+            alertClass = 'alert-orange';
+            alertLabel = 'Erhoehtes Risiko';
+        } else {
+            alertClass = 'alert-red';
+            alertLabel = 'Hitzestress \u2014 Schatten/Wasser pruefen';
+        }
+
+        card.className = 'alert-kpi-card ' + alertClass;
+        labelEl.textContent = alertLabel;
+
+        // Show max temperature
+        const maxTemp = Math.max(...data.map(d => d.temperature_max_c || 0));
+        subEl.textContent = 'Naechste 14 Tage, max. ' + Math.round(maxTemp * 10) / 10 + ' \u00B0C';
+    } catch (err) {
+        console.error('K4 error:', err);
+        valueEl.textContent = '\u2014';
+        labelEl.textContent = 'Fehler';
+        card.className = 'alert-kpi-card alert-gray';
+    }
+}
+
+// ── W1 Enhanced: Farm-total bar + per-camp stocking ─────────────
+async function loadW1Detail() {
+    const barEl = document.getElementById('w1-total-bar');
+    const labelEl = document.getElementById('w1-total-label');
+    const subEl = document.getElementById('w1-total-sub');
+
+    try {
+        // Farm total LSU
+        const { data: snapshot } = await supabase
+            .from('herd_snapshots')
+            .select('total_lsu')
+            .order('snapshot_date', { ascending: false })
+            .limit(1);
+
+        // Active camps (exclude boundary)
+        const { data: camps } = await supabase
+            .from('farm_camps')
+            .select('id, name, area_ha, carrying_capacity_ha_per_lsu')
+            .eq('active', true);
+
+        // Carrying capacity assumption (fallback)
+        const { data: capacity } = await supabase
+            .from('carrying_capacity_assumptions')
+            .select('lsu_per_ha')
+            .order('effective_from', { ascending: false })
+            .limit(1);
+
+        const totalLSU = snapshot?.[0]?.total_lsu || 0;
+        const defaultLsuPerHa = capacity?.[0]?.lsu_per_ha || 0.07;
+
+        // Calculate total capacity from camp-level data
+        const totalArea = (camps || []).reduce((s, c) => s + (c.area_ha || 0), 0);
+        const totalCapacity = (camps || []).reduce((s, c) => {
+            if (c.carrying_capacity_ha_per_lsu > 0) {
+                return s + c.area_ha / c.carrying_capacity_ha_per_lsu;
+            }
+            return s + (c.area_ha || 0) * defaultLsuPerHa;
+        }, 0);
+
+        const utilizationPct = totalCapacity > 0 ? Math.round(totalLSU / totalCapacity * 100) : 0;
+
+        // Update farm-total bar
+        const barWidth = Math.min(utilizationPct, 120); // cap visual at 120%
+        barEl.style.width = barWidth + '%';
+        barEl.textContent = utilizationPct + ' %';
+
+        // Color
+        barEl.className = 'utilization-bar-fill ' +
+            (utilizationPct <= 80 ? 'bar-green' : utilizationPct <= 100 ? 'bar-yellow' : 'bar-red');
+
+        labelEl.textContent = Math.round(totalLSU) + ' GVE / ' + Math.round(totalCapacity) + ' Kapazitaet';
+        subEl.textContent = Math.round(totalArea) + ' ha Gesamtflaeche, '
+            + (utilizationPct <= 80 ? 'Nachhaltig' : utilizationPct <= 100 ? 'Grenzbereich' : 'Ueberbesetzt');
+
+        // Per-camp assignments
+        const { data: assignments } = await supabase
+            .from('herd_camp_assignments')
+            .select('camp_id, estimated_animals, snapshot_id, herd_snapshots(snapshot_date)')
+            .order('created_at', { ascending: false });
+
+        if (!assignments?.length) {
+            document.getElementById('w1-camp-nodata').style.display = 'block';
+            return;
+        }
+
+        // Get latest assignment per camp
+        const latestPerCamp = {};
+        assignments.forEach(a => {
+            if (!latestPerCamp[a.camp_id]) {
+                latestPerCamp[a.camp_id] = a;
+            }
+        });
+
+        // Build camp map
+        const campMap = {};
+        (camps || []).forEach(c => { campMap[c.id] = c; });
+
+        const rows = Object.values(latestPerCamp).map(a => {
+            const camp = campMap[a.camp_id];
+            if (!camp) return null;
+
+            const campCapacity = camp.carrying_capacity_ha_per_lsu > 0
+                ? camp.area_ha / camp.carrying_capacity_ha_per_lsu
+                : (camp.area_ha || 0) * defaultLsuPerHa;
+
+            // Rough LSU estimate: assume ~0.7 LSU per animal (mixed herd)
+            const estimatedLSU = (a.estimated_animals || 0) * 0.7;
+            const campUtil = campCapacity > 0 ? Math.round(estimatedLSU / campCapacity * 100) : 0;
+
+            let statusBadge;
+            if (campUtil <= 80) {
+                statusBadge = '<span class="outlook-badge badge-green">Nachhaltig</span>';
+            } else if (campUtil <= 100) {
+                statusBadge = '<span class="outlook-badge badge-yellow">Grenzbereich</span>';
+            } else {
+                statusBadge = '<span class="outlook-badge badge-red">Ueberbesetzt</span>';
+            }
+
+            return `<tr>
+                <td>${escHtml(camp.name)}</td>
+                <td>${a.estimated_animals || '\u2014'}</td>
+                <td>${camp.area_ha ? Math.round(camp.area_ha) : '\u2014'}</td>
+                <td>${campUtil} %</td>
+                <td>${statusBadge}</td>
+            </tr>`;
+        }).filter(Boolean);
+
+        if (rows.length > 0) {
+            document.getElementById('w1-camp-title').style.display = 'flex';
+            document.getElementById('w1-camp-table').style.display = 'table';
+            document.getElementById('w1-camp-tbody').innerHTML = rows.join('');
+        } else {
+            document.getElementById('w1-camp-nodata').style.display = 'block';
+        }
+
+    } catch (err) {
+        console.error('W1 detail error:', err);
+        labelEl.textContent = 'Fehler beim Laden';
+    }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 function escHtml(str) {
     const d = document.createElement('div');
@@ -1050,7 +1718,11 @@ async function loadAll() {
         loadStockingRate(),
         loadCamps(),
         loadRainfall(),
-        loadSeasonalForecast()
+        loadSeasonalForecast(),
+        loadMap(),
+        loadK3(),
+        loadK4(),
+        loadW1Detail()
     ]);
 
     const now = new Date();

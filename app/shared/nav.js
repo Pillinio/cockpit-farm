@@ -12,6 +12,8 @@ const NAV_ITEMS = [
   { key: 'weide',    label: 'Weide & Klima',  href: PAGES.weide },
   { key: 'operativ', label: 'Operativ',       href: PAGES.operativ },
   { key: 'bonus',    label: 'Bonus',          href: PAGES.bonus },
+  { key: 'forecast', label: 'Prognose',       href: PAGES.forecast },
+  { key: 'admin',    label: 'Admin',          href: PAGES.admin },
 ];
 
 /**

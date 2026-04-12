@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Farm Erichsfelde</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+        .header-logo { width: 120px; height: auto; max-height: 100px; object-fit: contain; }
+        .header-content { flex: 1; max-width: 800px; text-align: center; }
+        .header h1 { font-size: 2.2em; margin-bottom: 6px; }
+        .header p { font-size: 1.1em; opacity: 0.85; }
+
+        /* Navigation */
+        .nav {
+            display: flex; gap: 0; background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6; overflow-x: auto;
+        }
+        .nav a {
+            padding: 12px 24px; text-decoration: none; color: #6b7280;
+            font-size: 0.9em; font-weight: 500; white-space: nowrap;
+            border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s;
+        }
+        .nav a:hover { color: #374151; background: #f0f0f0; }
+        .nav a.active { color: #2E75B6; border-bottom-color: #2E75B6; font-weight: 600; }
+
+        /* Content area */
+        .content { padding: 24px; }
+
+        /* Section tabs */
+        .section-tabs {
+            display: flex; gap: 0; background: #f1f5f9;
+            border-radius: 10px; overflow: hidden; margin-bottom: 24px;
+        }
+        .section-tabs button {
+            flex: 1; padding: 12px 16px; border: none; background: transparent;
+            cursor: pointer; font-size: 0.85em; font-weight: 500; color: #64748b;
+            transition: all 0.2s;
+        }
+        .section-tabs button:hover { background: #e2e8f0; }
+        .section-tabs button.active {
+            background: #2E75B6; color: white; font-weight: 600;
+        }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
+        /* Tables */
+        table {
+            width: 100%; border-collapse: collapse; margin-bottom: 16px;
+            font-size: 0.9em;
+        }
+        th, td {
+            padding: 10px 14px; text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th { background: #f8f9fa; font-weight: 600; color: #374151; }
+        tr:hover { background: #f9fafb; }
+
+        /* Form elements */
+        input[type="text"], input[type="number"], input[type="email"],
+        input[type="date"], select, textarea {
+            padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;
+            font-size: 0.9em; font-family: inherit; width: 100%;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none; border-color: #2E75B6; box-shadow: 0 0 0 3px rgba(46,117,182,0.15);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 20px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 0.9em; font-weight: 500;
+            transition: background 0.2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: #2E75B6; color: white; }
+        .btn-primary:hover { background: #1F4E78; }
+        .btn-success { background: #22c55e; color: white; }
+        .btn-success:hover { background: #16a34a; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        .btn-sm { padding: 5px 12px; font-size: 0.8em; }
+
+        /* Form groups */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 4px; color: #374151; font-size: 0.9em; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        /* Status message */
+        .status-msg {
+            padding: 10px 16px; border-radius: 8px; margin-bottom: 16px;
+            font-size: 0.9em; display: none;
+        }
+        .status-msg.success { display: block; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .status-msg.error { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+        /* Card style section header */
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px;
+        }
+        .section-header h2 { font-size: 1.3em; color: #1e293b; }
+
+        /* Checkbox */
+        .checkbox-cell { text-align: center; }
+        .checkbox-cell input { width: auto; }
+
+        /* Footer */
+        .footer {
+            text-align: center; padding: 14px; color: #9ca3af;
+            font-size: 0.8em; border-top: 1px solid #e5e7eb;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { flex-direction: column; gap: 12px; padding: 16px 20px; }
+            .header-logo { width: 70px; }
+            .header h1 { font-size: 1.5em; }
+            .content { padding: 16px; }
+            .form-row { grid-template-columns: 1fr; }
+            .section-tabs { flex-wrap: wrap; }
+            .section-tabs button { flex: none; }
+            table { font-size: 0.8em; }
+            th, td { padding: 6px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="../logo.png" alt="Erichsfelde Logo" class="header-logo">
+        <div class="header-content">
+            <h1>Administration</h1>
+            <p>Erichsfelde &mdash; Systemkonfiguration</p>
+        </div>
+    </div>
+
+    <div id="main-nav"></div>
+
+    <div class="content">
+        <!-- Section Tabs -->
+        <div class="section-tabs">
+            <button class="active" onclick="showSection('budget')">Budget</button>
+            <button onclick="showSection('bonus')">Bonus-Parameter</button>
+            <button onclick="showSection('carrying')">Tragfaehigkeit</button>
+            <button onclick="showSection('rules')">Kategorisierung</button>
+            <button onclick="showSection('uncat')">Unkategorisiert</button>
+            <button onclick="showSection('users')">Benutzer</button>
+        </div>
+
+        <div id="status-msg" class="status-msg"></div>
+
+        <!-- A. Budget-Verwaltung -->
+        <div id="section-budget" class="section active">
+            <div class="section-header">
+                <h2>Budget-Verwaltung</h2>
+                <button class="btn btn-primary" onclick="addBudgetRow()">+ Neue Kategorie</button>
+            </div>
+            <table id="budget-table">
+                <thead>
+                    <tr>
+                        <th>Kategorie</th>
+                        <th>Geplant (NAD)</th>
+                        <th>Ist (NAD)</th>
+                        <th>Abweichung</th>
+                    </tr>
+                </thead>
+                <tbody id="budget-tbody"></tbody>
+            </table>
+            <button class="btn btn-success" onclick="saveBudgets()">Speichern</button>
+        </div>
+
+        <!-- B. Bonus-Parameter -->
+        <div id="section-bonus" class="section">
+            <div class="section-header">
+                <h2>Bonus-Parameter</h2>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Stufe 1 Rate (%)</label>
+                    <input type="number" id="bp-tier1Rate" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Stufe 2 Rate (%)</label>
+                    <input type="number" id="bp-tier2Rate" step="0.1">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Stufe 3 Rate (%)</label>
+                    <input type="number" id="bp-tier3Rate" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Stufe 4 Rate (%)</label>
+                    <input type="number" id="bp-tier4Rate" step="0.1">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>EBIT Cap (Mio. NAD)</label>
+                    <input type="number" id="bp-ebitCap" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>EBIT Gewichtung (%)</label>
+                    <input type="number" id="bp-ebitWeight" step="1">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Prod. Schwelle Kritisch</label>
+                    <input type="number" id="bp-prodThresholdCritical" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Prod. Schwelle Ok</label>
+                    <input type="number" id="bp-prodThresholdOk" step="0.1">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Prod. Schwelle Gut</label>
+                    <input type="number" id="bp-prodThresholdGood" step="0.1">
+                </div>
+                <div class="form-group">
+                    <!-- spacer -->
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="saveBonusParams()">Speichern (neue Version)</button>
+        </div>
+
+        <!-- C. Tragfaehigkeit -->
+        <div id="section-carrying" class="section">
+            <div class="section-header">
+                <h2>Tragfaehigkeit (Carrying Capacity)</h2>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>LSU pro Hektar</label>
+                    <input type="number" id="cc-lsuPerHa" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Regenjahr-Typ</label>
+                    <select id="cc-rainYearType">
+                        <option value="below_average">Unterdurchschnittlich</option>
+                        <option value="average">Durchschnittlich</option>
+                        <option value="above_average">Ueberdurchschnittlich</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="saveCarryingCapacity()">Speichern</button>
+        </div>
+
+        <!-- D. Kategorisierungs-Regeln -->
+        <div id="section-rules" class="section">
+            <div class="section-header">
+                <h2>Kategorisierungs-Regeln</h2>
+                <button class="btn btn-primary" onclick="addRuleRow()">+ Neue Regel</button>
+            </div>
+            <table id="rules-table">
+                <thead>
+                    <tr>
+                        <th>Pattern</th>
+                        <th>Typ</th>
+                        <th>Kategorie</th>
+                        <th>Konfidenz</th>
+                        <th style="width:140px">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="rules-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- E. Unkategorisierte Transaktionen -->
+        <div id="section-uncat" class="section">
+            <div class="section-header">
+                <h2>Unkategorisierte Transaktionen</h2>
+                <button class="btn btn-primary" onclick="bulkAssignCategory()">Auswahl zuweisen</button>
+            </div>
+            <div class="form-group" style="max-width:300px; margin-bottom:16px;">
+                <label>Kategorie fuer Auswahl</label>
+                <select id="bulk-category"></select>
+            </div>
+            <table id="uncat-table">
+                <thead>
+                    <tr>
+                        <th class="checkbox-cell"><input type="checkbox" id="uncat-select-all" onchange="toggleAllUncat(this)"></th>
+                        <th>Datum</th>
+                        <th>Beschreibung</th>
+                        <th>Betrag (NAD)</th>
+                        <th>Kategorie</th>
+                    </tr>
+                </thead>
+                <tbody id="uncat-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- F. User-Verwaltung -->
+        <div id="section-users" class="section">
+            <div class="section-header">
+                <h2>Benutzer-Verwaltung</h2>
+            </div>
+            <table id="users-table">
+                <thead>
+                    <tr>
+                        <th>E-Mail</th>
+                        <th>Name</th>
+                        <th>Rolle</th>
+                        <th style="width:120px">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+            <h3 style="margin-bottom: 12px; font-size: 1.1em;">Neuen Benutzer einladen</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>E-Mail</label>
+                    <input type="email" id="invite-email" placeholder="name@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Rolle</label>
+                    <select id="invite-role">
+                        <option value="viewer">Viewer</option>
+                        <option value="manager">Manager</option>
+                        <option value="owner">Owner</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="inviteUser()">Einladung senden (Magic Link)</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        Farm Controlling &mdash; Erichsfelde &copy; 2026
+    </div>
+</div>
+
+<script type="module">
+import { renderNav } from './shared/nav.js';
+renderNav('admin');
+</script>
+
+<script>
+// ── Supabase Client ──────────────────────────────────────────────
+const SUPABASE_URL = 'https://vhwlcnfxslkftswksqrw.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const currentYear = new Date().getFullYear();
+let allCategories = [];
+
+// ── Status Message ───────────────────────────────────────────────
+function showStatus(msg, type = 'success') {
+    const el = document.getElementById('status-msg');
+    el.textContent = msg;
+    el.className = 'status-msg ' + type;
+    setTimeout(() => { el.className = 'status-msg'; }, 4000);
+}
+
+// ── Section Tabs ─────────────────────────────────────────────────
+function showSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.section-tabs button').forEach(b => b.classList.remove('active'));
+    document.getElementById('section-' + name).classList.add('active');
+    event.target.classList.add('active');
+}
+
+// ── Auth Guard (owner only) ─────────────────────────────────────
+async function checkAdminAuth() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname);
+        return null;
+    }
+    const userId = session.user.id;
+    const { data: profile } = await sb.from('profiles').select('role').eq('id', userId).single();
+    if (!profile || profile.role !== 'owner') {
+        alert('Zugriff verweigert. Nur Eigentuemer (Owner) koennen auf die Administration zugreifen.');
+        window.location.href = 'cockpit.html';
+        return null;
+    }
+    return session.user;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// A. BUDGET-VERWALTUNG
+// ══════════════════════════════════════════════════════════════════
+async function loadBudgets() {
+    const { data, error } = await sb
+        .from('budgets')
+        .select('*')
+        .eq('fiscal_year', currentYear)
+        .eq('month', 0)
+        .order('category');
+
+    if (error) return showStatus('Fehler beim Laden der Budgets: ' + error.message, 'error');
+
+    const tbody = document.getElementById('budget-tbody');
+    tbody.innerHTML = '';
+
+    (data || []).forEach(row => {
+        const deviation = row.planned_nad > 0
+            ? Math.round((row.actual_nad - row.planned_nad) / row.planned_nad * 100)
+            : 0;
+        const devClass = Math.abs(deviation) <= 10 ? 'color:#22c55e' : Math.abs(deviation) <= 25 ? 'color:#eab308' : 'color:#ef4444';
+
+        tbody.innerHTML += `
+            <tr data-id="${row.id}">
+                <td>${row.category}</td>
+                <td><input type="number" class="budget-planned" value="${row.planned_nad || 0}" style="width:140px"></td>
+                <td>${(row.actual_nad || 0).toLocaleString('de-DE')} NAD</td>
+                <td style="${devClass}; font-weight:600">${deviation > 0 ? '+' : ''}${deviation}%</td>
+            </tr>`;
+    });
+}
+
+function addBudgetRow() {
+    const tbody = document.getElementById('budget-tbody');
+    tbody.innerHTML += `
+        <tr data-id="new">
+            <td><input type="text" class="budget-category-new" placeholder="Kategoriename"></td>
+            <td><input type="number" class="budget-planned" value="0" style="width:140px"></td>
+            <td>0 NAD</td>
+            <td>-</td>
+        </tr>`;
+}
+
+async function saveBudgets() {
+    const rows = document.querySelectorAll('#budget-tbody tr');
+    const updates = [];
+    const inserts = [];
+
+    rows.forEach(row => {
+        const id = row.dataset.id;
+        const planned = parseFloat(row.querySelector('.budget-planned').value) || 0;
+
+        if (id === 'new') {
+            const catInput = row.querySelector('.budget-category-new');
+            if (catInput && catInput.value.trim()) {
+                inserts.push({
+                    fiscal_year: currentYear,
+                    month: 0,
+                    category: catInput.value.trim(),
+                    planned_nad: planned,
+                    actual_nad: 0,
+                });
+            }
+        } else {
+            updates.push({ id, planned_nad: planned });
+        }
+    });
+
+    let hasError = false;
+
+    for (const u of updates) {
+        const { error } = await sb.from('budgets').update({ planned_nad: u.planned_nad }).eq('id', u.id);
+        if (error) hasError = true;
+    }
+
+    for (const ins of inserts) {
+        const { error } = await sb.from('budgets').insert(ins);
+        if (error) hasError = true;
+    }
+
+    if (hasError) {
+        showStatus('Einige Budgets konnten nicht gespeichert werden.', 'error');
+    } else {
+        showStatus('Budgets gespeichert.');
+        loadBudgets();
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// B. BONUS-PARAMETER
+// ══════════════════════════════════════════════════════════════════
+async function loadBonusParams() {
+    const { data, error } = await sb
+        .from('bonus_parameters')
+        .select('*')
+        .order('effective_from', { ascending: false })
+        .limit(1);
+
+    if (error || !data?.length) return;
+
+    const p = data[0];
+    document.getElementById('bp-tier1Rate').value = p.tier1_rate ?? 8;
+    document.getElementById('bp-tier2Rate').value = p.tier2_rate ?? 12;
+    document.getElementById('bp-tier3Rate').value = p.tier3_rate ?? 15;
+    document.getElementById('bp-tier4Rate').value = p.tier4_rate ?? 20;
+    document.getElementById('bp-ebitCap').value = p.ebit_cap ?? 4;
+    document.getElementById('bp-ebitWeight').value = p.ebit_weight ?? 70;
+    document.getElementById('bp-prodThresholdCritical').value = p.prod_threshold_critical ?? 15;
+    document.getElementById('bp-prodThresholdOk').value = p.prod_threshold_ok ?? 20;
+    document.getElementById('bp-prodThresholdGood').value = p.prod_threshold_good ?? 25;
+}
+
+async function saveBonusParams() {
+    const params = {
+        tier1_rate: parseFloat(document.getElementById('bp-tier1Rate').value),
+        tier2_rate: parseFloat(document.getElementById('bp-tier2Rate').value),
+        tier3_rate: parseFloat(document.getElementById('bp-tier3Rate').value),
+        tier4_rate: parseFloat(document.getElementById('bp-tier4Rate').value),
+        ebit_cap: parseFloat(document.getElementById('bp-ebitCap').value),
+        ebit_weight: parseFloat(document.getElementById('bp-ebitWeight').value),
+        prod_threshold_critical: parseFloat(document.getElementById('bp-prodThresholdCritical').value),
+        prod_threshold_ok: parseFloat(document.getElementById('bp-prodThresholdOk').value),
+        prod_threshold_good: parseFloat(document.getElementById('bp-prodThresholdGood').value),
+        effective_from: new Date().toISOString().split('T')[0],
+    };
+
+    const { error } = await sb.from('bonus_parameters').insert(params);
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    showStatus('Neue Bonus-Parameter Version gespeichert.');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// C. TRAGFAEHIGKEIT
+// ══════════════════════════════════════════════════════════════════
+async function loadCarryingCapacity() {
+    const { data } = await sb
+        .from('carrying_capacity')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+    if (data?.length) {
+        document.getElementById('cc-lsuPerHa').value = data[0].lsu_per_ha ?? '';
+        document.getElementById('cc-rainYearType').value = data[0].rain_year_type ?? 'average';
+    }
+}
+
+async function saveCarryingCapacity() {
+    const payload = {
+        lsu_per_ha: parseFloat(document.getElementById('cc-lsuPerHa').value),
+        rain_year_type: document.getElementById('cc-rainYearType').value,
+        created_at: new Date().toISOString(),
+    };
+
+    const { error } = await sb.from('carrying_capacity').insert(payload);
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    showStatus('Tragfaehigkeit gespeichert.');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// D. KATEGORISIERUNGS-REGELN
+// ══════════════════════════════════════════════════════════════════
+async function loadCategoryRules() {
+    const { data, error } = await sb
+        .from('category_rules')
+        .select('*')
+        .order('category_name');
+
+    if (error) return showStatus('Fehler beim Laden der Regeln: ' + error.message, 'error');
+
+    // Collect unique categories for dropdowns
+    allCategories = [...new Set((data || []).map(r => r.category_name).filter(Boolean))];
+    populateCategoryDropdowns();
+
+    const tbody = document.getElementById('rules-tbody');
+    tbody.innerHTML = '';
+
+    (data || []).forEach(row => {
+        tbody.innerHTML += `
+            <tr data-rule-id="${row.id}">
+                <td><input type="text" class="rule-pattern" value="${escapeHtml(row.pattern || '')}" style="width:100%"></td>
+                <td>
+                    <select class="rule-type" style="width:100%">
+                        <option value="contains" ${row.type === 'contains' ? 'selected' : ''}>contains</option>
+                        <option value="exact" ${row.type === 'exact' ? 'selected' : ''}>exact</option>
+                        <option value="regex" ${row.type === 'regex' ? 'selected' : ''}>regex</option>
+                        <option value="starts_with" ${row.type === 'starts_with' ? 'selected' : ''}>starts_with</option>
+                    </select>
+                </td>
+                <td><input type="text" class="rule-category" value="${escapeHtml(row.category_name || '')}" style="width:100%"></td>
+                <td><input type="number" class="rule-confidence" value="${row.confidence ?? 1}" step="0.1" min="0" max="1" style="width:70px"></td>
+                <td>
+                    <button class="btn btn-primary btn-sm" onclick="saveRule(this)">Speichern</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRule(this)">Loeschen</button>
+                </td>
+            </tr>`;
+    });
+}
+
+function addRuleRow() {
+    const tbody = document.getElementById('rules-tbody');
+    const tr = document.createElement('tr');
+    tr.dataset.ruleId = 'new';
+    tr.innerHTML = `
+        <td><input type="text" class="rule-pattern" placeholder="z.B. SPAR" style="width:100%"></td>
+        <td>
+            <select class="rule-type" style="width:100%">
+                <option value="contains">contains</option>
+                <option value="exact">exact</option>
+                <option value="regex">regex</option>
+                <option value="starts_with">starts_with</option>
+            </select>
+        </td>
+        <td><input type="text" class="rule-category" placeholder="Kategoriename" style="width:100%"></td>
+        <td><input type="number" class="rule-confidence" value="1" step="0.1" min="0" max="1" style="width:70px"></td>
+        <td>
+            <button class="btn btn-primary btn-sm" onclick="saveRule(this)">Speichern</button>
+            <button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">Abbrechen</button>
+        </td>`;
+    tbody.prepend(tr);
+}
+
+async function saveRule(btn) {
+    const tr = btn.closest('tr');
+    const id = tr.dataset.ruleId;
+    const payload = {
+        pattern: tr.querySelector('.rule-pattern').value.trim(),
+        type: tr.querySelector('.rule-type').value,
+        category_name: tr.querySelector('.rule-category').value.trim(),
+        confidence: parseFloat(tr.querySelector('.rule-confidence').value) || 1,
+    };
+
+    if (!payload.pattern || !payload.category_name) {
+        return showStatus('Pattern und Kategorie sind Pflichtfelder.', 'error');
+    }
+
+    let error;
+    if (id === 'new') {
+        ({ error } = await sb.from('category_rules').insert(payload));
+    } else {
+        ({ error } = await sb.from('category_rules').update(payload).eq('id', id));
+    }
+
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    showStatus('Regel gespeichert.');
+    loadCategoryRules();
+}
+
+async function deleteRule(btn) {
+    const tr = btn.closest('tr');
+    const id = tr.dataset.ruleId;
+    if (id === 'new') { tr.remove(); return; }
+
+    if (!confirm('Regel wirklich loeschen?')) return;
+
+    const { error } = await sb.from('category_rules').delete().eq('id', id);
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    showStatus('Regel geloescht.');
+    loadCategoryRules();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// E. UNKATEGORISIERTE TRANSAKTIONEN
+// ══════════════════════════════════════════════════════════════════
+async function loadUncategorized() {
+    const { data, error } = await sb
+        .from('transactions')
+        .select('*')
+        .or('category.is.null,category.eq.uncategorized')
+        .order('transaction_date', { ascending: false });
+
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+
+    const tbody = document.getElementById('uncat-tbody');
+    tbody.innerHTML = '';
+
+    (data || []).forEach(row => {
+        const dateStr = row.transaction_date
+            ? new Date(row.transaction_date).toLocaleDateString('de-DE')
+            : '-';
+        const catOptions = allCategories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+        tbody.innerHTML += `
+            <tr data-tx-id="${row.id}">
+                <td class="checkbox-cell"><input type="checkbox" class="uncat-check"></td>
+                <td>${dateStr}</td>
+                <td>${escapeHtml(row.description || '')}</td>
+                <td style="text-align:right">${(row.amount_nad || 0).toLocaleString('de-DE')} NAD</td>
+                <td>
+                    <select class="uncat-category" style="width:100%">
+                        <option value="">-- waehlen --</option>
+                        ${catOptions}
+                    </select>
+                </td>
+            </tr>`;
+    });
+}
+
+function toggleAllUncat(master) {
+    document.querySelectorAll('.uncat-check').forEach(cb => cb.checked = master.checked);
+}
+
+async function bulkAssignCategory() {
+    const bulkCat = document.getElementById('bulk-category').value;
+    if (!bulkCat) return showStatus('Bitte Kategorie waehlen.', 'error');
+
+    const rows = document.querySelectorAll('#uncat-tbody tr');
+    let count = 0;
+    let hasError = false;
+
+    for (const row of rows) {
+        const cb = row.querySelector('.uncat-check');
+        if (!cb.checked) continue;
+
+        const txId = row.dataset.txId;
+        const selectCat = row.querySelector('.uncat-category').value || bulkCat;
+
+        const { error } = await sb.from('transactions').update({ category: selectCat }).eq('id', txId);
+        if (error) { hasError = true; continue; }
+        count++;
+    }
+
+    if (hasError) {
+        showStatus('Einige Zuweisungen fehlgeschlagen.', 'error');
+    } else {
+        showStatus(count + ' Transaktionen zugewiesen.');
+    }
+
+    // Offer to create rule
+    if (count > 0 && confirm('Soll eine Kategorisierungsregel aus dem Muster erstellt werden?')) {
+        showSection('rules');
+        document.querySelectorAll('.section-tabs button')[3].classList.add('active');
+        addRuleRow();
+    }
+
+    loadUncategorized();
+}
+
+function populateCategoryDropdowns() {
+    const bulkSelect = document.getElementById('bulk-category');
+    bulkSelect.innerHTML = '<option value="">-- waehlen --</option>' +
+        allCategories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// F. USER-VERWALTUNG
+// ══════════════════════════════════════════════════════════════════
+async function loadUsers() {
+    const { data, error } = await sb
+        .from('profiles')
+        .select('id, email, display_name, role')
+        .order('email');
+
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = '';
+
+    (data || []).forEach(row => {
+        tbody.innerHTML += `
+            <tr data-user-id="${row.id}">
+                <td>${escapeHtml(row.email || '')}</td>
+                <td>${escapeHtml(row.display_name || '-')}</td>
+                <td>
+                    <select class="user-role" onchange="updateRole('${row.id}', this.value)">
+                        <option value="viewer" ${row.role === 'viewer' ? 'selected' : ''}>Viewer</option>
+                        <option value="manager" ${row.role === 'manager' ? 'selected' : ''}>Manager</option>
+                        <option value="owner" ${row.role === 'owner' ? 'selected' : ''}>Owner</option>
+                    </select>
+                </td>
+                <td>-</td>
+            </tr>`;
+    });
+}
+
+async function updateRole(userId, newRole) {
+    const { error } = await sb.from('profiles').update({ role: newRole }).eq('id', userId);
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    showStatus('Rolle aktualisiert.');
+}
+
+async function inviteUser() {
+    const email = document.getElementById('invite-email').value.trim();
+    const role = document.getElementById('invite-role').value;
+
+    if (!email) return showStatus('Bitte E-Mail eingeben.', 'error');
+
+    const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: { data: { role } }
+    });
+
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    showStatus('Einladung (Magic Link) an ' + email + ' gesendet.');
+    document.getElementById('invite-email').value = '';
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+(async function init() {
+    const user = await checkAdminAuth();
+    if (!user) return;
+
+    await Promise.allSettled([
+        loadBudgets(),
+        loadBonusParams(),
+        loadCarryingCapacity(),
+        loadCategoryRules(),
+    ]);
+
+    // Load uncategorized after categories are known
+    await loadUncategorized();
+    await loadUsers();
+})();
+</script>
+
+</body>
+</html>

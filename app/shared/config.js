@@ -11,6 +11,7 @@ export const PAGES = {
   operativ:  'operativ.html',
   bonus:     '../farm_bonussystem_komplett.html',
   admin:     'admin.html',
+  forecast:  'forecast.html',
   herdEntry: 'herd-entry.html',
 };
 

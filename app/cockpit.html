@@ -389,6 +389,34 @@
                 <div class="card-subtitle">Tage bis Ablauf</div>
             </div>
         </a>
+
+        <!-- K3 Consecutive Dry Days -->
+        <a class="card" id="card-k3" href="weide.html">
+            <div class="card-status-bar status-gray"></div>
+            <div class="card-body">
+                <div class="card-top">
+                    <span class="card-icon">&#x2600;&#xFE0F;</span>
+                    <span class="card-title">Trockentage</span>
+                    <span class="card-status-dot status-gray"></span>
+                </div>
+                <div class="card-value" data-kpi="k3"><span class="loading-spinner"></span></div>
+                <div class="card-subtitle">Tage ohne Regen in Folge</div>
+            </div>
+        </a>
+
+        <!-- K4 Heat Stress Risk -->
+        <a class="card" id="card-k4" href="weide.html">
+            <div class="card-status-bar status-gray"></div>
+            <div class="card-body">
+                <div class="card-top">
+                    <span class="card-icon">&#x1F321;&#xFE0F;</span>
+                    <span class="card-title">Hitzestress</span>
+                    <span class="card-status-dot status-gray"></span>
+                </div>
+                <div class="card-value" data-kpi="k4"><span class="loading-spinner"></span></div>
+                <div class="card-subtitle">Tage &gt; 35 &deg;C (14-Tage-Prognose)</div>
+            </div>
+        </a>
     </div>
 
     <div class="footer">
@@ -692,13 +720,78 @@ async function loadC1() {
     } catch { noData('c1'); }
 }
 
+// K3 — Consecutive dry days
+async function loadK3() {
+    try {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 90);
+
+        const { data } = await supabase
+            .from('weather_observations')
+            .select('observation_date, rainfall_mm')
+            .gte('observation_date', cutoff.toISOString().split('T')[0])
+            .order('observation_date', { ascending: false });
+
+        if (!data?.length) return noData('k3');
+
+        let dryDays = 0;
+        for (const obs of data) {
+            if ((obs.rainfall_mm || 0) < 1) dryDays++;
+            else break;
+        }
+
+        let status;
+        if (dryDays < 30) status = 'green';
+        else if (dryDays <= 45) status = 'yellow';
+        else status = 'red';
+
+        setCard('k3', {
+            value: dryDays + ' Tage',
+            subtitle: 'Tage ohne Regen in Folge',
+            status
+        });
+    } catch { noData('k3'); }
+}
+
+// K4 — Heat stress days (next 14 days forecast)
+async function loadK4() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const in14 = new Date();
+        in14.setDate(in14.getDate() + 14);
+
+        const { data } = await supabase
+            .from('weather_observations')
+            .select('observation_date, temperature_max_c')
+            .eq('source', 'open-meteo-forecast')
+            .gte('observation_date', today)
+            .lte('observation_date', in14.toISOString().split('T')[0]);
+
+        if (!data?.length) return noData('k4');
+
+        const hotDays = data.filter(d => d.temperature_max_c > 35).length;
+
+        let status;
+        if (hotDays === 0) status = 'green';
+        else if (hotDays <= 3) status = 'yellow';
+        else status = 'red';
+
+        setCard('k4', {
+            value: hotDays + (hotDays === 1 ? ' Tag' : ' Tage'),
+            subtitle: 'Tage > 35 \u00B0C (14-Tage-Prognose)',
+            status
+        });
+    } catch { noData('k4'); }
+}
+
 // ── Load All ─────────────────────────────────────────────────────
 async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
     await Promise.allSettled([
         loadF1(), loadF2(), loadH4(), loadW1(),
-        loadF4(), loadK2(), loadO2(), loadC1()
+        loadF4(), loadK2(), loadO2(), loadC1(),
+        loadK3(), loadK4()
     ]);
 
     const now = new Date();

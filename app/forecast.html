@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prognose - Farm Erichsfelde</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+        .header-logo { width: 120px; height: auto; max-height: 100px; object-fit: contain; }
+        .header-content { flex: 1; max-width: 800px; text-align: center; }
+        .header h1 { font-size: 2.2em; margin-bottom: 6px; }
+        .header p { font-size: 1.1em; opacity: 0.85; }
+
+        /* Navigation */
+        .nav {
+            display: flex; gap: 0; background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6; overflow-x: auto;
+        }
+        .nav a {
+            padding: 12px 24px; text-decoration: none; color: #6b7280;
+            font-size: 0.9em; font-weight: 500; white-space: nowrap;
+            border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s;
+        }
+        .nav a:hover { color: #374151; background: #f0f0f0; }
+        .nav a.active { color: #2E75B6; border-bottom-color: #2E75B6; font-weight: 600; }
+
+        /* Content */
+        .content { padding: 24px; }
+
+        /* Projection banner */
+        .projection-banner {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            border-radius: 14px;
+            padding: 28px 32px;
+            margin-bottom: 28px;
+            text-align: center;
+        }
+        .projection-banner .label {
+            font-size: 0.95em; opacity: 0.8; margin-bottom: 6px;
+        }
+        .projection-banner .value {
+            font-size: 2.8em; font-weight: 700; line-height: 1.1;
+        }
+        .projection-banner .sub {
+            font-size: 0.9em; opacity: 0.7; margin-top: 8px;
+        }
+
+        /* Scenario cards */
+        .scenarios {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        .scenario-card {
+            border-radius: 14px;
+            padding: 22px;
+            color: white;
+        }
+        .scenario-card.conservative { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+        .scenario-card.base { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+        .scenario-card.optimistic { background: linear-gradient(135deg, #16a34a, #15803d); }
+
+        .scenario-card h3 {
+            font-size: 1.1em; margin-bottom: 12px; opacity: 0.9;
+        }
+        .scenario-card .ebit-val {
+            font-size: 2em; font-weight: 700; margin-bottom: 4px;
+        }
+        .scenario-card .bonus-val {
+            font-size: 1.3em; font-weight: 600; opacity: 0.9;
+        }
+        .scenario-card .details {
+            margin-top: 14px; font-size: 0.85em; opacity: 0.8;
+            line-height: 1.7;
+        }
+
+        /* Assumptions table in scenario */
+        .scenario-table {
+            width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85em;
+        }
+        .scenario-table td {
+            padding: 4px 0; border: none;
+        }
+        .scenario-table td:last-child { text-align: right; font-weight: 600; }
+
+        /* Chart section */
+        .chart-section {
+            margin-bottom: 28px;
+        }
+        .chart-section h2 {
+            font-size: 1.3em; color: #1e293b; margin-bottom: 16px;
+        }
+        .chart-container {
+            position: relative;
+            height: 350px;
+            background: #fafbfc;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Sensitivity section */
+        .sensitivity-section {
+            background: #f8fafc;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 28px;
+            border: 1px solid #e2e8f0;
+        }
+        .sensitivity-section h2 {
+            font-size: 1.3em; color: #1e293b; margin-bottom: 16px;
+        }
+        .slider-group {
+            margin-bottom: 20px;
+        }
+        .slider-group label {
+            display: block; font-weight: 600; color: #374151;
+            margin-bottom: 6px; font-size: 0.9em;
+        }
+        .slider-row {
+            display: flex; align-items: center; gap: 16px;
+        }
+        .slider-row input[type="range"] {
+            flex: 1; accent-color: #2E75B6;
+        }
+        .slider-value {
+            min-width: 60px; text-align: right; font-weight: 600;
+            font-size: 0.95em; color: #1e293b;
+        }
+        .sensitivity-result {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            margin-top: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        .sensitivity-result .label { font-size: 0.9em; color: #64748b; }
+        .sensitivity-result .value { font-size: 1.8em; font-weight: 700; color: #1e293b; }
+        .sensitivity-result .bonus { font-size: 1.1em; color: #2563eb; font-weight: 600; margin-top: 4px; }
+
+        /* Bonus forecast section */
+        .bonus-forecast {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .bonus-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .bonus-card h4 { font-size: 0.95em; color: #64748b; margin-bottom: 8px; }
+        .bonus-card .amount { font-size: 1.8em; font-weight: 700; color: #1e293b; }
+        .bonus-card .breakdown { font-size: 0.8em; color: #94a3b8; margin-top: 6px; }
+
+        /* Loading */
+        .loading-spinner {
+            display: inline-block; width: 18px; height: 18px;
+            border: 2px solid #d1d5db; border-top-color: #2E75B6;
+            border-radius: 50%; animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Footer */
+        .footer {
+            text-align: center; padding: 14px; color: #9ca3af;
+            font-size: 0.8em; border-top: 1px solid #e5e7eb;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { flex-direction: column; gap: 12px; padding: 16px 20px; }
+            .header-logo { width: 70px; }
+            .header h1 { font-size: 1.5em; }
+            .content { padding: 16px; }
+            .scenarios { grid-template-columns: 1fr; }
+            .bonus-forecast { grid-template-columns: 1fr; }
+            .projection-banner .value { font-size: 2em; }
+            .chart-container { height: 280px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="../logo.png" alt="Erichsfelde Logo" class="header-logo">
+        <div class="header-content">
+            <h1>Jahresprognose</h1>
+            <p>Erichsfelde &mdash; Szenarien & Sensitivitaet</p>
+        </div>
+    </div>
+
+    <div id="main-nav"></div>
+
+    <div class="content">
+
+        <!-- A. Jahresendprognose -->
+        <div class="projection-banner" id="projection-banner">
+            <div class="label">Auf Basis der aktuellen Daten: geschaetztes Jahres-EBIT</div>
+            <div class="value" id="projected-ebit"><span class="loading-spinner"></span></div>
+            <div class="sub" id="projected-sub">Wird berechnet...</div>
+        </div>
+
+        <!-- B. 3 Szenarien -->
+        <h2 style="font-size:1.3em; color:#1e293b; margin-bottom:16px;">Szenarien-Vergleich</h2>
+        <div class="scenarios">
+            <div class="scenario-card conservative" id="scenario-conservative">
+                <h3>Konservativ</h3>
+                <div class="ebit-val" id="sc-con-ebit"><span class="loading-spinner"></span></div>
+                <div class="bonus-val" id="sc-con-bonus">-</div>
+                <div class="details">
+                    <table class="scenario-table">
+                        <tr><td>Regen</td><td>Seasonal P25</td></tr>
+                        <tr><td>Fleischpreis</td><td>-10%</td></tr>
+                        <tr><td>Verkaufsrate</td><td>-5 PP</td></tr>
+                        <tr><td>Zusatzkosten</td><td>+15%</td></tr>
+                    </table>
+                </div>
+            </div>
+            <div class="scenario-card base" id="scenario-base">
+                <h3>Basis</h3>
+                <div class="ebit-val" id="sc-base-ebit"><span class="loading-spinner"></span></div>
+                <div class="bonus-val" id="sc-base-bonus">-</div>
+                <div class="details">
+                    <table class="scenario-table">
+                        <tr><td>Regen</td><td>Seasonal P50</td></tr>
+                        <tr><td>Fleischpreis</td><td>Aktuell</td></tr>
+                        <tr><td>Verkaufsrate</td><td>Aktuell</td></tr>
+                        <tr><td>Zusatzkosten</td><td>0%</td></tr>
+                    </table>
+                </div>
+            </div>
+            <div class="scenario-card optimistic" id="scenario-optimistic">
+                <h3>Optimistisch</h3>
+                <div class="ebit-val" id="sc-opt-ebit"><span class="loading-spinner"></span></div>
+                <div class="bonus-val" id="sc-opt-bonus">-</div>
+                <div class="details">
+                    <table class="scenario-table">
+                        <tr><td>Regen</td><td>Seasonal P75</td></tr>
+                        <tr><td>Fleischpreis</td><td>+10%</td></tr>
+                        <tr><td>Verkaufsrate</td><td>+5 PP</td></tr>
+                        <tr><td>Zusatzkosten</td><td>-5%</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-section">
+            <h2>Szenarien-Vergleich (Chart)</h2>
+            <div class="chart-container">
+                <canvas id="scenarioChart"></canvas>
+            </div>
+        </div>
+
+        <!-- C. Sensitivitaets-Analyse -->
+        <div class="sensitivity-section">
+            <h2>Sensitivitaets-Analyse: "Was passiert wenn...?"</h2>
+
+            <div class="slider-group">
+                <label>Regensaison: Abweichung von Normal</label>
+                <div class="slider-row">
+                    <span style="font-size:0.85em;color:#94a3b8">-50%</span>
+                    <input type="range" id="slider-rain" min="-50" max="50" value="0" oninput="recalcSensitivity()">
+                    <span style="font-size:0.85em;color:#94a3b8">+50%</span>
+                    <span class="slider-value" id="slider-rain-val">0%</span>
+                </div>
+            </div>
+
+            <div class="slider-group">
+                <label>Fleischpreis: Abweichung vom aktuellen Preis</label>
+                <div class="slider-row">
+                    <span style="font-size:0.85em;color:#94a3b8">-30%</span>
+                    <input type="range" id="slider-price" min="-30" max="30" value="0" oninput="recalcSensitivity()">
+                    <span style="font-size:0.85em;color:#94a3b8">+30%</span>
+                    <span class="slider-value" id="slider-price-val">0%</span>
+                </div>
+            </div>
+
+            <div class="slider-group">
+                <label>Kostenentwicklung</label>
+                <div class="slider-row">
+                    <span style="font-size:0.85em;color:#94a3b8">-20%</span>
+                    <input type="range" id="slider-cost" min="-20" max="30" value="0" oninput="recalcSensitivity()">
+                    <span style="font-size:0.85em;color:#94a3b8">+30%</span>
+                    <span class="slider-value" id="slider-cost-val">0%</span>
+                </div>
+            </div>
+
+            <div class="sensitivity-result">
+                <div class="label">Projiziertes EBIT bei diesen Annahmen</div>
+                <div class="value" id="sens-ebit">-</div>
+                <div class="bonus" id="sens-bonus">-</div>
+            </div>
+        </div>
+
+        <!-- D. Bonus-Prognose -->
+        <h2 style="font-size:1.3em; color:#1e293b; margin-bottom:16px;">Bonus-Prognose nach Szenario</h2>
+        <div class="bonus-forecast">
+            <div class="bonus-card">
+                <h4>Konservativ</h4>
+                <div class="amount" id="bf-con">-</div>
+                <div class="breakdown" id="bf-con-detail"></div>
+            </div>
+            <div class="bonus-card">
+                <h4>Basis</h4>
+                <div class="amount" id="bf-base">-</div>
+                <div class="breakdown" id="bf-base-detail"></div>
+            </div>
+            <div class="bonus-card">
+                <h4>Optimistisch</h4>
+                <div class="amount" id="bf-opt">-</div>
+                <div class="breakdown" id="bf-opt-detail"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        Farm Controlling &mdash; Erichsfelde &copy; 2026
+    </div>
+</div>
+
+<script type="module">
+import { renderNav } from './shared/nav.js';
+renderNav('forecast');
+</script>
+
+<script type="module">
+import { calculateEbit, calculateBonus, DEFAULTS } from '../shared/bonus-engine.js';
+
+// ── Supabase Client ──────────────────────────────────────────────
+const SUPABASE_URL = 'https://vhwlcnfxslkftswksqrw.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const currentYear = new Date().getFullYear();
+const currentMonth = new Date().getMonth() + 1; // 1-12
+let scenarioChart = null;
+
+// Shared baseline data (filled by loadBaseData)
+let baseData = {
+    herdSize: 0,
+    slaughterWeight: 220,
+    salesRate: 26,
+    pricePerKg: 0,
+    huntingRevenue: 0,
+    rentRevenue: 0,
+    otherRevenue: 0,
+    baseCosts: 0,
+    actualRevenueYTD: 0,
+    actualCostsYTD: 0,
+    totalSlaughterKg: 0,
+    bonusParams: { ...DEFAULTS },
+};
+
+// ── Auth Guard ───────────────────────────────────────────────────
+async function checkAuth() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname);
+        return null;
+    }
+    return session.user;
+}
+
+// ── Format helpers ───────────────────────────────────────────────
+function fmtNAD(n) {
+    return 'N$ ' + Math.round(n).toLocaleString('de-DE');
+}
+
+// ── Load baseline data from Supabase ────────────────────────────
+async function loadBaseData() {
+    // Herd size
+    const { data: herdSnap } = await sb
+        .from('herd_snapshots')
+        .select('total_head, total_lsu')
+        .order('snapshot_date', { ascending: false })
+        .limit(1);
+
+    if (herdSnap?.length) {
+        baseData.herdSize = herdSnap[0].total_head || 0;
+    }
+
+    // Sales data (YTD) for price and volume
+    const { data: sales } = await sb
+        .from('sales')
+        .select('weight_kg, revenue_nad')
+        .gte('sale_date', currentYear + '-01-01');
+
+    if (sales?.length) {
+        baseData.totalSlaughterKg = sales.reduce((s, r) => s + (r.weight_kg || 0), 0);
+        const totalRevenue = sales.reduce((s, r) => s + (r.revenue_nad || 0), 0);
+        baseData.actualRevenueYTD = totalRevenue;
+        if (baseData.totalSlaughterKg > 0) {
+            baseData.pricePerKg = totalRevenue / baseData.totalSlaughterKg;
+        }
+        // Derive salesRate from actuals
+        if (baseData.herdSize > 0 && baseData.totalSlaughterKg > 0 && baseData.slaughterWeight > 0) {
+            const soldAnimals = baseData.totalSlaughterKg / baseData.slaughterWeight;
+            // Annualize: project full year from YTD
+            const annualizedSold = soldAnimals * (12 / currentMonth);
+            baseData.salesRate = Math.round(annualizedSold / baseData.herdSize * 100 * 10) / 10;
+        }
+    }
+
+    // Budget data (actuals YTD + planned remaining)
+    const { data: budgets } = await sb
+        .from('budgets')
+        .select('month, planned_nad, actual_nad')
+        .eq('fiscal_year', currentYear);
+
+    if (budgets?.length) {
+        let actualCosts = 0;
+        let plannedRemaining = 0;
+
+        budgets.forEach(b => {
+            if (b.month === 0) return; // annual summary row
+            if (b.month <= currentMonth) {
+                actualCosts += (b.actual_nad || 0);
+            } else {
+                plannedRemaining += (b.planned_nad || 0);
+            }
+        });
+
+        baseData.actualCostsYTD = actualCosts;
+        baseData.baseCosts = actualCosts + plannedRemaining;
+    }
+
+    // Bonus parameters (latest)
+    const { data: bpData } = await sb
+        .from('bonus_parameters')
+        .select('*')
+        .order('effective_from', { ascending: false })
+        .limit(1);
+
+    if (bpData?.length) {
+        const p = bpData[0];
+        baseData.bonusParams = {
+            ...DEFAULTS,
+            tier1Rate: p.tier1_rate ?? DEFAULTS.tier1Rate,
+            tier2Rate: p.tier2_rate ?? DEFAULTS.tier2Rate,
+            tier3Rate: p.tier3_rate ?? DEFAULTS.tier3Rate,
+            tier4Rate: p.tier4_rate ?? DEFAULTS.tier4Rate,
+            ebitCap: p.ebit_cap ?? DEFAULTS.ebitCap,
+            ebitWeight: p.ebit_weight ?? DEFAULTS.ebitWeight,
+            prodThresholdCritical: p.prod_threshold_critical ?? DEFAULTS.prodThresholdCritical,
+            prodThresholdOk: p.prod_threshold_ok ?? DEFAULTS.prodThresholdOk,
+            prodThresholdGood: p.prod_threshold_good ?? DEFAULTS.prodThresholdGood,
+        };
+    }
+
+    // Other revenue streams (use annual budget categories)
+    const { data: revBudgets } = await sb
+        .from('budgets')
+        .select('category, actual_nad')
+        .eq('fiscal_year', currentYear)
+        .in('category', ['Jagd', 'Pacht', 'Sonstiges']);
+
+    if (revBudgets?.length) {
+        revBudgets.forEach(b => {
+            const annualized = (b.actual_nad || 0) * (12 / currentMonth);
+            if (b.category === 'Jagd') baseData.huntingRevenue = annualized;
+            else if (b.category === 'Pacht') baseData.rentRevenue = annualized;
+            else baseData.otherRevenue += annualized;
+        });
+    }
+}
+
+// ── Calculate scenario ──────────────────────────────────────────
+function calcScenario({ priceMult, salesRateAdj, costMult, rainEffect }) {
+    // Rain affects stocking rate -> affects how many animals can be sold
+    const adjustedSalesRate = baseData.salesRate + salesRateAdj + (rainEffect || 0);
+    const adjustedPrice = baseData.pricePerKg * priceMult;
+    const adjustedCosts = baseData.baseCosts * costMult;
+
+    const ebitResult = calculateEbit({
+        herdSize: baseData.herdSize,
+        slaughterWeight: baseData.slaughterWeight,
+        salesRate: adjustedSalesRate,
+        pricePerKg: adjustedPrice,
+        huntingRevenue: baseData.huntingRevenue,
+        rentRevenue: baseData.rentRevenue,
+        otherRevenue: baseData.otherRevenue,
+        baseCosts: adjustedCosts,
+    });
+
+    const bonusResult = calculateBonus({
+        ebit: ebitResult.ebit,
+        slaughterKg: ebitResult.totalSlaughterWeight,
+        totalCost: adjustedCosts,
+        params: baseData.bonusParams,
+    });
+
+    return { ebit: ebitResult, bonus: bonusResult };
+}
+
+// ── Render everything ───────────────────────────────────────────
+function renderAll() {
+    // A. Base projection (Basis scenario)
+    const baseResult = calcScenario({ priceMult: 1, salesRateAdj: 0, costMult: 1, rainEffect: 0 });
+    document.getElementById('projected-ebit').textContent = fmtNAD(baseResult.ebit.ebit);
+    document.getElementById('projected-sub').textContent =
+        'Umsatz: ' + fmtNAD(baseResult.ebit.totalRevenue) + ' | Kosten: ' + fmtNAD(baseResult.ebit.totalCost) +
+        ' | Monat ' + currentMonth + '/' + currentYear;
+
+    // B. Three scenarios
+    // Conservative: P25 rain → -3% sales rate impact, -10% price, -5pp sales, +15% costs
+    const conservative = calcScenario({ priceMult: 0.9, salesRateAdj: -5, costMult: 1.15, rainEffect: -3 });
+    // Base: P50 rain, current everything
+    const base = baseResult;
+    // Optimistic: P75 rain → +2% sales rate impact, +10% price, +5pp sales, -5% costs
+    const optimistic = calcScenario({ priceMult: 1.1, salesRateAdj: 5, costMult: 0.95, rainEffect: 2 });
+
+    // Update scenario cards
+    document.getElementById('sc-con-ebit').textContent = fmtNAD(conservative.ebit.ebit);
+    document.getElementById('sc-con-bonus').textContent = 'Bonus: ' + fmtNAD(conservative.bonus.totalBonus);
+    document.getElementById('sc-base-ebit').textContent = fmtNAD(base.ebit.ebit);
+    document.getElementById('sc-base-bonus').textContent = 'Bonus: ' + fmtNAD(base.bonus.totalBonus);
+    document.getElementById('sc-opt-ebit').textContent = fmtNAD(optimistic.ebit.ebit);
+    document.getElementById('sc-opt-bonus').textContent = 'Bonus: ' + fmtNAD(optimistic.bonus.totalBonus);
+
+    // D. Bonus forecast cards
+    document.getElementById('bf-con').textContent = fmtNAD(conservative.bonus.totalBonus);
+    document.getElementById('bf-con-detail').textContent =
+        'EBIT-Anteil: ' + fmtNAD(conservative.bonus.ebitBonusWeighted) + ' | Prod.-Anteil: ' + fmtNAD(conservative.bonus.prodBonus);
+    document.getElementById('bf-base').textContent = fmtNAD(base.bonus.totalBonus);
+    document.getElementById('bf-base-detail').textContent =
+        'EBIT-Anteil: ' + fmtNAD(base.bonus.ebitBonusWeighted) + ' | Prod.-Anteil: ' + fmtNAD(base.bonus.prodBonus);
+    document.getElementById('bf-opt').textContent = fmtNAD(optimistic.bonus.totalBonus);
+    document.getElementById('bf-opt-detail').textContent =
+        'EBIT-Anteil: ' + fmtNAD(optimistic.bonus.ebitBonusWeighted) + ' | Prod.-Anteil: ' + fmtNAD(optimistic.bonus.prodBonus);
+
+    // Chart
+    renderChart(conservative, base, optimistic);
+
+    // Initial sensitivity
+    recalcSensitivityInternal();
+}
+
+// ── Chart ────────────────────────────────────────────────────────
+function renderChart(conservative, base, optimistic) {
+    const ctx = document.getElementById('scenarioChart').getContext('2d');
+
+    if (scenarioChart) scenarioChart.destroy();
+
+    scenarioChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Konservativ', 'Basis', 'Optimistisch'],
+            datasets: [
+                {
+                    label: 'EBIT (NAD)',
+                    data: [conservative.ebit.ebit, base.ebit.ebit, optimistic.ebit.ebit],
+                    backgroundColor: ['rgba(220, 38, 38, 0.7)', 'rgba(37, 99, 235, 0.7)', 'rgba(22, 163, 74, 0.7)'],
+                    borderColor: ['#dc2626', '#2563eb', '#16a34a'],
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    barPercentage: 0.5,
+                },
+                {
+                    label: 'Bonus (NAD)',
+                    data: [conservative.bonus.totalBonus, base.bonus.totalBonus, optimistic.bonus.totalBonus],
+                    backgroundColor: ['rgba(220, 38, 38, 0.3)', 'rgba(37, 99, 235, 0.3)', 'rgba(22, 163, 74, 0.3)'],
+                    borderColor: ['#dc2626', '#2563eb', '#16a34a'],
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderDash: [4, 4],
+                    barPercentage: 0.5,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': N$ ' + Math.round(ctx.raw).toLocaleString('de-DE');
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            if (Math.abs(value) >= 1000000) return 'N$ ' + (value / 1000000).toFixed(1) + 'M';
+                            if (Math.abs(value) >= 1000) return 'N$ ' + (value / 1000).toFixed(0) + 'k';
+                            return 'N$ ' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ── Sensitivity Analysis ────────────────────────────────────────
+function recalcSensitivityInternal() {
+    const rainPct = parseInt(document.getElementById('slider-rain').value);
+    const pricePct = parseInt(document.getElementById('slider-price').value);
+    const costPct = parseInt(document.getElementById('slider-cost').value);
+
+    document.getElementById('slider-rain-val').textContent = (rainPct >= 0 ? '+' : '') + rainPct + '%';
+    document.getElementById('slider-price-val').textContent = (pricePct >= 0 ? '+' : '') + pricePct + '%';
+    document.getElementById('slider-cost-val').textContent = (costPct >= 0 ? '+' : '') + costPct + '%';
+
+    // Rain % below normal → impact on stocking rate → sales rate adjustment
+    // Rough model: 10% less rain → 2pp less sales rate
+    const rainSalesImpact = rainPct * 0.2;
+
+    const result = calcScenario({
+        priceMult: 1 + (pricePct / 100),
+        salesRateAdj: rainSalesImpact,
+        costMult: 1 + (costPct / 100),
+        rainEffect: 0,
+    });
+
+    document.getElementById('sens-ebit').textContent = fmtNAD(result.ebit.ebit);
+    document.getElementById('sens-bonus').textContent = 'Prognostizierter Bonus: ' + fmtNAD(result.bonus.totalBonus);
+}
+
+// Expose to global scope for inline event handlers
+window.recalcSensitivity = recalcSensitivityInternal;
+
+// ── Init ─────────────────────────────────────────────────────────
+(async function init() {
+    const user = await checkAuth();
+    if (!user) return;
+
+    await loadBaseData();
+    renderAll();
+})();
+</script>
+
+</body>
+</html>
