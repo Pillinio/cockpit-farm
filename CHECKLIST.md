@@ -39,10 +39,10 @@ Stand: 2026-04-12 | Letzte Prüfung: manuell verifiziert gegen DB + Codebase
 - [x] herd_snapshots: 1 Test-Snapshot (April 2026, 631 GVE) ✓
 - [x] seasonal_forecasts: 14 (7 Monate × 2 Variablen) ✓
 - [x] alert_rules: 8 Regeln geseedet ✓
-- [ ] **carrying_capacity_assumptions: 0 — MUSS GESEEDET WERDEN** (LSU/ha für Erichsfelde)
-- [ ] **task_templates: 0 — MUSS GESEEDET WERDEN** (~10 wiederkehrende Aufgaben)
-- [ ] **farm_assets: 0 — MUSS GESEEDET WERDEN** (Bohrlöcher, Dämme, 20 Regenstationen)
-- [ ] bonus_parameters: 0 — Default-Bonus-Config als erster Eintrag
+- [x] carrying_capacity_assumptions: 3 (poor/normal/good) ✓
+- [x] task_templates: 10 (Impfungen, Inspektionen, Wartung) ✓
+- [x] farm_assets: 15 (10 Regenstationen, 3 Bohrlöcher, 2 Dämme) ✓
+- [x] bonus_parameters: 1 (Default-Config matching bonus-engine.js) ✓
 
 ## 3. EDGE FUNCTIONS (6 deployed)
 
@@ -180,11 +180,11 @@ Stand: 2026-04-12 | Letzte Prüfung: manuell verifiziert gegen DB + Codebase
 - [ ] **Carrying Capacity seeden** (ohne diesen Wert ist W1 Besatzdichte sinnlos)
 - [ ] **Task Templates seeden** (~10 Einträge: Impfungen, Entwurmung, Zaunkontrolle, etc.)
 - [ ] **Farm Assets seeden** (Bohrlöcher, Dämme, Regenstationen aus Data_Input)
-- [ ] **bonus-live-loader.js in HTML einbinden** (Script-Tag fehlt)
+- [x] bonus-live-loader.js in HTML eingebunden ✓
 - [ ] **Cloudflare Pages deployen** (wrangler login + deploy)
 
 ### Wichtig (Feature-Gaps)
-- [ ] **Markt-Tab fehlt** als eigenständige Seite (M1-M8 KPIs)
+- [x] Markt-Tab (app/markt.html) mit M1-M8 KPIs ✓
 - [ ] **LPO-Parser fehlt** (Meatco-Wochenpreise aus Mail)
 - [ ] **Compliance-Tracking C1-C4** (FMD, Brucellose, EU-Approval — Schema + UI)
 - [ ] **NDVI Sentinel-2** echte Implementierung (Copernicus-Registrierung)
