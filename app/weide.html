@@ -304,6 +304,118 @@
             border-top: 1px solid #e5e7eb;
         }
 
+        /* Forecast Section */
+        .forecast-summary {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .forecast-summary.outlook-green {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-color: #bbf7d0;
+        }
+
+        .forecast-summary.outlook-yellow {
+            background: linear-gradient(135deg, #fefce8, #fef9c3);
+            border-color: #fde68a;
+        }
+
+        .forecast-summary.outlook-red {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border-color: #fecaca;
+        }
+
+        .forecast-summary.outlook-gray {
+            background: #f8f9fa;
+        }
+
+        .forecast-summary-icon {
+            font-size: 2.5em;
+            line-height: 1;
+        }
+
+        .forecast-summary-main {
+            flex: 1;
+        }
+
+        .forecast-summary-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+
+        .forecast-summary-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .forecast-summary-sub {
+            font-size: 0.85em;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .forecast-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 0.9em;
+        }
+
+        .forecast-table th {
+            background: #f8f9fa;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .forecast-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #4b5563;
+        }
+
+        .forecast-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .outlook-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: white;
+        }
+
+        .outlook-badge.badge-green { background: #22c55e; }
+        .outlook-badge.badge-yellow { background: #eab308; }
+        .outlook-badge.badge-red { background: #ef4444; }
+
+        .temp-highlight {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .subsection-title {
+            font-size: 1.05em;
+            font-weight: 600;
+            color: #374151;
+            margin: 24px 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             body { padding: 10px; }
@@ -404,17 +516,63 @@
         <div class="no-data" id="rainfall-nodata" style="display:none;">Keine Niederschlagsdaten vorhanden.</div>
     </div>
 
-    <!-- Weather Placeholder (K1-K4) -->
+    <!-- K2: Saisonale Regenprognose -->
     <div class="section">
         <div class="section-title">
-            <span class="section-icon">&#x2600;&#xFE0F;</span>
-            Wetter &amp; Klima-KPIs (K1&ndash;K4)
+            <span class="section-icon">&#x1F327;&#xFE0F;</span>
+            Saisonale Regenprognose (K2)
         </div>
-        <div class="placeholder">
-            <div class="placeholder-icon">&#x1F6A7;</div>
-            Wetterdaten werden in Phase 3 automatisiert.<br>
-            Temperatur, Verdunstung, Windgeschwindigkeit und Klimaprognosen werden dann hier angezeigt.
+
+        <!-- Summary Card -->
+        <div class="forecast-summary outlook-gray" id="forecast-summary">
+            <div class="forecast-summary-icon">&#x1F327;&#xFE0F;</div>
+            <div class="forecast-summary-main">
+                <div class="forecast-summary-title">Regenprognose naechste 6 Monate</div>
+                <div class="forecast-summary-value" id="forecast-outlook-value"><span class="loading-spinner"></span></div>
+                <div class="forecast-summary-sub" id="forecast-outlook-sub">Wird geladen...</div>
+            </div>
         </div>
+
+        <!-- Monthly Forecast Chart -->
+        <div class="chart-container" id="forecast-chart-container" style="display:none;">
+            <canvas id="forecast-chart"></canvas>
+        </div>
+
+        <!-- Monthly Outlook Table (Rainfall) -->
+        <div class="subsection-title" id="rain-table-title" style="display:none;">
+            &#x1F4CA; Monatliche Regenprognose
+        </div>
+        <table class="forecast-table" id="rain-forecast-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Monat</th>
+                    <th>Median (mm)</th>
+                    <th>Normal (mm)</th>
+                    <th>Abweichung</th>
+                    <th>Bewertung</th>
+                </tr>
+            </thead>
+            <tbody id="rain-forecast-tbody"></tbody>
+        </table>
+
+        <!-- Temperature Section -->
+        <div class="subsection-title" id="temp-table-title" style="display:none;">
+            &#x1F321;&#xFE0F; Temperaturprognose
+        </div>
+        <table class="forecast-table" id="temp-forecast-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Monat</th>
+                    <th>Prognose (&deg;C)</th>
+                    <th>Normal (&deg;C)</th>
+                    <th>Abweichung</th>
+                    <th>Hitzestress</th>
+                </tr>
+            </thead>
+            <tbody id="temp-forecast-tbody"></tbody>
+        </table>
+
+        <div class="no-data" id="forecast-nodata" style="display:none;">Keine Prognosedaten vorhanden.</div>
     </div>
 
     <div class="footer">
@@ -642,6 +800,241 @@ async function loadRainfall() {
     }
 }
 
+// ── K2: Seasonal Forecast ───────────────────────────────────────
+let forecastChart = null;
+
+async function loadSeasonalForecast() {
+    try {
+        const { data: forecasts } = await supabase
+            .from('seasonal_forecasts')
+            .select('*')
+            .order('forecast_date', { ascending: false })
+            .limit(12);  // 6 months x 2 variables
+
+        const summaryEl = document.getElementById('forecast-summary');
+        const valueEl = document.getElementById('forecast-outlook-value');
+        const subEl = document.getElementById('forecast-outlook-sub');
+        const nodataEl = document.getElementById('forecast-nodata');
+
+        if (!forecasts?.length) {
+            valueEl.textContent = '\u2014';
+            subEl.textContent = 'Keine Prognosedaten';
+            nodataEl.style.display = 'block';
+            return;
+        }
+
+        // Group by latest forecast_date, then by variable
+        const latest = forecasts.filter(f => f.forecast_date === forecasts[0]?.forecast_date);
+        const rain = latest
+            .filter(f => f.variable === 'precipitation_mm')
+            .sort((a, b) => a.target_month.localeCompare(b.target_month));
+        const temp = latest
+            .filter(f => f.variable === 'temperature_c')
+            .sort((a, b) => a.target_month.localeCompare(b.target_month));
+
+        // ── Summary Card ──
+        const outlookMap = {
+            'well_above': { label: 'Deutlich ueber Normal', color: 'green', score: 2 },
+            'above':      { label: 'Ueber Normal',          color: 'green', score: 1 },
+            'normal':     { label: 'Normal',                 color: 'green', score: 0 },
+            'below':      { label: 'Unter Normal',           color: 'yellow', score: -1 },
+            'well_below': { label: 'Deutlich unter Normal',  color: 'red', score: -2 }
+        };
+
+        // Aggregate outlook: average score across rain months
+        let totalScore = 0;
+        rain.forEach(r => {
+            totalScore += (outlookMap[r.outlook]?.score || 0);
+        });
+        const avgScore = rain.length > 0 ? totalScore / rain.length : 0;
+
+        let aggColor, aggLabel;
+        if (avgScore >= 0) {
+            aggColor = 'green';
+            aggLabel = avgScore > 0.5 ? 'Ueber Normal' : 'Normal';
+        } else if (avgScore >= -1) {
+            aggColor = 'yellow';
+            aggLabel = 'Unter Normal';
+        } else {
+            aggColor = 'red';
+            aggLabel = 'Deutlich unter Normal';
+        }
+
+        // Calculate overall median vs climatology
+        const totalMedian = rain.reduce((s, r) => s + (r.p50 || 0), 0);
+        const totalClim = rain.reduce((s, r) => s + (r.climatology_mean || 0), 0);
+        const overallPct = totalClim > 0 ? Math.round(totalMedian / totalClim * 100) : 0;
+
+        summaryEl.classList.remove('outlook-gray', 'outlook-green', 'outlook-yellow', 'outlook-red');
+        summaryEl.classList.add('outlook-' + aggColor);
+        valueEl.textContent = aggLabel + ' (' + overallPct + ' %)';
+        valueEl.style.color = aggColor === 'green' ? '#16a34a' : aggColor === 'yellow' ? '#ca8a04' : '#dc2626';
+
+        const fDate = new Date(forecasts[0].forecast_date);
+        subEl.textContent = 'Letzte Aktualisierung: ' + fDate.toLocaleDateString('de-DE', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+
+        // ── Monthly Forecast Chart ──
+        if (rain.length > 0) {
+            document.getElementById('forecast-chart-container').style.display = 'block';
+
+            const monthNames = ['Jan','Feb','Maerz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+            const labels = rain.map(r => {
+                const d = new Date(r.target_month);
+                return monthNames[d.getMonth()] + ' ' + d.getFullYear();
+            });
+
+            // Floating bars: [bottom, top]
+            const p5_p95 = rain.map(r => [r.p5, r.p95]);
+            const p25_p75 = rain.map(r => [r.p25, r.p75]);
+            const medians = rain.map(r => r.p50);
+            const climatology = rain.map(r => r.climatology_mean);
+
+            if (forecastChart) forecastChart.destroy();
+
+            forecastChart = new Chart(document.getElementById('forecast-chart'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'P5\u2013P95 (volle Bandbreite)',
+                            data: p5_p95,
+                            backgroundColor: 'rgba(156, 163, 175, 0.25)',
+                            borderColor: 'rgba(156, 163, 175, 0.4)',
+                            borderWidth: 1,
+                            barPercentage: 0.7,
+                            categoryPercentage: 0.8,
+                            order: 3
+                        },
+                        {
+                            label: 'P25\u2013P75 (wahrscheinlich)',
+                            data: p25_p75,
+                            backgroundColor: 'rgba(46, 117, 182, 0.4)',
+                            borderColor: 'rgba(46, 117, 182, 0.7)',
+                            borderWidth: 1,
+                            barPercentage: 0.5,
+                            categoryPercentage: 0.8,
+                            order: 2
+                        },
+                        {
+                            label: 'Median (P50)',
+                            data: medians,
+                            type: 'line',
+                            borderColor: '#2E75B6',
+                            backgroundColor: '#2E75B6',
+                            pointRadius: 6,
+                            pointStyle: 'circle',
+                            borderWidth: 2,
+                            fill: false,
+                            order: 1
+                        },
+                        {
+                            label: 'Klimatologisches Mittel',
+                            data: climatology,
+                            type: 'line',
+                            borderColor: '#ef4444',
+                            backgroundColor: '#ef4444',
+                            borderDash: [6, 4],
+                            pointRadius: 3,
+                            pointStyle: 'dash',
+                            borderWidth: 2,
+                            fill: false,
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: {
+                            display: true,
+                            text: 'Saisonale Niederschlagsprognose (mm)'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const val = ctx.raw;
+                                    if (Array.isArray(val)) {
+                                        return ctx.dataset.label + ': ' + Math.round(val[0]) + '\u2013' + Math.round(val[1]) + ' mm';
+                                    }
+                                    return ctx.dataset.label + ': ' + Math.round(val) + ' mm';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'mm' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ── Rain Forecast Table ──
+        if (rain.length > 0) {
+            document.getElementById('rain-table-title').style.display = 'flex';
+            document.getElementById('rain-forecast-table').style.display = 'table';
+
+            const monthNames = ['Jan','Feb','Maerz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+            const tbody = document.getElementById('rain-forecast-tbody');
+            tbody.innerHTML = rain.map(r => {
+                const d = new Date(r.target_month);
+                const monthLabel = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+                const deviation = r.anomaly_pct != null ? (r.anomaly_pct >= 0 ? '+' : '') + Math.round(r.anomaly_pct) + ' %' : '\u2014';
+
+                const ol = outlookMap[r.outlook] || { label: r.outlook, color: 'green' };
+                const badgeClass = 'badge-' + ol.color;
+                const emoji = ol.color === 'green' ? '\uD83D\uDFE2' : ol.color === 'yellow' ? '\uD83D\uDFE1' : '\uD83D\uDD34';
+
+                return `<tr>
+                    <td>${escHtml(monthLabel)}</td>
+                    <td>${r.p50 != null ? Math.round(r.p50) : '\u2014'}</td>
+                    <td>${r.climatology_mean != null ? Math.round(r.climatology_mean) : '\u2014'}</td>
+                    <td>${deviation}</td>
+                    <td><span class="outlook-badge ${badgeClass}">${emoji} ${escHtml(ol.label)}</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ── Temperature Forecast Table ──
+        if (temp.length > 0) {
+            document.getElementById('temp-table-title').style.display = 'flex';
+            document.getElementById('temp-forecast-table').style.display = 'table';
+
+            const monthNames = ['Jan','Feb','Maerz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+            const tbody = document.getElementById('temp-forecast-tbody');
+            tbody.innerHTML = temp.map(r => {
+                const d = new Date(r.target_month);
+                const monthLabel = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+                const deviation = r.anomaly_pct != null ? (r.anomaly_pct >= 0 ? '+' : '') + r.anomaly_pct.toFixed(1) + ' %' : '\u2014';
+                const isHeatStress = r.p50 != null && r.p50 > 35;
+
+                return `<tr>
+                    <td>${escHtml(monthLabel)}</td>
+                    <td>${r.p50 != null ? r.p50.toFixed(1) : '\u2014'}</td>
+                    <td>${r.climatology_mean != null ? r.climatology_mean.toFixed(1) : '\u2014'}</td>
+                    <td>${deviation}</td>
+                    <td>${isHeatStress
+                        ? '<span class="temp-highlight">\u26A0\uFE0F Hitzestress-Risiko</span>'
+                        : '<span style="color:#22c55e;">\u2714 OK</span>'}</td>
+                </tr>`;
+            }).join('');
+        }
+
+    } catch (err) {
+        console.error('Forecast load error:', err);
+        document.getElementById('forecast-outlook-value').textContent = '\u2014';
+        document.getElementById('forecast-outlook-sub').textContent = 'Fehler beim Laden der Prognose';
+        document.getElementById('forecast-nodata').style.display = 'block';
+    }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 function escHtml(str) {
     const d = document.createElement('div');
@@ -656,7 +1049,8 @@ async function loadAll() {
     await Promise.allSettled([
         loadStockingRate(),
         loadCamps(),
-        loadRainfall()
+        loadRainfall(),
+        loadSeasonalForecast()
     ]);
 
     const now = new Date();

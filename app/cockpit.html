@@ -611,18 +611,28 @@ async function loadF4() {
     } catch { noData('f4'); }
 }
 
-// K2 — Seasonal rainfall forecast
+// K2 — Seasonal rainfall forecast (from seasonal_forecasts table)
 async function loadK2() {
     try {
-        const { data } = await supabase
-            .from('climate_forecasts')
-            .select('forecast_pct_of_normal')
+        const { data: forecasts } = await supabase
+            .from('seasonal_forecasts')
+            .select('forecast_date, target_month, variable, p50, climatology_mean, anomaly_pct, outlook')
             .order('forecast_date', { ascending: false })
-            .limit(1);
+            .limit(12);  // 6 months x 2 variables
 
-        if (!data?.length) return noData('k2');
+        if (!forecasts?.length) return noData('k2');
 
-        const pct = Math.round(data[0].forecast_pct_of_normal);
+        // Filter to latest forecast date, rain only
+        const latest = forecasts.filter(f => f.forecast_date === forecasts[0].forecast_date);
+        const rain = latest.filter(f => f.variable === 'precipitation_mm');
+
+        if (!rain.length) return noData('k2');
+
+        // Calculate aggregate: total median vs total climatology
+        const totalMedian = rain.reduce((s, r) => s + (r.p50 || 0), 0);
+        const totalClim = rain.reduce((s, r) => s + (r.climatology_mean || 0), 0);
+        const pct = totalClim > 0 ? Math.round(totalMedian / totalClim * 100) : 0;
+
         const status = pct >= 90 ? 'green' : pct >= 70 ? 'yellow' : 'red';
 
         setCard('k2', {
