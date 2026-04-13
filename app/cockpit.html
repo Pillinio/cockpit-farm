@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../favicon.ico">
     <title>Cockpit - Farm Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -433,11 +434,11 @@ renderNav('cockpit');
 // ── Supabase Client ──────────────────────────────────────────────
 const SUPABASE_URL = 'https://vhwlcnfxslkftswksqrw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ── Auth Guard ───────────────────────────────────────────────────
 async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (!session) {
         window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname);
         return null;
@@ -478,13 +479,13 @@ function noData(id, subtitle) {
 // F1 — Cash Runway (months)
 async function loadF1() {
     try {
-        const { data: balRows } = await supabase
+        const { data: balRows } = await sb
             .from('account_balances')
             .select('balance_nad')
             .order('balance_date', { ascending: false })
             .limit(1);
 
-        const { data: costs } = await supabase
+        const { data: costs } = await sb
             .from('budgets')
             .select('actual_nad')
             .eq('fiscal_year', new Date().getFullYear())
@@ -512,7 +513,7 @@ async function loadF1() {
 // F2 — Budget deviation (max category %)
 async function loadF2() {
     try {
-        const { data } = await supabase
+        const { data } = await sb
             .from('budgets')
             .select('category, planned_nad, actual_nad')
             .eq('fiscal_year', new Date().getFullYear());
@@ -549,16 +550,19 @@ async function loadF2() {
 // H4 — Net herd growth
 async function loadH4() {
     try {
-        const { data } = await supabase
+        const { data } = await sb
             .from('herd_snapshots')
-            .select('snapshot_date, total_head')
+            .select('snapshot_date, cows, bulls, heifers, calves, oxen')
             .order('snapshot_date', { ascending: false })
             .limit(2);
 
         if (!data || data.length < 2) return noData('h4');
 
-        const diff = data[0].total_head - data[1].total_head;
-        const pct = Math.round(diff / data[1].total_head * 1000) / 10;
+        const totalHead = r => (r.cows||0) + (r.bulls||0) + (r.heifers||0) + (r.calves||0) + (r.oxen||0);
+        const head0 = totalHead(data[0]);
+        const head1 = totalHead(data[1]);
+        const diff = head0 - head1;
+        const pct = head1 > 0 ? Math.round(diff / head1 * 1000) / 10 : 0;
         const status = diff > 0 ? 'green' : diff === 0 ? 'yellow' : 'red';
         const sign = diff > 0 ? '+' : '';
 
@@ -573,25 +577,28 @@ async function loadH4() {
 // W1 — Stocking rate vs capacity
 async function loadW1() {
     try {
-        const { data: snap } = await supabase
+        const { data: snap } = await sb
             .from('herd_snapshots')
             .select('total_lsu')
             .order('snapshot_date', { ascending: false })
             .limit(1);
 
-        const { data: camps } = await supabase
+        const { data: camps } = await sb
             .from('farm_camps')
-            .select('area_ha, carrying_capacity_ha_per_lsu');
+            .select('area_ha');
 
-        if (!snap?.length || !camps?.length) return noData('w1');
+        const { data: capRows } = await sb
+            .from('carrying_capacity_assumptions')
+            .select('lsu_per_ha')
+            .order('effective_from', { ascending: false })
+            .limit(1);
+
+        if (!snap?.length || !camps?.length || !capRows?.length) return noData('w1');
 
         const totalLSU = snap[0].total_lsu;
-        const totalCapacity = camps.reduce((s, c) => {
-            if (c.carrying_capacity_ha_per_lsu > 0) {
-                return s + c.area_ha / c.carrying_capacity_ha_per_lsu;
-            }
-            return s;
-        }, 0);
+        const lsuPerHa = capRows[0].lsu_per_ha;
+        const totalArea = camps.reduce((s, c) => s + (c.area_ha || 0), 0);
+        const totalCapacity = totalArea * lsuPerHa;
 
         if (totalCapacity <= 0) return noData('w1', 'Kapazitaet unbekannt');
 
@@ -609,25 +616,25 @@ async function loadW1() {
 // F4 — Cost per kg sold
 async function loadF4() {
     try {
-        const { data: sales } = await supabase
-            .from('sales')
-            .select('weight_kg, revenue_nad')
-            .gte('sale_date', new Date().getFullYear() + '-01-01');
+        const { data: reports } = await sb
+            .from('slaughter_reports')
+            .select('total_cold_mass_kg, total_gross_nad, total_net_nad, report_date')
+            .gte('report_date', new Date().getFullYear() + '-01-01');
 
-        const { data: costs } = await supabase
+        const { data: costs } = await sb
             .from('budgets')
             .select('actual_nad')
             .eq('fiscal_year', new Date().getFullYear());
 
-        if (!sales?.length || !costs?.length) return noData('f4');
+        if (!reports?.length || !costs?.length) return noData('f4');
 
-        const totalKg = sales.reduce((s, r) => s + (r.weight_kg || 0), 0);
+        const totalKg = reports.reduce((s, r) => s + (r.total_cold_mass_kg || 0), 0);
         const totalCost = costs.reduce((s, r) => s + (r.actual_nad || 0), 0);
 
         if (totalKg <= 0) return noData('f4', 'Keine Verkaufsmengen');
 
         const costPerKg = Math.round(totalCost / totalKg * 100) / 100;
-        const revenuePerKg = sales.reduce((s, r) => s + (r.revenue_nad || 0), 0) / totalKg;
+        const revenuePerKg = reports.reduce((s, r) => s + (r.total_net_nad || 0), 0) / totalKg;
         const profitable = revenuePerKg > costPerKg;
         const status = profitable ? 'green' : 'red';
 
@@ -642,7 +649,7 @@ async function loadF4() {
 // K2 — Seasonal rainfall forecast (from seasonal_forecasts table)
 async function loadK2() {
     try {
-        const { data: forecasts } = await supabase
+        const { data: forecasts } = await sb
             .from('seasonal_forecasts')
             .select('forecast_date, target_month, variable, p50, climatology_mean, anomaly_pct, outlook')
             .order('forecast_date', { ascending: false })
@@ -671,18 +678,18 @@ async function loadK2() {
     } catch { noData('k2'); }
 }
 
-// O2 — Open tickets > 30 days
+// O2 — Open incidents > 30 days
 async function loadO2() {
     try {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
 
-        const { data, count } = await supabase
-            .from('tickets')
+        const { data, count } = await sb
+            .from('incidents')
             .select('id', { count: 'exact', head: true })
-            .eq('status', 'open')
-            .lte('created_at', cutoff);
+            .is('resolution', null)
+            .lte('incident_date', cutoff);
 
         if (count === null || count === undefined) return noData('o2');
 
@@ -699,7 +706,7 @@ async function loadO2() {
 // C1 — Days until nearest cert expiry (from compliance_certificates)
 async function loadC1() {
     try {
-        const { data } = await supabase
+        const { data } = await sb
             .from('compliance_certificates')
             .select('cert_type, cert_number, expiry_date, status')
             .not('expiry_date', 'is', null)
@@ -738,7 +745,7 @@ async function loadK3() {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - 90);
 
-        const { data } = await supabase
+        const { data } = await sb
             .from('weather_observations')
             .select('observation_date, rainfall_mm')
             .gte('observation_date', cutoff.toISOString().split('T')[0])
@@ -772,7 +779,7 @@ async function loadK4() {
         const in14 = new Date();
         in14.setDate(in14.getDate() + 14);
 
-        const { data } = await supabase
+        const { data } = await sb
             .from('weather_observations')
             .select('observation_date, temperature_max_c')
             .eq('source', 'open-meteo-forecast')

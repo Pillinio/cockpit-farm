@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../favicon.ico">
     <title>Markt - Farm Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -448,11 +449,11 @@ renderNav('markt');
 // ── Supabase Client ──────────────────────────────────────────────
 const SUPABASE_URL = 'https://vhwlcnfxslkftswksqrw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ── Auth Guard ───────────────────────────────────────────────────
 async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (!session) {
         window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname);
         return null;
@@ -495,7 +496,7 @@ function noData(id, subtitle) {
 // ── M1 — Rindfleischpreis NAD/kg ────────────────────────────────
 async function loadM1() {
     try {
-        const { data } = await supabase
+        const { data } = await sb
             .from('market_prices')
             .select('commodity, price_date, price_nad')
             .like('commodity', 'beef_%')
@@ -559,7 +560,7 @@ async function loadM1() {
 async function loadM2() {
     try {
         // Latest beef price
-        const { data: priceData } = await supabase
+        const { data: priceData } = await sb
             .from('market_prices')
             .select('price_nad')
             .like('commodity', 'beef_%')
@@ -567,24 +568,24 @@ async function loadM2() {
             .limit(1);
 
         // Costs from budgets
-        const { data: costs } = await supabase
+        const { data: costs } = await sb
             .from('budgets')
             .select('actual_nad')
             .eq('fiscal_year', new Date().getFullYear());
 
-        // Total kg sold
-        const { data: sales } = await supabase
-            .from('sales')
-            .select('weight_kg')
-            .gte('sale_date', new Date().getFullYear() + '-01-01');
+        // Total kg sold (from slaughter_reports)
+        const { data: slaughterData } = await sb
+            .from('slaughter_reports')
+            .select('total_cold_mass_kg')
+            .gte('report_date', new Date().getFullYear() + '-01-01');
 
         if (!priceData?.length) return noData('m2', 'Kein Marktpreis');
 
         const pricePerKg = priceData[0].price_nad;
 
         // Calculate cost per kg if possible
-        if (sales?.length && costs?.length) {
-            const totalKg = sales.reduce((s, r) => s + (r.weight_kg || 0), 0);
+        if (slaughterData?.length && costs?.length) {
+            const totalKg = slaughterData.reduce((s, r) => s + (r.total_cold_mass_kg || 0), 0);
             const totalCost = costs.reduce((s, r) => s + (r.actual_nad || 0), 0);
 
             if (totalKg > 0) {
@@ -613,7 +614,7 @@ async function loadM2() {
 async function loadM3() {
     try {
         // Try market_prices for feed/fuel commodities
-        const { data } = await supabase
+        const { data } = await sb
             .from('market_prices')
             .select('commodity, price_date, price_nad')
             .or('commodity.like.maize%,commodity.like.lick%,commodity.like.diesel%,commodity.like.feed%,commodity.like.fuel%')
@@ -622,7 +623,7 @@ async function loadM3() {
 
         if (!data?.length) {
             // Fallback: try budgets for feed/fuel categories
-            const { data: budgets } = await supabase
+            const { data: budgets } = await sb
                 .from('budgets')
                 .select('category, month, actual_nad')
                 .eq('fiscal_year', new Date().getFullYear())
@@ -685,7 +686,7 @@ async function loadM4() {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
 
-        const { data } = await supabase
+        const { data } = await sb
             .from('market_prices')
             .select('commodity, price_date, price_nad')
             .like('commodity', 'fx_%')
@@ -757,10 +758,10 @@ async function loadM5() {
         oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
         const cutoff = oneYearAgo.toISOString().split('T')[0];
 
-        const { data } = await supabase
+        const { data } = await sb
             .from('slaughter_line_items')
-            .select('grade, cold_mass_kg, slaughter_reports!inner(slaughter_date)')
-            .gte('slaughter_reports.slaughter_date', cutoff);
+            .select('grade, cold_mass_kg, slaughter_reports!inner(report_date)')
+            .gte('slaughter_reports.report_date', cutoff);
 
         if (!data?.length) return noData('m5', 'Keine Schlachtdaten');
 
@@ -834,7 +835,7 @@ async function loadM5() {
 // ── M6 — Condemnation Rate ──────────────────────────────────────
 async function loadM6() {
     try {
-        const { data } = await supabase
+        const { data } = await sb
             .from('slaughter_line_items')
             .select('cold_mass_kg, condemnation_deduction_nad');
 
@@ -863,28 +864,23 @@ async function loadM6() {
 // ── M7 — Shortages (Placeholder) ────────────────────────────────
 async function loadM7() {
     try {
-        // Try to compare announced vs actual from slaughter_reports
-        const { data } = await supabase
+        // Show total animals from slaughter_reports
+        const { data } = await sb
             .from('slaughter_reports')
-            .select('announced_head, actual_head')
-            .order('slaughter_date', { ascending: false })
+            .select('total_animals')
+            .order('report_date', { ascending: false })
             .limit(20);
 
-        if (!data?.length || !data[0].announced_head) {
+        if (!data?.length || !data[0].total_animals) {
             return noData('m7', 'Daten nicht verfuegbar');
         }
 
-        const totalAnnounced = data.reduce((s, r) => s + (r.announced_head || 0), 0);
-        const totalActual = data.reduce((s, r) => s + (r.actual_head || 0), 0);
-        const shortage = totalAnnounced - totalActual;
-        const pct = totalAnnounced > 0 ? Math.round(shortage / totalAnnounced * 100) : 0;
-
-        const status = pct <= 2 ? 'green' : pct <= 10 ? 'yellow' : 'red';
+        const totalAnimals = data.reduce((s, r) => s + (r.total_animals || 0), 0);
 
         setCard('m7', {
-            value: shortage + ' Tiere',
-            subtitle: pct + '% Differenz (' + totalAnnounced + ' vs. ' + totalActual + ')',
-            status
+            value: totalAnimals + ' Tiere',
+            subtitle: 'Letzte ' + data.length + ' Berichte',
+            status: 'green'
         });
     } catch { noData('m7', 'Daten nicht verfuegbar'); }
 }

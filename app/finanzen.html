@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../favicon.ico">
     <title>Finanzen - Farm Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -678,7 +679,7 @@ async function loadF4() {
     try {
         const { data: items } = await sb
             .from('slaughter_line_items')
-            .select('cold_mass_kg, slaughter_date');
+            .select('cold_mass_kg, slaughter_reports!inner(report_date)');
 
         const { data: costs } = await sb
             .from('budgets')

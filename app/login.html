@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../favicon.ico">
     <title>Login - Farm Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -201,7 +202,7 @@
 <script>
 const SUPABASE_URL = 'https://vhwlcnfxslkftswksqrw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Determine redirect target
 const params = new URLSearchParams(window.location.search);
@@ -209,14 +210,14 @@ const redirectTo = params.get('redirect') || 'cockpit.html';
 
 // If already logged in, redirect immediately
 (async function() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (session) {
         window.location.href = redirectTo;
     }
 })();
 
 // Listen for auth state changes (handles magic link callback)
-supabase.auth.onAuthStateChange((event, session) => {
+sb.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) {
         window.location.href = redirectTo;
     }
@@ -241,7 +242,7 @@ form.addEventListener('submit', async (e) => {
     messageEl.style.display = 'none';
 
     try {
-        const { error } = await supabase.auth.signInWithOtp({
+        const { error } = await sb.auth.signInWithOtp({
             email,
             options: {
                 emailRedirectTo: window.location.origin + '/app/' + redirectTo,

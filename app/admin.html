@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../favicon.ico">
     <title>Admin - Farm Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -332,7 +333,6 @@
             <table id="users-table">
                 <thead>
                     <tr>
-                        <th>E-Mail</th>
                         <th>Name</th>
                         <th>Rolle</th>
                         <th style="width:120px">Aktionen</th>
@@ -548,7 +548,7 @@ async function saveBonusParams() {
 // ══════════════════════════════════════════════════════════════════
 async function loadCarryingCapacity() {
     const { data } = await sb
-        .from('carrying_capacity')
+        .from('carrying_capacity_assumptions')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1);
@@ -566,7 +566,7 @@ async function saveCarryingCapacity() {
         created_at: new Date().toISOString(),
     };
 
-    const { error } = await sb.from('carrying_capacity').insert(payload);
+    const { error } = await sb.from('carrying_capacity_assumptions').insert(payload);
     if (error) return showStatus('Fehler: ' + error.message, 'error');
     showStatus('Tragfaehigkeit gespeichert.');
 }
@@ -762,8 +762,8 @@ function populateCategoryDropdowns() {
 async function loadUsers() {
     const { data, error } = await sb
         .from('profiles')
-        .select('id, email, display_name, role')
-        .order('email');
+        .select('id, display_name, role')
+        .order('display_name');
 
     if (error) return showStatus('Fehler: ' + error.message, 'error');
 
@@ -773,7 +773,6 @@ async function loadUsers() {
     (data || []).forEach(row => {
         tbody.innerHTML += `
             <tr data-user-id="${row.id}">
-                <td>${escapeHtml(row.email || '')}</td>
                 <td>${escapeHtml(row.display_name || '-')}</td>
                 <td>
                     <select class="user-role" onchange="updateRole('${row.id}', this.value)">

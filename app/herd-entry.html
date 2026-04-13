@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" href="../favicon.ico">
     <title>Monatsmeldung - Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -664,7 +665,7 @@
 // ═══════════════════════════════════════
 const SUPABASE_URL = 'https://vhwlcnfxslkftswksqrw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // State
 let currentUser = null;
@@ -680,7 +681,7 @@ let isSubmitting = false;
 // Auth
 // ═══════════════════════════════════════
 async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (session) {
         currentUser = session.user;
         showForm();
@@ -697,7 +698,7 @@ async function sendMagicLink() {
         msgEl.textContent = 'Bitte E-Mail-Adresse eingeben.';
         return;
     }
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await sb.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: window.location.href }
     });
@@ -711,7 +712,7 @@ async function sendMagicLink() {
 }
 
 async function logout() {
-    await supabase.auth.signOut();
+    await sb.auth.signOut();
     currentUser = null;
     document.getElementById('formScreen').classList.add('hidden');
     document.getElementById('successScreen').classList.add('hidden');
@@ -720,7 +721,7 @@ async function logout() {
 }
 
 // Listen for auth state changes (magic link redirect)
-supabase.auth.onAuthStateChange((event, session) => {
+sb.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) {
         currentUser = session.user;
         showForm();
@@ -752,7 +753,7 @@ async function showForm() {
 
 async function loadCamps() {
     const container = document.getElementById('campList');
-    const { data, error } = await supabase.from('farm_camps').select('id, name').order('name');
+    const { data, error } = await sb.from('farm_camps').select('id, name').order('name');
     if (error || !data || data.length === 0) {
         container.innerHTML = '<div class="text-muted">Keine Camps gefunden.</div>';
         return;
@@ -775,7 +776,7 @@ async function loadCamps() {
 
 async function loadAssets() {
     const container = document.getElementById('assetList');
-    const { data, error } = await supabase
+    const { data, error } = await sb
         .from('farm_assets')
         .select('id, name, asset_type')
         .in('asset_type', ['borehole', 'dam'])
@@ -805,7 +806,7 @@ async function loadAssets() {
 
 async function loadTasks() {
     const container = document.getElementById('taskList');
-    const { data, error } = await supabase.from('task_templates').select('id, name, description, target_count').order('name');
+    const { data, error } = await sb.from('task_templates').select('id, name, description, target_scope').order('name');
     if (error || !data || data.length === 0) {
         container.innerHTML = '<div class="text-muted">Keine Aufgabenvorlagen gefunden.</div>';
         return;
@@ -818,11 +819,9 @@ async function loadTasks() {
                 <div class="task-name">${esc(t.name)}</div>
                 ${t.description ? `<div class="task-meta">${esc(t.description)}</div>` : ''}
             </div>
-            ${t.target_count ? `
             <div class="task-counts">
-                <input type="number" id="task_count_${i}" min="0" value="0" inputmode="numeric">
-                <span>/ ${t.target_count}</span>
-            </div>` : ''}
+                <input type="number" id="task_count_${i}" min="0" value="0" inputmode="numeric" placeholder="Anzahl">
+            </div>
         </div>
     `).join('');
 }
@@ -917,7 +916,7 @@ async function uploadPhotos(snapshotDate) {
         if (!photoFiles[i]) continue;
         const ext = photoFiles[i].name.split('.').pop();
         const path = `herd-photos/${snapshotDate}/${Date.now()}_${i}.${ext}`;
-        const { error } = await supabase.storage.from('farm-uploads').upload(path, photoFiles[i]);
+        const { error } = await sb.storage.from('farm-uploads').upload(path, photoFiles[i]);
         if (!error) {
             urls.push({ path, label: photoLabels[i] || '' });
         }
@@ -1038,7 +1037,7 @@ async function submitForm() {
         const photoRefs = await uploadPhotos(snapshotDate);
 
         // 1. Insert herd_snapshot
-        const { data: snapshot, error: snapErr } = await supabase.from('herd_snapshots').insert({
+        const { data: snapshot, error: snapErr } = await sb.from('herd_snapshots').insert({
             snapshot_date: snapshotDate,
             cows, bulls, heifers, calves, oxen,
             births,
@@ -1056,7 +1055,7 @@ async function submitForm() {
         for (let i = 0; i < camps.length; i++) {
             const scoreEl = document.getElementById('camp_score_' + i);
             if (!scoreEl || !scoreEl.value) continue;
-            const { error } = await supabase.from('veld_observations').insert({
+            const { error } = await sb.from('veld_observations').insert({
                 snapshot_date: snapshotDate,
                 camp_name: camps[i].name,
                 condition_score: parseInt(scoreEl.value)
@@ -1070,7 +1069,7 @@ async function submitForm() {
             const statusEl = document.getElementById('asset_status_' + i);
             const metricEl = document.getElementById('asset_metric_' + i);
             if (!statusEl || !statusEl.value) continue;
-            const { error } = await supabase.from('asset_status_reports').insert({
+            const { error } = await sb.from('asset_status_reports').insert({
                 snapshot_date: snapshotDate,
                 asset_id: assets[i].id,
                 status: statusEl.value,
@@ -1085,7 +1084,7 @@ async function submitForm() {
             const doneEl = document.getElementById('task_done_' + i);
             if (!doneEl || !doneEl.checked) continue;
             const countEl = document.getElementById('task_count_' + i);
-            const { error } = await supabase.from('task_executions').insert({
+            const { error } = await sb.from('task_executions').insert({
                 snapshot_date: snapshotDate,
                 task_template_id: tasks[i].id,
                 completed: true,
@@ -1099,7 +1098,7 @@ async function submitForm() {
         const incidentCards = document.querySelectorAll('.incident-card');
         for (const card of incidentCards) {
             const idx = card.id.split('_')[1];
-            const { error } = await supabase.from('incidents').insert({
+            const { error } = await sb.from('incidents').insert({
                 snapshot_date: snapshotDate,
                 incident_type: val('inc_type_' + idx),
                 severity: val('inc_severity_' + idx),

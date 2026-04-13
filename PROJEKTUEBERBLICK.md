@@ -74,7 +74,7 @@ Bleibt erhalten und funktioniert wie bisher. Am Ende des Projekts wird er automa
 | 4 | Betriebsmodul, automatische Alerts, Quartalsberichte | danach |
 | 5 | Bonus-Integration mit echten Daten | zum Schluss |
 
-Geschätzter Gesamtaufwand: **~130 Stunden** (6-10 Wochen bei 10-15 h/Woche).
+Keine Kosten - PR baut das gesamte System. Zeitrahmen 1-2 Wochen ggf. schneller
 
 ## Wert ab wann?
 

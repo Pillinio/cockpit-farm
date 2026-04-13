@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../favicon.ico">
     <title>Weide &amp; Klima - Farm Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -865,11 +866,11 @@ renderNav('weide');
 // ── Supabase Client ──────────────────────────────────────────────
 const SUPABASE_URL = 'https://vhwlcnfxslkftswksqrw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ── Auth Guard ───────────────────────────────────────────────────
 async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (!session) {
         window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname);
         return null;
@@ -880,15 +881,21 @@ async function checkAuth() {
 // ── W1: Stocking Rate ───────────────────────────────────────────
 async function loadStockingRate() {
     try {
-        const { data: snap } = await supabase
+        const { data: snap } = await sb
             .from('herd_snapshots')
             .select('total_lsu')
             .order('snapshot_date', { ascending: false })
             .limit(1);
 
-        const { data: camps } = await supabase
+        const { data: camps } = await sb
             .from('farm_camps')
-            .select('area_ha, carrying_capacity_ha_per_lsu');
+            .select('area_ha');
+
+        const { data: capAssump } = await sb
+            .from('carrying_capacity_assumptions')
+            .select('lsu_per_ha')
+            .order('effective_from', { ascending: false })
+            .limit(1);
 
         const lsuEl = document.getElementById('kpi-lsu');
         const capEl = document.getElementById('kpi-capacity');
@@ -908,11 +915,9 @@ async function loadStockingRate() {
             return;
         }
 
+        const lsuPerHa = capAssump?.[0]?.lsu_per_ha || 0.07;
         const totalCapacity = camps.reduce((s, c) => {
-            if (c.carrying_capacity_ha_per_lsu > 0) {
-                return s + c.area_ha / c.carrying_capacity_ha_per_lsu;
-            }
-            return s;
+            return s + (c.area_ha || 0) * lsuPerHa;
         }, 0);
 
         capEl.textContent = Math.round(totalCapacity) + ' GVE';
@@ -942,10 +947,18 @@ async function loadStockingRate() {
 async function loadCamps() {
     const grid = document.getElementById('camp-grid');
     try {
-        const { data: camps } = await supabase
+        const { data: camps } = await sb
             .from('farm_camps')
-            .select('id, name, area_ha, carrying_capacity_ha_per_lsu')
+            .select('id, name, area_ha')
             .order('name');
+
+        const { data: capAssump } = await sb
+            .from('carrying_capacity_assumptions')
+            .select('lsu_per_ha')
+            .order('effective_from', { ascending: false })
+            .limit(1);
+
+        const lsuPerHa = capAssump?.[0]?.lsu_per_ha || 0.07;
 
         if (!camps?.length) {
             grid.innerHTML = '<div class="no-data">Keine Camps gefunden.</div>';
@@ -953,31 +966,31 @@ async function loadCamps() {
         }
 
         // Get latest veld observation per camp
-        const { data: obs } = await supabase
+        const { data: obs } = await sb
             .from('veld_observations')
-            .select('camp_id, condition_score, observed_at')
-            .order('observed_at', { ascending: false });
+            .select('camp_name, condition_score, snapshot_date')
+            .order('snapshot_date', { ascending: false });
 
-        // Build a map: camp_id -> latest observation
+        // Build a map: camp_name -> latest observation
         const latestObs = {};
         if (obs) {
             obs.forEach(o => {
-                if (!latestObs[o.camp_id]) {
-                    latestObs[o.camp_id] = o;
+                if (!latestObs[o.camp_name]) {
+                    latestObs[o.camp_name] = o;
                 }
             });
         }
 
         grid.innerHTML = camps.map(c => {
-            const ob = latestObs[c.id];
+            const ob = latestObs[c.name];
             const score = ob ? ob.condition_score : null;
             const condClass = score ? 'condition-' + Math.min(5, Math.max(1, score)) : '';
             const condLabel = score
                 ? 'Zustand: ' + score + '/5'
                 : 'Keine Bewertung';
 
-            const capLSU = c.carrying_capacity_ha_per_lsu > 0
-                ? Math.round(c.area_ha / c.carrying_capacity_ha_per_lsu)
+            const capLSU = lsuPerHa > 0
+                ? Math.round((c.area_ha || 0) * lsuPerHa)
                 : '\u2014';
 
             return `
@@ -999,11 +1012,11 @@ let rainfallChart = null;
 
 async function loadRainfall() {
     try {
-        const { data } = await supabase
+        const { data } = await sb
             .from('weather_observations')
-            .select('station_name, observed_date, rainfall_mm')
+            .select('station_name, observation_date, rainfall_mm')
             .not('rainfall_mm', 'is', null)
-            .order('observed_date', { ascending: true });
+            .order('observation_date', { ascending: true });
 
         const noDataEl = document.getElementById('rainfall-nodata');
         const canvas = document.getElementById('rainfall-chart');
@@ -1022,7 +1035,7 @@ async function loadRainfall() {
         const allMonths = new Set();
 
         data.forEach(r => {
-            const month = r.observed_date.substring(0, 7); // YYYY-MM
+            const month = r.observation_date.substring(0, 7); // YYYY-MM
             allMonths.add(month);
             const key = r.station_name || 'Unbekannt';
             if (!stationMonths[key]) stationMonths[key] = {};
@@ -1081,7 +1094,7 @@ let forecastChart = null;
 
 async function loadSeasonalForecast() {
     try {
-        const { data: forecasts } = await supabase
+        const { data: forecasts } = await sb
             .from('seasonal_forecasts')
             .select('*')
             .order('forecast_date', { ascending: false })
@@ -1342,7 +1355,7 @@ async function loadMap() {
         }
 
         // Load GeoJSON from RPC function
-        const { data: geojsonData, error } = await supabase.rpc('get_camps_geojson');
+        const { data: geojsonData, error } = await sb.rpc('get_camps_geojson');
 
         if (error) {
             console.error('Map GeoJSON error:', error);
@@ -1356,7 +1369,7 @@ async function loadMap() {
         }
 
         // Load latest veld observations
-        const { data: veld } = await supabase
+        const { data: veld } = await sb
             .from('veld_observations')
             .select('camp_name, condition_score, snapshot_date')
             .order('snapshot_date', { ascending: false });
@@ -1469,7 +1482,7 @@ async function loadK3() {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - 90);
 
-        const { data } = await supabase
+        const { data } = await sb
             .from('weather_observations')
             .select('observation_date, rainfall_mm')
             .gte('observation_date', cutoff.toISOString().split('T')[0])
@@ -1536,7 +1549,7 @@ async function loadK4() {
         const in14 = new Date();
         in14.setDate(in14.getDate() + 14);
 
-        const { data } = await supabase
+        const { data } = await sb
             .from('weather_observations')
             .select('observation_date, temperature_max_c')
             .eq('source', 'open-meteo-forecast')
@@ -1590,20 +1603,20 @@ async function loadW1Detail() {
 
     try {
         // Farm total LSU
-        const { data: snapshot } = await supabase
+        const { data: snapshot } = await sb
             .from('herd_snapshots')
             .select('total_lsu')
             .order('snapshot_date', { ascending: false })
             .limit(1);
 
         // Active camps (exclude boundary)
-        const { data: camps } = await supabase
+        const { data: camps } = await sb
             .from('farm_camps')
-            .select('id, name, area_ha, carrying_capacity_ha_per_lsu')
+            .select('id, name, area_ha')
             .eq('active', true);
 
         // Carrying capacity assumption (fallback)
-        const { data: capacity } = await supabase
+        const { data: capacity } = await sb
             .from('carrying_capacity_assumptions')
             .select('lsu_per_ha')
             .order('effective_from', { ascending: false })
@@ -1615,9 +1628,6 @@ async function loadW1Detail() {
         // Calculate total capacity from camp-level data
         const totalArea = (camps || []).reduce((s, c) => s + (c.area_ha || 0), 0);
         const totalCapacity = (camps || []).reduce((s, c) => {
-            if (c.carrying_capacity_ha_per_lsu > 0) {
-                return s + c.area_ha / c.carrying_capacity_ha_per_lsu;
-            }
             return s + (c.area_ha || 0) * defaultLsuPerHa;
         }, 0);
 
@@ -1637,7 +1647,7 @@ async function loadW1Detail() {
             + (utilizationPct <= 80 ? 'Nachhaltig' : utilizationPct <= 100 ? 'Grenzbereich' : 'Ueberbesetzt');
 
         // Per-camp assignments
-        const { data: assignments } = await supabase
+        const { data: assignments } = await sb
             .from('herd_camp_assignments')
             .select('camp_id, estimated_animals, snapshot_id, herd_snapshots(snapshot_date)')
             .order('created_at', { ascending: false });
@@ -1663,9 +1673,7 @@ async function loadW1Detail() {
             const camp = campMap[a.camp_id];
             if (!camp) return null;
 
-            const campCapacity = camp.carrying_capacity_ha_per_lsu > 0
-                ? camp.area_ha / camp.carrying_capacity_ha_per_lsu
-                : (camp.area_ha || 0) * defaultLsuPerHa;
+            const campCapacity = (camp.area_ha || 0) * defaultLsuPerHa;
 
             // Rough LSU estimate: assume ~0.7 LSU per animal (mixed herd)
             const estimatedLSU = (a.estimated_animals || 0) * 0.7;

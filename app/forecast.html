@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../favicon.ico">
     <title>Prognose - Farm Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -407,26 +408,27 @@ function fmtNAD(n) {
 
 // ── Load baseline data from Supabase ────────────────────────────
 async function loadBaseData() {
-    // Herd size
+    // Herd size (no total_head column; sum individual categories)
     const { data: herdSnap } = await sb
         .from('herd_snapshots')
-        .select('total_head, total_lsu')
+        .select('cows, bulls, heifers, calves, oxen, total_lsu')
         .order('snapshot_date', { ascending: false })
         .limit(1);
 
     if (herdSnap?.length) {
-        baseData.herdSize = herdSnap[0].total_head || 0;
+        const h = herdSnap[0];
+        baseData.herdSize = (h.cows || 0) + (h.bulls || 0) + (h.heifers || 0) + (h.calves || 0) + (h.oxen || 0);
     }
 
-    // Sales data (YTD) for price and volume
-    const { data: sales } = await sb
-        .from('sales')
-        .select('weight_kg, revenue_nad')
-        .gte('sale_date', currentYear + '-01-01');
+    // Sales data (YTD) from slaughter_reports for price and volume
+    const { data: slaughterReps } = await sb
+        .from('slaughter_reports')
+        .select('total_cold_mass_kg, total_net_nad, report_date')
+        .gte('report_date', currentYear + '-01-01');
 
-    if (sales?.length) {
-        baseData.totalSlaughterKg = sales.reduce((s, r) => s + (r.weight_kg || 0), 0);
-        const totalRevenue = sales.reduce((s, r) => s + (r.revenue_nad || 0), 0);
+    if (slaughterReps?.length) {
+        baseData.totalSlaughterKg = slaughterReps.reduce((s, r) => s + (r.total_cold_mass_kg || 0), 0);
+        const totalRevenue = slaughterReps.reduce((s, r) => s + (r.total_net_nad || 0), 0);
         baseData.actualRevenueYTD = totalRevenue;
         if (baseData.totalSlaughterKg > 0) {
             baseData.pricePerKg = totalRevenue / baseData.totalSlaughterKg;

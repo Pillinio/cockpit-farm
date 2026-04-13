@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../favicon.ico">
     <title>Operativ - Farm Erichsfelde</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -583,11 +584,11 @@ renderNav('operativ');
 // ── Supabase Client ──────────────────────────────────────────────
 const SUPABASE_URL = 'https://vhwlcnfxslkftswksqrw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ── Auth Guard ───────────────────────────────────────────────────
 async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (!session) {
         window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname);
         return null;
@@ -615,7 +616,7 @@ async function loadTaskCoverage() {
     const barEl = document.getElementById('kpi-coverage-bar');
 
     try {
-        const { data: templates } = await supabase
+        const { data: templates } = await sb
             .from('task_templates')
             .select('id, name, frequency')
             .order('name');
@@ -627,10 +628,10 @@ async function loadTaskCoverage() {
         }
 
         // Get all task executions
-        const { data: executions } = await supabase
+        const { data: executions } = await sb
             .from('task_executions')
-            .select('template_id, executed_at, status')
-            .order('executed_at', { ascending: false });
+            .select('template_id, executed_date, covered_count, target_count')
+            .order('executed_date', { ascending: false });
 
         // Build coverage per template
         const now = new Date();
@@ -639,12 +640,12 @@ async function loadTaskCoverage() {
 
         const items = templates.map(t => {
             const tExecs = (executions || []).filter(e => e.template_id === t.id);
-            const completed = tExecs.filter(e => e.status === 'done' || e.status === 'completed').length;
-            const total = tExecs.length || 1;
-            const pct = Math.round(completed / total * 100);
+            const totalCovered = tExecs.reduce((sum, e) => sum + (e.covered_count || 0), 0);
+            const totalTarget = tExecs.reduce((sum, e) => sum + (e.target_count || 1), 0) || 1;
+            const pct = Math.round(totalCovered / totalTarget * 100);
 
-            totalDone += completed;
-            totalExpected += total;
+            totalDone += totalCovered;
+            totalExpected += totalTarget;
 
             const color = pct >= 80 ? '#22c55e' : pct >= 50 ? '#eab308' : '#ef4444';
 
@@ -685,18 +686,18 @@ async function loadOpenMaintenance() {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
 
-        // Tickets older than 30 days
-        const { count: oldCount } = await supabase
+        // Tickets older than 30 days (open = resolution is null)
+        const { count: oldCount } = await sb
             .from('incidents')
             .select('id', { count: 'exact', head: true })
-            .in('status', ['open', 'pending'])
-            .lte('reported_at', cutoff);
+            .is('resolution', null)
+            .lte('incident_date', cutoff);
 
-        // All open tickets
-        const { count: totalCount } = await supabase
+        // All open tickets (resolution is null)
+        const { count: totalCount } = await sb
             .from('incidents')
             .select('id', { count: 'exact', head: true })
-            .in('status', ['open', 'pending']);
+            .is('resolution', null);
 
         const old = oldCount ?? 0;
         const total = totalCount ?? 0;
@@ -719,10 +720,10 @@ async function loadIncidents() {
     const tbody = document.getElementById('incident-tbody');
 
     try {
-        const { data } = await supabase
+        const { data } = await sb
             .from('incidents')
-            .select('reported_at, description, severity, status')
-            .order('reported_at', { ascending: false })
+            .select('incident_date, description, severity, resolution')
+            .order('incident_date', { ascending: false })
             .limit(20);
 
         if (!data?.length) {
@@ -739,16 +740,11 @@ async function loadIncidents() {
                 critical: 'Kritisch'
             }[r.severity] || r.severity || 'Unbekannt';
 
-            const statusLabel = {
-                open: 'Offen',
-                pending: 'In Bearbeitung',
-                resolved: 'Geloest',
-                closed: 'Geschlossen'
-            }[r.status] || r.status || '\u2014';
+            const statusLabel = r.resolution ? 'Geloest' : 'Offen';
 
             return `
                 <tr>
-                    <td>${formatDate(r.reported_at)}</td>
+                    <td>${formatDate(r.incident_date)}</td>
                     <td>${escHtml(r.description)}</td>
                     <td><span class="severity-badge ${sevClass}">${sevLabel}</span></td>
                     <td>${statusLabel}</td>
@@ -765,7 +761,7 @@ async function loadAssets() {
     const grid = document.getElementById('asset-grid');
 
     try {
-        const { data: assets } = await supabase
+        const { data: assets } = await sb
             .from('farm_assets')
             .select('id, name, asset_type')
             .order('name');
@@ -776,10 +772,10 @@ async function loadAssets() {
         }
 
         // Get latest status report per asset
-        const { data: reports } = await supabase
+        const { data: reports } = await sb
             .from('asset_status_reports')
-            .select('asset_id, status, reported_at')
-            .order('reported_at', { ascending: false });
+            .select('asset_id, status, report_date')
+            .order('report_date', { ascending: false });
 
         const latestStatus = {};
         if (reports) {
@@ -823,7 +819,7 @@ async function loadCompliance() {
     const container = document.getElementById('compliance-cards');
 
     try {
-        const { data: certs } = await supabase
+        const { data: certs } = await sb
             .from('compliance_certificates')
             .select('*')
             .order('expiry_date', { ascending: true });
