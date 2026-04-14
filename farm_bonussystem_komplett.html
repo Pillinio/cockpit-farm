@@ -64,6 +64,34 @@
             opacity: 0.9;
         }
 
+        /* Navigation (shared nav) */
+        .nav {
+            display: flex;
+            gap: 0;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            overflow-x: auto;
+        }
+        .nav a {
+            padding: 12px 24px;
+            text-decoration: none;
+            color: #6b7280;
+            font-size: 0.9em;
+            font-weight: 500;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .nav a:hover {
+            color: #374151;
+            background: #f0f0f0;
+        }
+        .nav a.active {
+            color: #2E75B6;
+            border-bottom-color: #2E75B6;
+            font-weight: 600;
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -77,7 +105,7 @@
                 font-size: 1.8em;
             }
         }
-        
+
         .tabs {
             display: flex;
             background: #f8f9fa;
@@ -568,7 +596,10 @@
             <img src="namibia-flag.png" alt="Namibia Flag" class="header-logo">
             <button class="admin-toggle" id="adminToggle" onclick="toggleAdminMode()">🔒 Admin-Modus</button>
         </div>
-        
+
+        <!-- Shared Navigation -->
+        <div id="main-nav"></div>
+
         <div class="tabs">
             <button class="tab active" onclick="switchTab('ebit')">📊 EBIT Berechnung</button>
             <button class="tab" onclick="switchTab('bonus')">💰 Bonusberechnung</button>
@@ -2400,6 +2431,25 @@
           initLiveDefaults('https://vhwlcnfxslkftswksqrw.supabase.co', 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd');
         }, 500); // Delay to let existing localStorage init run first
       });
+
+      // Render shared navigation (paths adjusted for root location)
+      const NAV_ITEMS = [
+        { key: 'cockpit',  label: 'Cockpit',      href: 'app/cockpit.html' },
+        { key: 'finanzen', label: 'Finanzen',      href: 'app/finanzen.html' },
+        { key: 'herde',    label: 'Herde',         href: 'app/herde.html' },
+        { key: 'weide',    label: 'Weide & Klima', href: 'app/weide.html' },
+        { key: 'markt',    label: 'Markt',         href: 'app/markt.html' },
+        { key: 'operativ', label: 'Operativ',      href: 'app/operativ.html' },
+        { key: 'bonus',    label: 'Bonus',         href: 'farm_bonussystem_komplett.html' },
+        { key: 'forecast', label: 'Prognose',      href: 'app/forecast.html' },
+        { key: 'admin',    label: 'Admin',         href: 'app/admin.html' },
+      ];
+      const links = NAV_ITEMS.map(item => {
+        const cls = item.key === 'bonus' ? ' class="active"' : '';
+        return `<a href="${item.href}"${cls}>${item.label}</a>`;
+      }).join('');
+      const target = document.getElementById('main-nav');
+      if (target) target.outerHTML = `<nav class="nav">${links}</nav>`;
     </script>
 </body>
 </html>

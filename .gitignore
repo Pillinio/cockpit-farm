@@ -64,3 +64,6 @@ supabase/.temp/
 .playwright-mcp/
 *.png
 .playwright-mcp/
+
+# Generated satellite data
+app/data/

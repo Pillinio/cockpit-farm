@@ -207,6 +207,12 @@
             margin-top: 2px;
         }
 
+        .card-source {
+            font-size: 0.75em;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
         .card-status-dot {
             display: inline-block;
             width: 10px;
@@ -498,7 +504,7 @@ async function loadM1() {
     try {
         const { data } = await sb
             .from('market_prices')
-            .select('commodity, price_date, price_nad')
+            .select('commodity, price_date, price_nad, source')
             .like('commodity', 'beef_%')
             .order('price_date', { ascending: true });
 
@@ -516,9 +522,12 @@ async function loadM1() {
         const latestPrice = latest.price_nad;
         const gradeName = latest.commodity.replace('beef_', '').toUpperCase();
 
+        const sources = [...new Set(data.map(r => r.source).filter(Boolean))];
+        const sourceStr = sources.length ? ' | Quelle: ' + sources.join(', ') : '';
+
         setCard('m1', {
             value: 'N$ ' + latestPrice.toFixed(2),
-            subtitle: gradeName + ' aktuell',
+            subtitle: gradeName + ' aktuell' + sourceStr,
             status: 'green'
         });
 
@@ -714,7 +723,7 @@ async function loadM4() {
 
         setCard('m4', {
             value: latestValues.join(' | '),
-            subtitle: 'NAD-Wechselkurse aktuell',
+            subtitle: 'NAD-Wechselkurse aktuell | Quelle: Frankfurter/ECB',
             status: 'green'
         });
 

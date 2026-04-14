@@ -331,7 +331,7 @@
                     <span class="card-status-dot status-gray"></span>
                 </div>
                 <div class="card-value" data-kpi="w1"><span class="loading-spinner"></span></div>
-                <div class="card-subtitle">GVE vs. Kapazitaet</div>
+                <div class="card-subtitle">LSU vs. Kapazitaet</div>
             </div>
         </a>
 
@@ -607,7 +607,7 @@ async function loadW1() {
 
         setCard('w1', {
             value: ratio + ' %',
-            subtitle: Math.round(totalLSU) + ' GVE / ' + Math.round(totalCapacity) + ' Kap.',
+            subtitle: Math.round(totalLSU) + ' LSU / ' + Math.round(totalCapacity) + ' Kap.',
             status
         });
     } catch { noData('w1'); }

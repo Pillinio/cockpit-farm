@@ -177,6 +177,8 @@
             <button onclick="showSection('carrying')">Tragfaehigkeit</button>
             <button onclick="showSection('rules')">Kategorisierung</button>
             <button onclick="showSection('uncat')">Unkategorisiert</button>
+            <button onclick="showSection('market')">Marktpreise</button>
+            <button onclick="showSection('bank')">Kontoauszug</button>
             <button onclick="showSection('users')">Benutzer</button>
         </div>
 
@@ -325,7 +327,111 @@
             </table>
         </div>
 
-        <!-- F. User-Verwaltung -->
+        <!-- F. Marktpreise manuell erfassen -->
+        <div id="section-market" class="section">
+            <div class="section-header">
+                <h2>Marktpreise manuell erfassen</h2>
+            </div>
+            <p style="color:#6b7280; font-size:0.9em; margin-bottom:16px;">
+                Hier koennen Auktionspreise, Meatco-Preise oder andere Marktdaten manuell eingegeben werden.
+                Automatisierte Quellen: FX-Kurse (taeglich), LPO-Preise (via Parser).
+            </p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Datum</label>
+                    <input type="date" id="mp-date">
+                </div>
+                <div class="form-group">
+                    <label>Kategorie</label>
+                    <select id="mp-category">
+                        <option value="">-- Waehlen --</option>
+                        <optgroup label="Auktionspreise">
+                            <option value="auction_weaner_bull">Absetzer Bulle</option>
+                            <option value="auction_weaner_heifer">Absetzer Faerse</option>
+                            <option value="auction_cow_calf">Kuh + Kalb</option>
+                            <option value="auction_toll_ox">Toll-Ochse</option>
+                            <option value="auction_old_cow">Altkuh</option>
+                        </optgroup>
+                        <optgroup label="Meatco-Preise">
+                            <option value="beef_meatco_A2">Meatco A2</option>
+                            <option value="beef_meatco_B2">Meatco B2</option>
+                            <option value="beef_meatco_C2">Meatco C2</option>
+                        </optgroup>
+                        <optgroup label="Sonstige">
+                            <option value="custom">Benutzerdefiniert...</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row" id="mp-custom-row" style="display:none;">
+                <div class="form-group">
+                    <label>Benutzerdefinierter Commodity-Name</label>
+                    <input type="text" id="mp-custom-commodity" placeholder="z.B. hay_bale">
+                </div>
+                <div class="form-group">
+                    <label>Einheit</label>
+                    <input type="text" id="mp-custom-unit" placeholder="z.B. per_kg, per_head, per_bale">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Preis (NAD)</label>
+                    <input type="number" id="mp-price" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Quelle</label>
+                    <input type="text" id="mp-source" placeholder="z.B. WHKLA Auktion, Meatco, Agri-Depot">
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="saveMarketPrice()">Preis speichern</button>
+
+            <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+            <div class="section-header">
+                <h2>Letzte Eintraege</h2>
+                <button class="btn btn-secondary btn-sm" onclick="loadRecentPrices()">Aktualisieren</button>
+            </div>
+            <table id="market-recent-table">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Commodity</th>
+                        <th>Preis (NAD)</th>
+                        <th>Quelle</th>
+                        <th>Aktion</th>
+                    </tr>
+                </thead>
+                <tbody id="market-recent-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- G. Kontoauszug-Zuordnung -->
+        <div id="section-bank" class="section">
+            <div class="section-header">
+                <h2>Kontoauszug-Zuordnung</h2>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleBankFilter()">Nur offene</button>
+                    <button class="btn btn-primary btn-sm" onclick="loadBankTransactions()">Aktualisieren</button>
+                </div>
+            </div>
+            <p style="color:#6b7280; font-size:0.9em; margin-bottom:12px;">
+                <span id="bank-stats"></span>
+            </p>
+            <table id="bank-table" style="font-size:0.85em;">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Beschreibung</th>
+                        <th style="text-align:right">Betrag (NAD)</th>
+                        <th style="width:220px">Kategorie</th>
+                        <th style="width:80px">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="bank-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- H. User-Verwaltung -->
         <div id="section-users" class="section">
             <div class="section-header">
                 <h2>Benutzer-Verwaltung</h2>
@@ -808,6 +914,216 @@ async function inviteUser() {
     document.getElementById('invite-email').value = '';
 }
 
+// ══════════════════════════════════════════════════════════════════
+// F. MARKTPREISE
+// ══════════════════════════════════════════════════════════════════
+
+// Toggle custom commodity field
+document.getElementById('mp-category')?.addEventListener('change', function() {
+    document.getElementById('mp-custom-row').style.display = this.value === 'custom' ? 'grid' : 'none';
+});
+
+async function saveMarketPrice() {
+    const dateVal = document.getElementById('mp-date').value;
+    const category = document.getElementById('mp-category').value;
+    const price = parseFloat(document.getElementById('mp-price').value);
+    const source = document.getElementById('mp-source').value.trim();
+
+    if (!dateVal || !category || isNaN(price)) {
+        return showStatus('Bitte Datum, Kategorie und Preis angeben.', 'error');
+    }
+
+    let commodity = category;
+    let unit = 'per_kg';
+
+    if (category === 'custom') {
+        commodity = document.getElementById('mp-custom-commodity').value.trim();
+        unit = document.getElementById('mp-custom-unit').value.trim() || 'per_unit';
+        if (!commodity) return showStatus('Bitte Commodity-Name angeben.', 'error');
+    } else if (category.startsWith('auction_')) {
+        unit = 'per_head';
+    }
+
+    const { error } = await sb
+        .from('market_prices')
+        .upsert({
+            price_date: dateVal,
+            commodity: commodity,
+            price_nad: price,
+            unit: unit,
+            source: source || 'manual'
+        }, { onConflict: 'price_date,commodity' });
+
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+
+    showStatus('Marktpreis gespeichert.');
+    document.getElementById('mp-price').value = '';
+    loadRecentPrices();
+}
+
+async function loadRecentPrices() {
+    const { data, error } = await sb
+        .from('market_prices')
+        .select('id, price_date, commodity, price_nad, unit, source')
+        .order('price_date', { ascending: false })
+        .limit(20);
+
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+
+    const tbody = document.getElementById('market-recent-tbody');
+    tbody.innerHTML = (data || []).map(r => {
+        const dateStr = new Date(r.price_date).toLocaleDateString('de-DE');
+        return `<tr>
+            <td>${dateStr}</td>
+            <td>${escapeHtml(r.commodity)}</td>
+            <td>N$ ${r.price_nad.toLocaleString('de-DE', {minimumFractionDigits: 2})}</td>
+            <td>${escapeHtml(r.source || '-')}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteMarketPrice('${r.id}')">Loeschen</button></td>
+        </tr>`;
+    }).join('');
+}
+
+async function deleteMarketPrice(id) {
+    if (!confirm('Preis wirklich loeschen?')) return;
+    const { error } = await sb.from('market_prices').delete().eq('id', id);
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    showStatus('Preis geloescht.');
+    loadRecentPrices();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// G. KONTOAUSZUG-ZUORDNUNG
+// ══════════════════════════════════════════════════════════════════
+const BUDGET_CATEGORIES = [
+    'Ammunition', 'Auditors Remuneration', 'Bank Charges', 'Bookkeeping Fees',
+    'Bullen einkaufen', 'Bush Clearing / Eradication', 'Consumables & Small Tools',
+    'Electricity & Water', 'Farm Management Equipment', 'Fodder & Lick',
+    'Fuel, Gas & Oil (Bulk)', 'Household Farm & Gaeste', 'Insurance', 'Land Tax',
+    'Livestock - Cattle Purchase', 'Membership Fees & Permits', 'Rations / Store',
+    'Repair Building', 'Repair Fence', 'Repair Machine & Plant',
+    'Repairs Water Installation', 'Rep. & Maint. Vehicles',
+    'Salaries Farm Workers & Welfare', 'Salaries Jacobi Family', 'Security Costs',
+    'Small Tools', 'Social Security', 'Staff Training & Consulting', 'Transport',
+    'Unexpected', 'Veterinary Expenses', 'Einnahme', 'Transfer (intern)', 'Darlehen/Loan'
+];
+
+let bankShowOnlyOpen = true;
+
+function toggleBankFilter() {
+    bankShowOnlyOpen = !bankShowOnlyOpen;
+    loadBankTransactions();
+}
+
+async function loadBankTransactions() {
+    let query = sb.from('bank_transactions')
+        .select('id, transaction_date, description, debit_nad, credit_nad, category, category_confirmed')
+        .order('category_confirmed', { ascending: true })
+        .order('transaction_date', { ascending: false });
+
+    if (bankShowOnlyOpen) {
+        query = query.eq('category_confirmed', false);
+    }
+
+    const { data, error } = await query.limit(200);
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+
+    const total = data?.length || 0;
+    const open = (data || []).filter(r => !r.category_confirmed).length;
+    document.getElementById('bank-stats').textContent =
+        bankShowOnlyOpen
+            ? open + ' offene Zuordnungen'
+            : total + ' Buchungen angezeigt, ' + open + ' offen';
+
+    const catOptions = BUDGET_CATEGORIES.map(c =>
+        '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'
+    ).join('');
+
+    const tbody = document.getElementById('bank-tbody');
+    tbody.innerHTML = (data || []).map(r => {
+        const dateStr = r.transaction_date || '';
+        const amount = r.debit_nad
+            ? '-' + Number(r.debit_nad).toLocaleString('de-DE', {minimumFractionDigits: 2})
+            : '+' + Number(r.credit_nad).toLocaleString('de-DE', {minimumFractionDigits: 2});
+        const amountColor = r.debit_nad ? 'color:#dc2626' : 'color:#16a34a';
+        const confirmed = r.category_confirmed;
+        const statusBadge = confirmed
+            ? '<span style="color:#22c55e;font-weight:600;">OK</span>'
+            : '<span style="color:#ef4444;font-weight:600;">Offen</span>';
+
+        const selectedCat = r.category || '';
+
+        return '<tr style="' + (confirmed ? '' : 'background:#fef9c3;') + '">'
+            + '<td>' + dateStr + '</td>'
+            + '<td>' + escapeHtml(r.description) + '</td>'
+            + '<td style="text-align:right;' + amountColor + '">' + amount + '</td>'
+            + '<td><select onchange="assignCategory(\'' + r.id + '\', this.value)" style="width:100%;padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9em;">'
+            + '<option value="">-- Zuordnen --</option>'
+            + catOptions.replace('value="' + escapeHtml(selectedCat) + '"', 'value="' + escapeHtml(selectedCat) + '" selected')
+            + '</select></td>'
+            + '<td style="text-align:center;">' + statusBadge + '</td>'
+            + '</tr>';
+    }).join('');
+}
+
+async function assignCategory(txId, category) {
+    if (!category) return;
+
+    // Update the transaction
+    const { error } = await sb.from('bank_transactions')
+        .update({ category: category, category_confirmed: true })
+        .eq('id', txId);
+
+    if (error) return showStatus('Fehler: ' + error.message, 'error');
+
+    // Get the transaction description for rule creation
+    const { data: tx } = await sb.from('bank_transactions')
+        .select('description')
+        .eq('id', txId)
+        .single();
+
+    if (tx) {
+        // Extract a keyword from description for the rule (first meaningful word)
+        const desc = tx.description.trim();
+        const keyword = desc.split(/\s+/)[0];
+
+        // Check if a rule already exists for this keyword
+        const { data: existingRule } = await sb.from('category_rules')
+            .select('id')
+            .eq('pattern', keyword)
+            .limit(1);
+
+        if (!existingRule?.length && keyword.length > 2) {
+            // Auto-create a contains rule
+            await sb.from('category_rules').insert({
+                pattern: keyword,
+                type: 'contains',
+                category_name: category,
+                confidence: 0.8,
+            });
+            showStatus('Zugeordnet + Regel "' + keyword + '" → ' + category + ' erstellt.');
+
+            // Apply this rule to other unconfirmed transactions with same keyword
+            const { data: similar } = await sb.from('bank_transactions')
+                .select('id')
+                .ilike('description', '%' + keyword + '%')
+                .eq('category_confirmed', false);
+
+            if (similar?.length > 0) {
+                for (const s of similar) {
+                    await sb.from('bank_transactions')
+                        .update({ category: category, category_confirmed: true })
+                        .eq('id', s.id);
+                }
+                showStatus('Zugeordnet + ' + similar.length + ' gleiche Buchungen automatisch aktualisiert.');
+            }
+        } else {
+            showStatus('Zugeordnet.');
+        }
+    }
+
+    loadBankTransactions();
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 function escapeHtml(str) {
     const div = document.createElement('div');
@@ -825,10 +1141,12 @@ function escapeHtml(str) {
         loadBonusParams(),
         loadCarryingCapacity(),
         loadCategoryRules(),
+        loadRecentPrices(),
     ]);
 
     // Load uncategorized after categories are known
     await loadUncategorized();
+    await loadBankTransactions();
     await loadUsers();
 })();
 </script>

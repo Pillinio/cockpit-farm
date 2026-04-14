@@ -187,15 +187,28 @@
                 required
                 autocomplete="email"
             >
+            <label class="form-label" for="password" style="margin-top:12px;">Passwort</label>
+            <input
+                type="password"
+                id="password"
+                class="form-input"
+                placeholder="Passwort eingeben"
+                autocomplete="current-password"
+            >
             <button type="submit" class="submit-btn" id="submit-btn">
-                Magic Link senden
+                Anmelden
             </button>
+            <div style="text-align:center; margin-top:8px;">
+                <a href="#" id="magic-link-toggle" style="color:#6b7280; font-size:0.85em; text-decoration:underline; cursor:pointer;">
+                    Stattdessen Magic Link per E-Mail senden
+                </a>
+            </div>
         </form>
         <div class="message" id="message"></div>
     </div>
 
     <div class="footer-note">
-        Ein Login-Link wird an Ihre E-Mail gesendet. Kein Passwort noetig.
+        Passwort oder Magic Link verwenden.
     </div>
 </div>
 
@@ -204,72 +217,93 @@ const SUPABASE_URL = 'https://vhwlcnfxslkftswksqrw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Determine redirect target
 const params = new URLSearchParams(window.location.search);
 const redirectTo = params.get('redirect') || 'cockpit.html';
 
-// If already logged in, redirect immediately
+// Already logged in? Redirect.
 (async function() {
     const { data: { session } } = await sb.auth.getSession();
-    if (session) {
-        window.location.href = redirectTo;
-    }
+    if (session) window.location.href = redirectTo;
 })();
 
-// Listen for auth state changes (handles magic link callback)
+// Magic link callback handler
 sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-        window.location.href = redirectTo;
-    }
+    if (event === 'SIGNED_IN' && session) window.location.href = redirectTo;
 });
 
-// Handle form submission
 const form = document.getElementById('login-form');
 const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
 const submitBtn = document.getElementById('submit-btn');
 const messageEl = document.getElementById('message');
+const magicToggle = document.getElementById('magic-link-toggle');
 
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const email = emailInput.value.trim();
+    const password = passwordInput.value;
     if (!email) return;
 
-    // Disable button, show loading
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="loading-spinner"></span> Wird gesendet...';
+    submitBtn.innerHTML = '<span class="loading-spinner"></span> Anmelden...';
     messageEl.className = 'message';
     messageEl.style.display = 'none';
 
     try {
-        const { error } = await sb.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo: window.location.origin + '/app/' + redirectTo,
-            },
-        });
-
-        if (error) {
-            messageEl.className = 'message error';
-            if (error.message.includes('rate')) {
-                messageEl.textContent = 'Zu viele Versuche. Bitte warten Sie einige Minuten.';
-            } else if (error.message.includes('invalid') || error.message.includes('Invalid')) {
-                messageEl.textContent = 'Ungueltige E-Mail-Adresse. Bitte pruefen Sie Ihre Eingabe.';
-            } else {
-                messageEl.textContent = 'Fehler: ' + error.message;
+        if (password) {
+            // ── Password Login ──
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) {
+                showError(error.message.includes('Invalid login')
+                    ? 'Falsche E-Mail oder Passwort.'
+                    : 'Fehler: ' + error.message);
+            } else if (data?.session) {
+                window.location.href = redirectTo;
+                return; // don't re-enable button
             }
         } else {
-            messageEl.className = 'message success';
-            messageEl.textContent = 'Login-Link wurde an ' + email + ' gesendet. Bitte pruefen Sie Ihr Postfach (auch Spam-Ordner).';
-            emailInput.value = '';
+            // ── Magic Link ──
+            const { error } = await sb.auth.signInWithOtp({
+                email,
+                options: { emailRedirectTo: window.location.origin + '/app/' + redirectTo },
+            });
+            if (error) {
+                showError(error.message.includes('rate')
+                    ? 'Zu viele Versuche. Bitte einige Minuten warten.'
+                    : 'Fehler: ' + error.message);
+            } else {
+                messageEl.className = 'message success';
+                messageEl.textContent = 'Login-Link an ' + email + ' gesendet. Postfach pruefen.';
+                messageEl.style.display = 'block';
+            }
         }
     } catch (err) {
-        messageEl.className = 'message error';
-        messageEl.textContent = 'Verbindungsfehler. Bitte versuchen Sie es erneut.';
+        showError('Verbindungsfehler. Bitte erneut versuchen.');
     }
 
     submitBtn.disabled = false;
-    submitBtn.innerHTML = 'Magic Link senden';
+    submitBtn.textContent = 'Anmelden';
+});
+
+function showError(msg) {
+    messageEl.className = 'message error';
+    messageEl.textContent = msg;
+    messageEl.style.display = 'block';
+}
+
+// Toggle: show magic link hint when clicked
+magicToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    passwordInput.value = '';
+    passwordInput.placeholder = 'Leer lassen fuer Magic Link';
+    emailInput.focus();
+    messageEl.className = 'message';
+    messageEl.textContent = 'Passwort leer lassen und Anmelden klicken — ein Login-Link wird per E-Mail gesendet.';
+    messageEl.style.display = 'block';
+    messageEl.style.background = '#f0f9ff';
+    messageEl.style.color = '#1e40af';
+    messageEl.style.border = '1px solid #bfdbfe';
 });
 </script>
 

@@ -577,6 +577,38 @@
             opacity: 0.7;
         }
 
+        /* Fullscreen map */
+        #farm-map-wrapper.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: white;
+        }
+        #farm-map-wrapper.fullscreen #farm-map {
+            height: 100vh !important;
+            border-radius: 0 !important;
+        }
+        #farm-map-wrapper.fullscreen .fullscreen-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 10000;
+            background: white;
+            border: 2px solid #374151;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        #farm-map-wrapper.fullscreen .fullscreen-close:hover {
+            background: #f1f5f9;
+        }
+
         .map-legend {
             display: flex;
             flex-wrap: wrap;
@@ -637,6 +669,23 @@
 
             .map-legend { gap: 8px; }
         }
+        .source-badges {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 0 0;
+        }
+
+        .source-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 0.75em;
+            color: #475569;
+        }
     </style>
 </head>
 <body>
@@ -667,11 +716,17 @@
             Farmkarte &mdash; Camps &amp; Weidezustand
         </div>
         <div class="map-controls">
-            <button class="btn" onclick="toggleNDVI()" disabled title="NDVI-Daten werden in Kuerze verfuegbar">
-                &#x1F6F0;&#xFE0F; NDVI Overlay (bald verfuegbar)
+            <button class="btn" id="ndvi-btn" onclick="toggleNDVI()" title="NDVI Vegetationsindex ein-/ausblenden">
+                &#x1F6F0;&#xFE0F; NDVI Overlay
             </button>
+            <button class="btn" id="fullscreen-btn" onclick="toggleFullscreen()" title="Karte im Vollbild anzeigen">
+                &#x26F6; Vollbild
+            </button>
+            <span id="ndvi-meta" style="font-size:0.8em; color:#6b7280; margin-left:8px;"></span>
         </div>
-        <div id="farm-map" style="height: 500px; border-radius: 8px;"></div>
+        <div id="farm-map-wrapper">
+            <div id="farm-map" style="height: 500px; border-radius: 8px;"></div>
+        </div>
         <div id="map-legend" class="map-legend"></div>
     </div>
 
@@ -683,7 +738,7 @@
         </div>
         <div class="kpi-row" id="stocking-kpis">
             <div class="kpi-card">
-                <div class="kpi-label">Aktuelle GVE</div>
+                <div class="kpi-label">Aktuelle LSU</div>
                 <div class="kpi-value" id="kpi-lsu"><span class="loading-spinner"></span></div>
                 <div class="kpi-sub">Letzer Herdensnapshot</div>
             </div>
@@ -695,7 +750,7 @@
             <div class="kpi-card">
                 <div class="kpi-label">Auslastung</div>
                 <div class="kpi-value" id="kpi-ratio"><span class="loading-spinner"></span></div>
-                <div class="kpi-sub" id="kpi-ratio-sub">GVE / Kapazitaet</div>
+                <div class="kpi-sub" id="kpi-ratio-sub">LSU / Kapazitaet</div>
                 <div class="kpi-status-bar status-gray" id="kpi-ratio-bar"></div>
             </div>
         </div>
@@ -721,6 +776,7 @@
         <div class="chart-container">
             <canvas id="rainfall-chart"></canvas>
         </div>
+        <div class="source-badges" id="rainfall-sources" style="display:none;"></div>
         <div class="no-data" id="rainfall-nodata" style="display:none;">Keine Niederschlagsdaten vorhanden.</div>
     </div>
 
@@ -887,9 +943,11 @@ async function loadStockingRate() {
             .order('snapshot_date', { ascending: false })
             .limit(1);
 
-        const { data: camps } = await sb
+        const { data: boundary } = await sb
             .from('farm_camps')
-            .select('area_ha');
+            .select('area_ha')
+            .eq('name', 'Außengrenze Farm')
+            .limit(1);
 
         const { data: capAssump } = await sb
             .from('carrying_capacity_assumptions')
@@ -909,18 +967,17 @@ async function loadStockingRate() {
             lsuEl.textContent = Math.round(snap[0].total_lsu);
         }
 
-        if (!camps?.length) {
+        const farmArea = boundary?.[0]?.area_ha;
+        if (!farmArea) {
             capEl.textContent = '\u2014';
             ratEl.textContent = '\u2014';
             return;
         }
 
         const lsuPerHa = capAssump?.[0]?.lsu_per_ha || 0.07;
-        const totalCapacity = camps.reduce((s, c) => {
-            return s + (c.area_ha || 0) * lsuPerHa;
-        }, 0);
+        const totalCapacity = farmArea * lsuPerHa;
 
-        capEl.textContent = Math.round(totalCapacity) + ' GVE';
+        capEl.textContent = Math.round(totalCapacity) + ' LSU';
 
         if (!snap?.length || totalCapacity <= 0) {
             ratEl.textContent = '\u2014';
@@ -931,7 +988,7 @@ async function loadStockingRate() {
         const ratio = Math.round(totalLSU / totalCapacity * 100);
 
         ratEl.textContent = ratio + ' %';
-        subEl.textContent = Math.round(totalLSU) + ' GVE / ' + Math.round(totalCapacity) + ' Kap.';
+        subEl.textContent = Math.round(totalLSU) + ' LSU / ' + Math.round(totalCapacity) + ' Kap.';
 
         // Color the bar
         ['status-green','status-yellow','status-red','status-gray'].forEach(c => barEl.classList.remove(c));
@@ -996,8 +1053,8 @@ async function loadCamps() {
             return `
                 <div class="camp-card">
                     <div class="camp-name">${escHtml(c.name)}</div>
-                    <div class="camp-detail">${c.area_ha} ha</div>
-                    <div class="camp-detail">Kapazitaet: ${capLSU} GVE</div>
+                    <div class="camp-detail">${c.area_ha ? Number(c.area_ha).toFixed(2) : '\u2014'} ha</div>
+                    <div class="camp-detail">Kapazitaet: ${capLSU} LSU</div>
                     <span class="condition-badge ${condClass}">${condLabel}</span>
                 </div>
             `;
@@ -1014,7 +1071,7 @@ async function loadRainfall() {
     try {
         const { data } = await sb
             .from('weather_observations')
-            .select('station_name, observation_date, rainfall_mm')
+            .select('station_name, observation_date, rainfall_mm, source')
             .not('rainfall_mm', 'is', null)
             .order('observation_date', { ascending: true });
 
@@ -1083,6 +1140,18 @@ async function loadRainfall() {
                 }
             }
         });
+        // Show source badges
+        const sources = [...new Set(data.map(r => r.source || 'unbekannt'))];
+        const sourceLabels = {
+            'open-meteo-archive': 'Open-Meteo Archiv',
+            'open-meteo-forecast': 'Open-Meteo Prognose',
+            'manual': 'Manuell / Farmstation',
+            'excel-import': 'Excel-Import (historisch)'
+        };
+        const badgesEl = document.getElementById('rainfall-sources');
+        badgesEl.style.display = 'flex';
+        badgesEl.innerHTML = '<span style="color:#6b7280;font-size:0.8em;margin-right:6px;">Quellen:</span>' +
+            sources.map(s => '<span class="source-badge">' + (sourceLabels[s] || s) + '</span>').join('');
     } catch {
         document.getElementById('rainfall-nodata').style.display = 'block';
         document.getElementById('rainfall-chart').style.display = 'none';
@@ -1160,7 +1229,8 @@ async function loadSeasonalForecast() {
         valueEl.style.color = aggColor === 'green' ? '#16a34a' : aggColor === 'yellow' ? '#ca8a04' : '#dc2626';
 
         const fDate = new Date(forecasts[0].forecast_date);
-        subEl.textContent = 'Letzte Aktualisierung: ' + fDate.toLocaleDateString('de-DE', {
+        const modelName = forecasts[0].model || 'ECMWF SEAS5';
+        subEl.textContent = modelName.toUpperCase() + ' — Letzte Aktualisierung: ' + fDate.toLocaleDateString('de-DE', {
             day: '2-digit', month: '2-digit', year: 'numeric'
         });
 
@@ -1342,7 +1412,7 @@ async function loadMap() {
                 attribution: '&copy; Esri'
             });
 
-            L.control.layers({
+            farmMap._layersControl = L.control.layers({
                 'Karte': osm,
                 'Satellit': satellite
             }).addTo(farmMap);
@@ -1407,6 +1477,33 @@ async function loadMap() {
             };
         }
 
+        // Load camp list and herd assignments for enhanced popups
+        const { data: campList } = await sb.from('farm_camps').select('id, name');
+        const campIdByName = {};
+        campList?.forEach(c => { campIdByName[c.name] = c.id; });
+
+        const { data: campAssignments } = await sb
+            .from('herd_camp_assignments')
+            .select('camp_id, estimated_animals')
+            .order('created_at', { ascending: false });
+
+        const latestAssignment = {};
+        campAssignments?.forEach(a => {
+            if (!latestAssignment[a.camp_id]) latestAssignment[a.camp_id] = a;
+        });
+
+        // Ampel badge helper
+        function ampelBadge(score) {
+            if (!score) return '';
+            let bg, label;
+            if (score >= 4) { bg = '#22c55e'; label = 'Gut'; }
+            else if (score === 3) { bg = '#eab308'; label = 'Mittel'; }
+            else { bg = '#dc2626'; label = 'Kritisch'; }
+            return '<span style="display:inline-block;padding:1px 8px;border-radius:9999px;' +
+                'background:' + bg + ';color:#fff;font-size:0.75em;font-weight:600;vertical-align:middle;margin-left:4px;">' +
+                label + '</span>';
+        }
+
         // Add GeoJSON layer
         campLayer = L.geoJSON(geojsonData, {
             style: function(feature) {
@@ -1421,17 +1518,26 @@ async function loadMap() {
                     : 'Keine Bewertung';
                 const scoreColor = conditionColors[score] || '#9ca3af';
 
-                let popupContent = '<div style="min-width:180px;">';
+                // Animal count from herd assignments
+                const campId = campIdByName[p.name];
+                const assignment = campId ? latestAssignment[campId] : null;
+                const animalCount = assignment?.estimated_animals;
+
+                let popupContent = '<div style="min-width:200px;">';
                 popupContent += '<strong style="font-size:1.1em;">' + escHtml(p.name) + '</strong><br>';
                 if (p.parent_camp) {
                     popupContent += '<span style="color:#6b7280;font-size:0.85em;">Hauptcamp: ' + escHtml(p.parent_camp) + '</span><br>';
                 }
                 popupContent += '<br>';
-                popupContent += '<strong>Flaeche:</strong> ' + (p.area_ha || '\u2014') + ' ha<br>';
-                popupContent += '<strong>Weidezustand:</strong> <span style="color:' + scoreColor + ';font-weight:600;">' + scoreText + '</span><br>';
+                popupContent += '<strong>Flaeche:</strong> ' + (p.area_ha ? Number(p.area_ha).toFixed(2) : '\u2014') + ' ha<br>';
+                popupContent += '<strong>Weidezustand:</strong> <span style="color:' + scoreColor + ';font-weight:600;">' + scoreText + '</span>' + ampelBadge(score) + '<br>';
+                if (animalCount != null) {
+                    popupContent += '<strong>Tiere (ca.):</strong> ' + animalCount + '<br>';
+                }
                 if (p.purpose) {
                     popupContent += '<strong>Nutzung:</strong> ' + escHtml(p.purpose) + '<br>';
                 }
+                popupContent += '<span style="color:#6b7280;font-size:0.8em;font-style:italic;">Grasarten: Siehe Camp-Details</span><br>';
                 popupContent += '</div>';
 
                 layer.bindPopup(popupContent);
@@ -1461,14 +1567,157 @@ async function loadMap() {
             '</div>'
         ).join('');
 
+        // ── Asset Marker Layers ─────────────────────────────────────
+        try {
+            const { data: assets } = await sb.rpc('get_farm_assets_with_coords');
+
+            if (assets && assets.length > 0) {
+                const assetConfig = {
+                    borehole:      { emoji: '\uD83D\uDCA7', label: 'Bohrlocher',  color: '#3b82f6' },
+                    dam:           { emoji: '\uD83C\uDF0A', label: 'Daemme',      color: '#06b6d4' },
+                    windmill:      { emoji: '\uD83D\uDD04', label: 'Windmuehlen', color: '#f97316' },
+                    trough:        { emoji: '\uD83D\uDEB0', label: 'Traenken',    color: '#14b8a6' },
+                    house:         { emoji: '\uD83C\uDFE0', label: 'Gebaeude',    color: '#6b7280' },
+                    hunting_blind: { emoji: '\uD83C\uDFAF', label: 'Ansitze',     color: '#92400e' }
+                };
+
+                const assetLayers = {};
+                Object.keys(assetConfig).forEach(type => {
+                    assetLayers[type] = L.layerGroup();
+                });
+
+                assets.forEach(a => {
+                    if (a.lat == null || a.lng == null) return;
+                    const cfg = assetConfig[a.asset_type];
+                    if (!cfg) return;
+
+                    const icon = L.divIcon({
+                        html: '<span style="font-size:20px;line-height:1;">' + cfg.emoji + '</span>',
+                        className: '',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
+
+                    const marker = L.marker([a.lat, a.lng], { icon: icon });
+                    const typeLabel = {
+                        borehole: 'Bohrloch', dam: 'Damm', windmill: 'Windmuehle',
+                        trough: 'Traenke', house: 'Gebaeude', hunting_blind: 'Ansitz'
+                    };
+                    marker.bindPopup(
+                        '<strong>' + escHtml(a.name) + '</strong><br>' +
+                        '<span style="color:#6b7280;">' + (typeLabel[a.asset_type] || a.asset_type) + '</span>'
+                    );
+
+                    if (assetLayers[a.asset_type]) {
+                        marker.addTo(assetLayers[a.asset_type]);
+                    }
+                });
+
+                // Add non-empty layers as overlays to the layers control
+                const ctrl = farmMap._layersControl;
+                if (ctrl) {
+                    Object.keys(assetConfig).forEach(type => {
+                        const lg = assetLayers[type];
+                        if (lg.getLayers().length > 0) {
+                            const cfg = assetConfig[type];
+                            ctrl.addOverlay(lg, cfg.emoji + ' ' + cfg.label);
+                            lg.addTo(farmMap);
+                        }
+                    });
+                }
+            }
+        } catch (assetErr) {
+            console.error('Asset markers load error:', assetErr);
+        }
+
     } catch (err) {
         console.error('Map load error:', err);
     }
 }
 
 // NDVI toggle placeholder
-function toggleNDVI() {
-    // Will be implemented when Sentinel-2 NDVI data is available
+// ── Fullscreen Map ─────────────────────────────────────────────
+function toggleFullscreen() {
+    const wrapper = document.getElementById('farm-map-wrapper');
+    if (wrapper.classList.contains('fullscreen')) {
+        // Exit fullscreen
+        wrapper.classList.remove('fullscreen');
+        const closeBtn = wrapper.querySelector('.fullscreen-close');
+        if (closeBtn) closeBtn.remove();
+        farmMap.invalidateSize();
+        return;
+    }
+    // Enter fullscreen
+    wrapper.classList.add('fullscreen');
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'fullscreen-close';
+    closeBtn.textContent = 'Vollbild beenden (Esc)';
+    closeBtn.onclick = toggleFullscreen;
+    wrapper.appendChild(closeBtn);
+    farmMap.invalidateSize();
+
+    // Fit bounds if camp layer exists
+    if (campLayer) {
+        const bounds = campLayer.getBounds();
+        if (bounds.isValid()) farmMap.fitBounds(bounds, { padding: [40, 40] });
+    }
+}
+
+// Escape key to exit fullscreen
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('farm-map-wrapper')?.classList.contains('fullscreen')) {
+        toggleFullscreen();
+    }
+});
+
+// ── NDVI Overlay ───────────────────────────────────────────────
+let ndviLayer = null;
+let ndviVisible = false;
+
+async function toggleNDVI() {
+    const btn = document.getElementById('ndvi-btn');
+    const metaEl = document.getElementById('ndvi-meta');
+
+    if (ndviVisible && ndviLayer) {
+        farmMap.removeLayer(ndviLayer);
+        ndviVisible = false;
+        btn.style.background = '';
+        metaEl.textContent = '';
+        return;
+    }
+
+    // Try to load NDVI image + metadata
+    try {
+        btn.textContent = 'Lade NDVI...';
+        const metaResp = await fetch('data/ndvi-meta.json?_=' + Date.now());
+        if (!metaResp.ok) {
+            metaEl.textContent = 'Keine NDVI-Daten. Bitte fetch-sentinel.py ausfuehren.';
+            btn.innerHTML = '&#x1F6F0;&#xFE0F; NDVI Overlay';
+            return;
+        }
+        const meta = await metaResp.json();
+
+        const bounds = meta.leaflet_bounds; // [[south, west], [north, east]]
+        ndviLayer = L.imageOverlay(
+            'data/ndvi-latest.png?_=' + Date.now(),
+            bounds,
+            { opacity: 0.7, interactive: false }
+        ).addTo(farmMap);
+
+        ndviVisible = true;
+        btn.innerHTML = '&#x1F6F0;&#xFE0F; NDVI ausblenden';
+        btn.style.background = '#16a34a';
+
+        // Show metadata
+        const fetchDate = new Date(meta.fetched_at);
+        const dateStr = fetchDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        metaEl.textContent = 'Sentinel-2 NDVI vom ' + dateStr +
+            (meta.cloud_coverage_max != null ? ' (max. ' + meta.cloud_coverage_max + '% Wolken)' : '');
+    } catch (err) {
+        console.error('NDVI load error:', err);
+        document.getElementById('ndvi-meta').textContent = 'Fehler beim Laden der NDVI-Daten.';
+        btn.innerHTML = '&#x1F6F0;&#xFE0F; NDVI Overlay';
+    }
 }
 
 // ── K3: Consecutive Dry Days ────────────────────────────────────
@@ -1484,7 +1733,7 @@ async function loadK3() {
 
         const { data } = await sb
             .from('weather_observations')
-            .select('observation_date, rainfall_mm')
+            .select('observation_date, rainfall_mm, source')
             .gte('observation_date', cutoff.toISOString().split('T')[0])
             .order('observation_date', { ascending: false });
 
@@ -1528,7 +1777,15 @@ async function loadK3() {
 
         card.className = 'alert-kpi-card ' + alertClass;
         labelEl.textContent = alertLabel;
-        subEl.textContent = 'Letzte 90 Tage analysiert' + (inRainSeason ? ' (Regensaison)' : ' (Trockensaison)');
+        const k3Sources = [...new Set(data.map(r => r.source || 'unbekannt'))];
+        const k3SourceLabels = {
+            'open-meteo-archive': 'Open-Meteo Archiv',
+            'open-meteo-forecast': 'Open-Meteo Prognose',
+            'manual': 'Manuell / Farmstation',
+            'excel-import': 'Excel-Import (historisch)'
+        };
+        const k3SourceStr = k3Sources.map(s => k3SourceLabels[s] || s).join(', ');
+        subEl.textContent = k3SourceStr + ' — Letzte 90 Tage analysiert' + (inRainSeason ? ' (Regensaison)' : ' (Trockensaison)');
     } catch (err) {
         console.error('K3 error:', err);
         valueEl.textContent = '\u2014';
@@ -1586,7 +1843,7 @@ async function loadK4() {
 
         // Show max temperature
         const maxTemp = Math.max(...data.map(d => d.temperature_max_c || 0));
-        subEl.textContent = 'Naechste 14 Tage, max. ' + Math.round(maxTemp * 10) / 10 + ' \u00B0C';
+        subEl.textContent = 'Open-Meteo Prognose — Naechste 14 Tage, max. ' + Math.round(maxTemp * 10) / 10 + ' \u00B0C';
     } catch (err) {
         console.error('K4 error:', err);
         valueEl.textContent = '\u2014';
@@ -1625,11 +1882,15 @@ async function loadW1Detail() {
         const totalLSU = snapshot?.[0]?.total_lsu || 0;
         const defaultLsuPerHa = capacity?.[0]?.lsu_per_ha || 0.07;
 
-        // Calculate total capacity from camp-level data
-        const totalArea = (camps || []).reduce((s, c) => s + (c.area_ha || 0), 0);
-        const totalCapacity = (camps || []).reduce((s, c) => {
-            return s + (c.area_ha || 0) * defaultLsuPerHa;
-        }, 0);
+        // Use farm boundary area (Außengrenze) for total, not sum of sub-camps
+        const { data: boundary } = await sb
+            .from('farm_camps')
+            .select('area_ha')
+            .eq('name', 'Außengrenze Farm')
+            .limit(1);
+
+        const totalArea = boundary?.[0]?.area_ha || (camps || []).reduce((s, c) => s + (c.area_ha || 0), 0);
+        const totalCapacity = totalArea * defaultLsuPerHa;
 
         const utilizationPct = totalCapacity > 0 ? Math.round(totalLSU / totalCapacity * 100) : 0;
 
@@ -1642,7 +1903,7 @@ async function loadW1Detail() {
         barEl.className = 'utilization-bar-fill ' +
             (utilizationPct <= 80 ? 'bar-green' : utilizationPct <= 100 ? 'bar-yellow' : 'bar-red');
 
-        labelEl.textContent = Math.round(totalLSU) + ' GVE / ' + Math.round(totalCapacity) + ' Kapazitaet';
+        labelEl.textContent = Math.round(totalLSU) + ' LSU / ' + Math.round(totalCapacity) + ' Kapazitaet';
         subEl.textContent = Math.round(totalArea) + ' ha Gesamtflaeche, '
             + (utilizationPct <= 80 ? 'Nachhaltig' : utilizationPct <= 100 ? 'Grenzbereich' : 'Ueberbesetzt');
 
@@ -1691,7 +1952,7 @@ async function loadW1Detail() {
             return `<tr>
                 <td>${escHtml(camp.name)}</td>
                 <td>${a.estimated_animals || '\u2014'}</td>
-                <td>${camp.area_ha ? Math.round(camp.area_ha) : '\u2014'}</td>
+                <td>${camp.area_ha ? Number(camp.area_ha).toFixed(2) : '\u2014'}</td>
                 <td>${campUtil} %</td>
                 <td>${statusBadge}</td>
             </tr>`;

@@ -1,100 +1,308 @@
 #!/usr/bin/env python3
 """
-fetch-sentinel.py — Placeholder for Sentinel-2 NDVI data ingestion.
+fetch-sentinel.py — Fetch Sentinel-2 NDVI imagery for Erichsfelde farm.
 
-This script will eventually:
-  1. Authenticate with the Copernicus Data Space Ecosystem (CDSE) API
-     https://dataspace.copernicus.eu/
-  2. Query for recent Sentinel-2 L2A tiles covering Erichsfelde farm
-  3. Download NDVI band data (B04 Red + B08 NIR) for the farm extent
-  4. Compute mean NDVI per camp polygon
-  5. Store results in a vegetation_indices table via Supabase
+Authenticates with Copernicus Sentinel Hub (OAuth2), requests a colored
+NDVI image via the Process API, and stores the result as a PNG tile
+suitable for Leaflet overlay.
 
-Farm bounding box (from KML):
-  SW corner: lon=16.82, lat=-21.70
-  NE corner: lon=16.95, lat=-21.55
-  Center:    lon=16.9011, lat=-21.6056
+Env vars required:
+  COPERNICUS_CLIENT_ID      — Sentinel Hub OAuth2 client ID
+  COPERNICUS_CLIENT_SECRET  — Sentinel Hub OAuth2 client secret
 
-Prerequisites (not yet implemented):
-  - Copernicus CDSE account and OAuth2 credentials
-  - Secrets: COPERNICUS_CLIENT_ID, COPERNICUS_CLIENT_SECRET
-  - Python packages: requests, numpy (for NDVI calc)
+Env vars optional:
+  SUPABASE_URL              — Supabase project URL
+  SUPABASE_SERVICE_KEY      — Supabase service-role key
 
-Sentinel-2 revisit time over Namibia: ~5 days
-Useful cloud-free scenes: depends on season (rainy season = more cloud cover)
+Output:
+  app/data/ndvi-latest.png  — Colored NDVI PNG (512×512, RGBA)
+  app/data/ndvi-meta.json   — Metadata (date, bbox, cloud %)
 """
 
+import json
 import os
 import sys
 import time
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import requests
 
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+TOKEN_URL = (
+    "https://identity.dataspace.copernicus.eu"
+    "/auth/realms/CDSE/protocol/openid-connect/token"
+)
+PROCESS_URL = "https://sh.dataspace.copernicus.eu/api/v1/process"
+
+# Erichsfelde farm bounding box (from KML)
+BBOX = [16.82, -21.70, 16.99, -21.55]
+
+# Output paths (relative to repo root)
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+DATA_DIR = REPO_ROOT / "app" / "data"
+PNG_PATH = DATA_DIR / "ndvi-latest.png"
+META_PATH = DATA_DIR / "ndvi-meta.json"
+
+# Evalscript: compute NDVI from B04/B08, apply color ramp, mask clouds
+EVALSCRIPT = """//VERSION=3
+function setup() {
+  return {
+    input: [{ bands: ["B04", "B08", "SCL"], units: "DN" }],
+    output: { bands: 4, sampleType: "UINT8" }
+  };
+}
+
+function evaluatePixel(sample) {
+  // Skip clouds (SCL 8,9,10) and no-data (SCL 0)
+  if ([0, 8, 9, 10].includes(sample.SCL)) {
+    return [0, 0, 0, 0]; // transparent
+  }
+
+  var ndvi = (sample.B08 - sample.B04) / (sample.B08 + sample.B04);
+
+  // Color ramp: red -> orange -> yellow -> light green -> green -> dark green
+  if (ndvi < 0)    return [255, 0, 0, 180];
+  if (ndvi < 0.15) return [255, 128, 0, 180];
+  if (ndvi < 0.3)  return [255, 255, 0, 180];
+  if (ndvi < 0.5)  return [128, 255, 0, 180];
+  if (ndvi < 0.7)  return [0, 200, 0, 180];
+  return [0, 128, 0, 180];
+}
+"""
+
 
 # ---------------------------------------------------------------------------
-# Retry helper
+# Helpers
 # ---------------------------------------------------------------------------
 
-def fetch_with_retry(url, params=None, headers=None, max_retries=3, timeout=30):
-    """Fetch URL with exponential backoff retry."""
-    for attempt in range(max_retries):
-        try:
-            resp = requests.get(url, params=params, headers=headers, timeout=timeout)
-            resp.raise_for_status()
-            return resp.json()
-        except (requests.RequestException, ValueError) as e:
-            if attempt < max_retries - 1:
-                wait = 2 ** attempt * 5  # 5s, 10s, 20s
-                print(f"Retry {attempt+1}/{max_retries} after {wait}s: {e}")
-                time.sleep(wait)
-            else:
-                raise
+def log(msg: str) -> None:
+    """Print timestamped log message."""
+    ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    print(f"[{ts}] {msg}")
 
 
-def main():
-    print("Sentinel NDVI check - implementation pending")
-    print()
-    print("This script will fetch Sentinel-2 NDVI data for Erichsfelde farm.")
-    print("Copernicus Data Space API registration is required before activation.")
-    print()
-    print("Farm center: lat=-21.6056, lon=16.9011")
-    print("Bounding box: SW(16.82, -21.70) NE(16.95, -21.55)")
-    print()
-
-    # Verify Supabase connection before main work
-    supabase_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
-    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
-    if supabase_url and supabase_key:
-        sb_headers = {
-            "apikey": supabase_key,
-            "Authorization": f"Bearer {supabase_key}",
-        }
-        test_resp = requests.get(
-            f"{supabase_url}/rest/v1/farms?select=name&limit=1",
-            headers=sb_headers, timeout=10,
+def get_oauth_token(client_id: str, client_secret: str) -> str:
+    """Obtain an OAuth2 access token from Copernicus identity service."""
+    log("Requesting OAuth2 token …")
+    try:
+        resp = requests.post(
+            TOKEN_URL,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+            timeout=30,
         )
-        if test_resp.status_code != 200:
-            raise RuntimeError(f"Supabase auth failed: {test_resp.status_code}")
-        print(f"Supabase connected: {test_resp.json()}")
-    else:
-        print("WARNING: SUPABASE_URL or SUPABASE_SERVICE_KEY not set")
+    except requests.RequestException as exc:
+        raise SystemExit(f"Token request failed (network): {exc}") from exc
 
-    # Check if Copernicus credentials are available
+    if resp.status_code != 200:
+        raise SystemExit(
+            f"Token request failed (HTTP {resp.status_code}): {resp.text[:500]}"
+        )
+
+    token = resp.json().get("access_token")
+    if not token:
+        raise SystemExit("Token response missing 'access_token' field.")
+
+    log("OAuth2 token obtained.")
+    return token
+
+
+def request_ndvi_png(token: str, bbox: list, days_back: int = 30) -> bytes:
+    """Call Sentinel Hub Process API and return NDVI PNG bytes."""
+    now = datetime.now(timezone.utc)
+    time_from = (now - timedelta(days=days_back)).strftime("%Y-%m-%dT00:00:00Z")
+    time_to = now.strftime("%Y-%m-%dT23:59:59Z")
+
+    log(f"Requesting NDVI image for {time_from[:10]} … {time_to[:10]}")
+    log(f"Bounding box: {bbox}")
+
+    payload = {
+        "input": {
+            "bounds": {
+                "bbox": bbox,
+                "properties": {
+                    "crs": "http://www.opengis.net/def/crs/EPSG/0/4326",
+                },
+            },
+            "data": [
+                {
+                    "type": "sentinel-2-l2a",
+                    "dataFilter": {
+                        "timeRange": {"from": time_from, "to": time_to},
+                        "maxCloudCoverage": 30,
+                    },
+                    "processing": {"upsampling": "BILINEAR"},
+                }
+            ],
+        },
+        "output": {
+            "width": 512,
+            "height": 512,
+            "responses": [
+                {
+                    "identifier": "default",
+                    "format": {"type": "image/png"},
+                }
+            ],
+        },
+        "evalscript": EVALSCRIPT,
+    }
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "image/png",
+    }
+
+    # Retry up to 3 times with back-off
+    last_err = None
+    for attempt in range(3):
+        try:
+            resp = requests.post(
+                PROCESS_URL,
+                headers=headers,
+                json=payload,
+                timeout=120,
+            )
+        except requests.RequestException as exc:
+            last_err = exc
+            wait = 2 ** attempt * 5
+            log(f"Request error (attempt {attempt + 1}/3): {exc}. Retrying in {wait}s …")
+            time.sleep(wait)
+            continue
+
+        if resp.status_code == 200:
+            content_type = resp.headers.get("Content-Type", "")
+            if "png" in content_type or len(resp.content) > 1000:
+                log(f"Received PNG: {len(resp.content):,} bytes")
+                return resp.content
+            else:
+                raise SystemExit(
+                    f"Expected PNG but got {content_type}: {resp.text[:300]}"
+                )
+
+        if resp.status_code == 429:
+            wait = 2 ** attempt * 10
+            log(f"Rate limited (429). Waiting {wait}s …")
+            time.sleep(wait)
+            continue
+
+        if resp.status_code in (502, 503, 504):
+            wait = 2 ** attempt * 5
+            log(f"Server error ({resp.status_code}). Retrying in {wait}s …")
+            time.sleep(wait)
+            continue
+
+        # Non-retryable error
+        raise SystemExit(
+            f"Process API error (HTTP {resp.status_code}): {resp.text[:500]}"
+        )
+
+    raise SystemExit(f"Process API failed after 3 attempts. Last error: {last_err}")
+
+
+def save_png(data: bytes, path: Path) -> None:
+    """Write PNG bytes to disk, creating parent dirs as needed."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    log(f"Saved PNG → {path}  ({len(data):,} bytes)")
+
+
+def save_metadata(path: Path, bbox: list) -> None:
+    """Write a small JSON sidecar with fetch metadata."""
+    meta = {
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "bbox": bbox,
+        "bbox_label": "Erichsfelde farm extent",
+        "image_width": 512,
+        "image_height": 512,
+        "max_cloud_coverage": 30,
+        "time_range_days": 30,
+        "leaflet_bounds": [[bbox[1], bbox[0]], [bbox[3], bbox[2]]],
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+    log(f"Saved metadata → {path}")
+
+
+def update_supabase(supabase_url: str, supabase_key: str) -> None:
+    """Upsert an NDVI fetch record into Supabase alert_history."""
+    if not supabase_url or not supabase_key:
+        log("Supabase credentials not set — skipping DB update.")
+        return
+
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}",
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates",
+    }
+
+    row = {
+        "alert_type": "ndvi_fetch",
+        "severity": "info",
+        "message": f"NDVI image fetched at {datetime.now(timezone.utc).isoformat()}",
+        "payload": json.dumps({
+            "bbox": BBOX,
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+        }),
+    }
+
+    try:
+        resp = requests.post(
+            f"{supabase_url.rstrip('/')}/rest/v1/alert_history",
+            headers=headers,
+            json=row,
+            timeout=15,
+        )
+        if resp.status_code in (200, 201):
+            log("Supabase alert_history updated.")
+        else:
+            log(f"Supabase insert returned HTTP {resp.status_code}: {resp.text[:200]}")
+    except requests.RequestException as exc:
+        log(f"Supabase update failed: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    log("=== Sentinel-2 NDVI fetch for Erichsfelde ===")
+
+    # 1. Read credentials
     client_id = os.environ.get("COPERNICUS_CLIENT_ID", "")
     client_secret = os.environ.get("COPERNICUS_CLIENT_SECRET", "")
 
-    if client_id and client_secret:
-        print("Copernicus credentials found - ready for implementation.")
-        # TODO: Implement the following steps:
-        # 1. OAuth2 token request to https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token
-        # 2. OData catalog query for recent S2 L2A products
-        # 3. Download relevant bands
-        # 4. NDVI computation: (B08 - B04) / (B08 + B04)
-        # 5. Zonal statistics per camp polygon
-        # 6. Upsert to Supabase
-    else:
-        print("No Copernicus credentials configured. Skipping.")
-        print("Set COPERNICUS_CLIENT_ID and COPERNICUS_CLIENT_SECRET to enable.")
+    if not client_id or not client_secret:
+        log("ERROR: COPERNICUS_CLIENT_ID and COPERNICUS_CLIENT_SECRET must be set.")
+        sys.exit(1)
+
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+
+    # 2. Authenticate
+    token = get_oauth_token(client_id, client_secret)
+
+    # 3. Request NDVI PNG
+    png_data = request_ndvi_png(token, BBOX)
+
+    # 4. Save outputs
+    save_png(png_data, PNG_PATH)
+    save_metadata(META_PATH, BBOX)
+
+    # 5. Update Supabase
+    update_supabase(supabase_url, supabase_key)
+
+    log("Done.")
 
 
 if __name__ == "__main__":

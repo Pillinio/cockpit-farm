@@ -10,6 +10,7 @@ export const PAGES = {
   weide:     'weide.html',
   markt:     'markt.html',
   operativ:  'operativ.html',
+  bericht:   'bericht.html',
   bonus:     '../farm_bonussystem_komplett.html',
   admin:     'admin.html',
   forecast:  'forecast.html',

@@ -243,6 +243,127 @@
             color: #6b7280;
         }
 
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f9fafb;
+            color: #374151;
+            font-weight: 600;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .data-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #374151;
+        }
+
+        .data-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .data-table .num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .data-table tfoot td {
+            font-weight: 600;
+            border-top: 2px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .summary-card .card-value {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 4px;
+        }
+
+        .summary-card .card-label {
+            font-size: 0.85em;
+            color: #6b7280;
+        }
+
+        /* CSV Upload */
+        .csv-upload-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            flex-wrap: wrap;
+        }
+
+        .csv-upload-area label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #2E75B6 0%, #1F4E78 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .csv-upload-area label:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(46,117,182,0.3);
+        }
+
+        .csv-upload-area input[type="file"] {
+            display: none;
+        }
+
+        .csv-upload-status {
+            font-size: 0.85em;
+            color: #6b7280;
+        }
+
+        .csv-upload-status.success {
+            color: #166534;
+            font-weight: 500;
+        }
+
+        .csv-upload-status.error {
+            color: #991b1b;
+            font-weight: 500;
+        }
+
+        .note-text {
+            font-size: 0.8em;
+            color: #9ca3af;
+            margin-top: 12px;
+            font-style: italic;
+        }
+
         /* Loading */
         .loading-spinner {
             display: inline-block;
@@ -319,7 +440,7 @@
         <div class="section">
             <div class="section-header">
                 <span class="section-icon">&#x1F404;</span>
-                <span class="section-title">H1 &mdash; Herdengr&ouml;&szlig;e in GVE</span>
+                <span class="section-title">H1 &mdash; Herdengr&ouml;&szlig;e in LSU</span>
                 <span class="section-badge badge-gray" id="badge-h1"><span class="loading-spinner"></span></span>
             </div>
             <div class="section-body">
@@ -328,7 +449,7 @@
                 </div>
                 <div class="placeholder" id="placeholder-h1" style="display:none;">
                     <span class="placeholder-icon">&#x1F4C9;</span>
-                    <span class="placeholder-text">Keine GVE-Daten vorhanden</span>
+                    <span class="placeholder-text">Keine LSU-Daten vorhanden</span>
                 </div>
             </div>
         </div>
@@ -406,6 +527,28 @@
                     <span class="placeholder-icon">&#x1F4C9;</span>
                     <span class="placeholder-text">Keine Strukturdaten vorhanden</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- H6: Herdenwert -->
+        <div class="section" id="section-herdenwert">
+            <div class="section-header">
+                <span class="section-icon">&#x1F4B0;</span>
+                <span class="section-title">H6 &mdash; Herdenwert (gesch&auml;tzt)</span>
+                <span class="section-badge badge-gray" id="badge-h6"><span class="loading-spinner"></span></span>
+            </div>
+            <div class="section-body" id="herdenwert-body">
+                <div class="placeholder" id="placeholder-h6">
+                    <span class="placeholder-icon">&#x2696;&#xFE0F;</span>
+                    <span class="placeholder-text">Herdenwert wird berechnet...</span>
+                </div>
+            </div>
+            <div class="csv-upload-area">
+                <label for="csv-file-input">
+                    &#x1F4C1; Herde-CSV importieren
+                </label>
+                <input type="file" id="csv-file-input" accept=".csv">
+                <span class="csv-upload-status" id="csv-status">CSV aus Herdenverwaltung hochladen</span>
             </div>
         </div>
 
@@ -502,14 +645,14 @@ async function loadH1() {
         const labels = data.map(r => formatDate(r.snapshot_date));
         const values = data.map(r => r.total_lsu);
         const latest = values[values.length - 1];
-        setBadge('h1', Math.round(latest) + ' GVE');
+        setBadge('h1', Math.round(latest) + ' LSU');
 
         charts['h1'] = new Chart(document.getElementById('chart-h1'), {
             type: 'line',
             data: {
                 labels,
                 datasets: [{
-                    label: 'GVE (Gro\u00dfvieheinheiten)',
+                    label: 'LSU (Gro\u00dfvieheinheiten)',
                     data: values,
                     borderColor: '#2E75B6',
                     backgroundColor: 'rgba(46,117,182,0.08)',
@@ -524,7 +667,7 @@ async function loadH1() {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: false, title: { display: true, text: 'GVE' } }
+                    y: { beginAtZero: false, title: { display: true, text: 'LSU' } }
                 }
             }
         });
@@ -799,12 +942,322 @@ async function loadH5() {
     }
 }
 
+// ── H6: Herdenwert ─────────────────────────────────────────────
+function categorizeAnimal(animal, today) {
+    const sex = animal.sex;
+    const calvings = animal.calvings || 0;
+    const birthDate = animal.birth_date ? new Date(animal.birth_date) : null;
+    const ageMonths = birthDate ? Math.floor((today - birthDate) / (1000 * 60 * 60 * 24 * 30.44)) : null;
+
+    if (ageMonths === null) {
+        // Unknown age: guess from weight or default
+        if (sex === 'F' && calvings > 0) return { key: 'cow', label: 'K\u00fche', gainKey: 'cow_adult', maxKg: 550 };
+        if (sex === 'M') return { key: 'bull_young', label: 'Jungbullen', gainKey: 'bull_young', maxKg: 800 };
+        return { key: 'heifer', label: 'F\u00e4rsen', gainKey: 'heifer_18plus', maxKg: 480 };
+    }
+
+    if (ageMonths < 6) return { key: 'calf', label: 'K\u00e4lber (<6 Mon)', gainKey: 'calf_0_6', maxKg: 250 };
+    if (ageMonths < 12) return { key: 'weaner', label: 'Absetzer (6-12 Mon)', gainKey: 'young_6_18', maxKg: 300 };
+    if (ageMonths < 18) return { key: 'young', label: 'Jungrinder (12-18 Mon)', gainKey: 'young_6_18', maxKg: 400 };
+
+    if (sex === 'F') {
+        if (calvings > 0) return { key: 'cow', label: 'K\u00fche', gainKey: 'cow_adult', maxKg: 550 };
+        return { key: 'heifer', label: 'F\u00e4rsen', gainKey: 'heifer_18plus', maxKg: 480 };
+    }
+
+    if (ageMonths < 24) return { key: 'bull_young', label: 'Jungbullen', gainKey: 'bull_young', maxKg: 800 };
+    return { key: 'ox_bull', label: 'Ochsen/Bullen', gainKey: 'ox_fattening', maxKg: 800 };
+}
+
+function estimateWeight(animal, category, gainConfig, today) {
+    const gains = {};
+    gainConfig.forEach(g => { gains[g.category] = parseFloat(g.daily_gain_kg); });
+
+    const dailyGain = gains[category.gainKey] || 0;
+
+    if (animal.last_weight_kg && animal.last_weigh_date) {
+        const weighDate = new Date(animal.last_weigh_date);
+        const daysSince = Math.floor((today - weighDate) / (1000 * 60 * 60 * 24));
+        const estimated = parseFloat(animal.last_weight_kg) + (daysSince * dailyGain);
+        return Math.min(estimated, category.maxKg);
+    }
+
+    // No weight data: estimate from age
+    if (animal.birth_date) {
+        const birthDate = new Date(animal.birth_date);
+        const ageDays = Math.floor((today - birthDate) / (1000 * 60 * 60 * 24));
+        // Birth weight ~35kg + age-appropriate daily gain
+        const estimated = 35 + (ageDays * dailyGain);
+        return Math.min(estimated, category.maxKg);
+    }
+
+    // Fallback: category average
+    const defaults = { calf: 120, weaner: 200, young: 280, heifer: 350, cow: 450, bull_young: 400, ox_bull: 500 };
+    return defaults[category.key] || 300;
+}
+
+async function loadH6() {
+    const body = document.getElementById('herdenwert-body');
+    const ph = document.getElementById('placeholder-h6');
+    try {
+        // Load animals, gain config, and beef price in parallel
+        const [animalsRes, gainRes, priceRes] = await Promise.all([
+            sb.from('herd_animals').select('*').eq('active', true),
+            sb.from('weight_gain_config').select('*'),
+            sb.from('market_prices')
+              .select('price_nad, commodity, price_date')
+              .like('commodity', 'Meatco%')
+              .order('price_date', { ascending: false })
+              .limit(1)
+        ]);
+
+        if (animalsRes.error) throw animalsRes.error;
+        if (gainRes.error) throw gainRes.error;
+
+        const animals = animalsRes.data || [];
+        const gainConfig = gainRes.data || [];
+
+        if (animals.length === 0) {
+            ph.innerHTML = '<span class="placeholder-icon">&#x1F404;</span>' +
+                '<span class="placeholder-text">Keine Tiere in der Datenbank. CSV importieren um zu starten.</span>';
+            setBadge('h6', '\u2014');
+            return;
+        }
+
+        // Beef price: Meatco carcass price, or fallback
+        let beefPricePerKgCarcass = 54.0; // NAD/kg fallback
+        let priceSource = 'Standardpreis';
+        let priceDate = null;
+        if (!priceRes.error && priceRes.data && priceRes.data.length > 0) {
+            beefPricePerKgCarcass = parseFloat(priceRes.data[0].price_nad);
+            priceSource = priceRes.data[0].commodity;
+            priceDate = priceRes.data[0].price_date;
+        }
+
+        // Live weight to carcass: ~52% dressing percentage for Namibian cattle
+        const dressingPct = 0.52;
+        const beefPricePerKgLive = beefPricePerKgCarcass * dressingPct;
+
+        const today = new Date();
+
+        // Categorize and estimate weights
+        const categories = {};
+        let totalWeight = 0;
+        let latestWeighDate = null;
+
+        animals.forEach(a => {
+            const cat = categorizeAnimal(a, today);
+            const estWeight = estimateWeight(a, cat, gainConfig, today);
+
+            if (!categories[cat.key]) {
+                categories[cat.key] = {
+                    label: cat.label,
+                    count: 0,
+                    totalWeight: 0,
+                    animals: []
+                };
+            }
+
+            categories[cat.key].count++;
+            categories[cat.key].totalWeight += estWeight;
+            totalWeight += estWeight;
+
+            // Track latest weigh date
+            if (a.last_weigh_date) {
+                const wd = new Date(a.last_weigh_date);
+                if (!latestWeighDate || wd > latestWeighDate) latestWeighDate = wd;
+            }
+        });
+
+        const totalAnimals = animals.length;
+        const avgWeight = totalWeight / totalAnimals;
+        const totalValue = totalWeight * beefPricePerKgLive;
+
+        setBadge('h6', new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(totalValue));
+
+        // Build HTML
+        let html = '<div class="summary-cards">';
+        html += '<div class="summary-card"><div class="card-value">' + totalAnimals + '</div><div class="card-label">Tiere (aktiv)</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(totalWeight) + ' kg</div><div class="card-label">Gesamtgewicht (gesch.)</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + Math.round(avgWeight) + ' kg</div><div class="card-label">Durchschnittsgewicht</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(totalValue) + '</div><div class="card-label">Gesch. Herdenwert</div></div>';
+        html += '</div>';
+
+        // Category table
+        const catOrder = ['calf', 'weaner', 'young', 'heifer', 'cow', 'bull_young', 'ox_bull'];
+        html += '<table class="data-table"><thead><tr>';
+        html += '<th>Kategorie</th><th class="num">Anzahl</th><th class="num">&#x2300; Gewicht</th><th class="num">Gesamtgewicht</th><th class="num">Gesch. Wert</th>';
+        html += '</tr></thead><tbody>';
+
+        catOrder.forEach(key => {
+            const cat = categories[key];
+            if (!cat) return;
+            const catAvg = cat.totalWeight / cat.count;
+            const catValue = cat.totalWeight * beefPricePerKgLive;
+            html += '<tr>';
+            html += '<td>' + cat.label + '</td>';
+            html += '<td class="num">' + cat.count + '</td>';
+            html += '<td class="num">' + Math.round(catAvg) + ' kg</td>';
+            html += '<td class="num">' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(cat.totalWeight) + ' kg</td>';
+            html += '<td class="num">' + new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(catValue) + '</td>';
+            html += '</tr>';
+        });
+
+        // Footer total
+        html += '</tbody><tfoot><tr>';
+        html += '<td>Gesamt</td>';
+        html += '<td class="num">' + totalAnimals + '</td>';
+        html += '<td class="num">' + Math.round(avgWeight) + ' kg</td>';
+        html += '<td class="num">' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(totalWeight) + ' kg</td>';
+        html += '<td class="num">' + new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(totalValue) + '</td>';
+        html += '</tr></tfoot></table>';
+
+        // Notes
+        const weighDateStr = latestWeighDate
+            ? latestWeighDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            : 'unbekannt';
+        const priceDateStr = priceDate
+            ? new Date(priceDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            : '';
+        html += '<div class="note-text">';
+        html += 'Letzte Wiegung: ' + weighDateStr + ' &mdash; Hochrechnung basierend auf Tageszunahme-Annahmen. ';
+        html += 'Bewertung: ' + beefPricePerKgCarcass.toFixed(2) + ' NAD/kg Schlachtgewicht (' + priceSource;
+        if (priceDateStr) html += ', ' + priceDateStr;
+        html += '), Ausschlachtung ' + (dressingPct * 100).toFixed(0) + '%.';
+        html += '</div>';
+
+        ph.style.display = 'none';
+        body.innerHTML = html;
+
+    } catch (e) {
+        console.error('H6 error:', e);
+        ph.innerHTML = '<span class="placeholder-icon">&#x26A0;&#xFE0F;</span>' +
+            '<span class="placeholder-text">Fehler beim Laden: ' + (e.message || e) + '</span>';
+        setBadge('h6', '\u2014');
+    }
+}
+
+// ── CSV Upload Handler ─────────────────────────────────────────
+function setupCSVUpload() {
+    const input = document.getElementById('csv-file-input');
+    const status = document.getElementById('csv-status');
+    if (!input) return;
+
+    input.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        status.className = 'csv-upload-status';
+        status.textContent = 'Importiere ' + file.name + '...';
+
+        try {
+            const text = await file.text();
+            const lines = text.split(/\r?\n/);
+
+            // Find header row
+            let headerIdx = -1;
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].includes('IDnr')) {
+                    headerIdx = i;
+                    break;
+                }
+            }
+            if (headerIdx === -1) throw new Error('Header-Zeile mit "IDnr" nicht gefunden');
+
+            // Parse header
+            const headers = lines[headerIdx].split(',').map(h => h.trim());
+            const colIdx = {};
+            headers.forEach((h, i) => { colIdx[h] = i; });
+
+            const required = ['IDnr', 'Sex'];
+            for (const r of required) {
+                if (!(r in colIdx)) throw new Error('Spalte "' + r + '" fehlt im CSV');
+            }
+
+            // Parse rows
+            const records = [];
+            let skipped = 0;
+
+            for (let i = headerIdx + 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // Simple CSV parse (no quoted fields expected)
+                const cols = line.split(',');
+                const animalId = (cols[colIdx['IDnr']] || '').trim();
+                const sex = (cols[colIdx['Sex']] || '').trim().toUpperCase();
+
+                if (!animalId || (sex !== 'M' && sex !== 'F')) {
+                    skipped++;
+                    continue;
+                }
+
+                const parseCSVDate = (val) => {
+                    if (!val || !val.trim()) return null;
+                    const parts = val.trim().split('/');
+                    if (parts.length === 3) return parts.join('-');
+                    return null;
+                };
+
+                const parseNum = (val) => {
+                    if (!val || !val.trim()) return null;
+                    const n = parseFloat(val.trim());
+                    return isNaN(n) ? null : n;
+                };
+
+                records.push({
+                    animal_id: animalId,
+                    sex: sex,
+                    sire: (cols[colIdx['Sire']] || '').trim() || null,
+                    dam: (cols[colIdx['Dam']] || '').trim() || null,
+                    traceability_no: (cols[colIdx['Traceability No']] || '').trim() || null,
+                    birth_date: parseCSVDate(cols[colIdx['Birthdate']] || ''),
+                    last_weigh_date: parseCSVDate(cols[colIdx['lWDate']] || ''),
+                    last_weight_kg: parseNum(cols[colIdx['lWgt']] || ''),
+                    calvings: parseInt(cols[colIdx['# Calvings']] || '0', 10) || 0,
+                    active: true,
+                });
+            }
+
+            if (records.length === 0) throw new Error('Keine g\u00fcltigen Tiereintr\u00e4ge gefunden');
+
+            // Upsert in batches of 100
+            const batchSize = 100;
+            let upserted = 0;
+            for (let i = 0; i < records.length; i += batchSize) {
+                const batch = records.slice(i, i + batchSize);
+                const { error } = await sb
+                    .from('herd_animals')
+                    .upsert(batch, { onConflict: 'farm_id,animal_id' });
+
+                if (error) throw new Error('Upsert fehlgeschlagen: ' + error.message);
+                upserted += batch.length;
+                status.textContent = 'Importiere... ' + upserted + '/' + records.length;
+            }
+
+            status.className = 'csv-upload-status success';
+            status.textContent = records.length + ' Tiere importiert' + (skipped > 0 ? ', ' + skipped + ' \u00fcbersprungen' : '') + '.';
+
+            // Reload herd value display
+            await loadH6();
+
+        } catch (err) {
+            console.error('CSV import error:', err);
+            status.className = 'csv-upload-status error';
+            status.textContent = 'Fehler: ' + err.message;
+        }
+
+        // Reset input so the same file can be re-selected
+        input.value = '';
+    });
+}
+
 // ── Load All ─────────────────────────────────────────────────────
 async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
     await Promise.allSettled([
-        loadH1(), loadH2(), loadH3(), loadH4(), loadH5()
+        loadH1(), loadH2(), loadH3(), loadH4(), loadH5(), loadH6()
     ]);
 
     const now = new Date();
@@ -819,6 +1272,7 @@ async function loadAll() {
 (async function init() {
     const user = await checkAuth();
     if (!user) return; // redirect in progress
+    setupCSVUpload();
     loadAll();
 })();
 </script>
