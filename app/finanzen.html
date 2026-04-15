@@ -1144,26 +1144,21 @@ async function loadF4() {
 // ── F5: EBIT Margin ──────────────────────────────────────────────
 async function loadF5() {
     try {
-        const { data: rev } = await sb
-            .from('transactions')
-            .select('amount_nad, transaction_date')
-            .gte('transaction_date', YEAR + '-01-01')
-            .gt('amount_nad', 0);
+        // Use bank_transactions as single source of truth for both revenue and costs
+        const { data: txns } = await sb
+            .from('bank_transactions')
+            .select('credit_nad, debit_nad, transaction_date')
+            .gte('transaction_date', YEAR + '-01-01');
 
-        const { data: costs } = await sb
-            .from('budgets')
-            .select('actual_nad')
-            .eq('fiscal_year', YEAR);
+        if (!txns?.length) return showNoData('f5');
 
-        if (!rev?.length || !costs?.length) return showNoData('f5');
+        const totalRevenue = txns.reduce((s, t) => s + Number(t.credit_nad || 0), 0);
+        const totalCost = txns.reduce((s, t) => s + Number(t.debit_nad || 0), 0);
 
-        const totalRevenue = rev.reduce((s, r) => s + (r.amount_nad || 0), 0);
-        const totalCost = costs.reduce((s, r) => s + (r.actual_nad || 0), 0);
-
-        if (totalRevenue <= 0) return showNoData('f5');
+        if (totalRevenue <= 0 && totalCost <= 0) return showNoData('f5');
 
         const ebit = totalRevenue - totalCost;
-        const margin = (ebit / totalRevenue) * 100;
+        const margin = totalRevenue > 0 ? (ebit / totalRevenue) * 100 : 0;
         const status = margin >= 10 ? 'green' : margin >= 0 ? 'yellow' : 'red';
         const statusText = margin >= 10 ? 'Gesund' : margin >= 0 ? 'Knapp' : 'Negativ';
         setBadge('f5', statusText, status);
@@ -1173,8 +1168,9 @@ async function loadF5() {
                 <span class="value">${margin.toFixed(1)} %</span>
                 <span class="unit">EBIT-Marge</span>
             </div>
-            <div class="kpi-detail">Umsatz: N$ ${fmt(totalRevenue)} | Kosten: N$ ${fmt(totalCost)}</div>
-            <div class="kpi-detail">EBIT: N$ ${fmt(ebit)}</div>`;
+            <div class="kpi-detail">Umsatz YTD: N$ ${fmt(totalRevenue)}</div>
+            <div class="kpi-detail">Kosten YTD: N$ ${fmt(totalCost)}</div>
+            <div class="kpi-detail" style="font-weight:600;color:${ebit>=0?'#16a34a':'#dc2626'};">EBIT: N$ ${fmt(ebit)}</div>`;
     } catch (e) {
         console.error('F5:', e);
         showNoData('f5');
@@ -1244,20 +1240,21 @@ async function loadF8() {
             .order('snapshot_date', { ascending: false })
             .limit(1);
 
-        const { data: costs } = await sb
-            .from('budgets')
-            .select('actual_nad, month')
-            .eq('fiscal_year', YEAR)
-            .neq('month', 0);
+        // Use bank_transactions for actual monthly cost (not budgets, since actuals live in bank_transactions)
+        const { data: txns } = await sb
+            .from('bank_transactions')
+            .select('debit_nad, transaction_date')
+            .gte('transaction_date', YEAR + '-01-01')
+            .not('debit_nad', 'is', null);
 
-        if (!snap?.length || !costs?.length) return showNoData('f8');
+        if (!snap?.length || !txns?.length) return showNoData('f8');
 
         const lsu = snap[0].total_lsu;
         if (!lsu || lsu <= 0) return showNoData('f8');
 
-        const totalCost = costs.reduce((s, r) => s + (r.actual_nad || 0), 0);
-        const distinctMonths = new Set(costs.map(r => r.month)).size;
-        const avgMonthlyCost = totalCost / Math.max(distinctMonths, 1);
+        const totalCost = txns.reduce((s, t) => s + Number(t.debit_nad || 0), 0);
+        const monthsSet = new Set(txns.map(t => t.transaction_date.substring(0, 7)));
+        const avgMonthlyCost = totalCost / Math.max(monthsSet.size, 1);
         const costPerLSU = avgMonthlyCost / lsu;
 
         setBadge('f8', 'N$ ' + costPerLSU.toFixed(2) + ' / LSU', 'gray');
@@ -1268,7 +1265,7 @@ async function loadF8() {
                 <span class="unit">pro LSU / Monat</span>
             </div>
             <div class="kpi-detail">Aktuelle LSU: ${fmt(lsu)} (Stand: ${snap[0].snapshot_date || '—'})</div>
-            <div class="kpi-detail">Durchschn. Monatskosten: N$ ${fmt(avgMonthlyCost)} (${distinctMonths} Monate erfasst)</div>
+            <div class="kpi-detail">Durchschn. Monatskosten: N$ ${fmt(avgMonthlyCost)} (${monthsSet.size} Monate erfasst)</div>
             <div class="kpi-detail" style="margin-top:8px; font-style:italic; color:#9ca3af;">Leitindikator fuer Kosteneffizienz</div>`;
     } catch (e) {
         console.error('F8:', e);
