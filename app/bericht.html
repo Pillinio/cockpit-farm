@@ -273,7 +273,7 @@
         .reason-separation { color: #7c3aed; }
         .reason-other      { color: #6b7280; }
 
-        /* Camp occupancy colors */
+        /* Kamp occupancy colors */
         .occ-green  { background: #dcfce7; }
         .occ-yellow { background: #fef9c3; }
         .occ-red    { background: #fee2e2; }
@@ -546,13 +546,13 @@
                             <input type="date" id="mv-date">
                         </div>
                         <div class="form-group">
-                            <label for="mv-from">Von Camp</label>
+                            <label for="mv-from">Von Kamp</label>
                             <select id="mv-from">
                                 <option value="">-- Zugang / Geburt --</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="mv-to">Nach Camp</label>
+                            <label for="mv-to">Nach Kamp</label>
                             <select id="mv-to">
                                 <option value="">-- Abgang / Verkauf / Tod --</option>
                             </select>
@@ -601,7 +601,7 @@
                 </div>
 
                 <!-- Camp occupancy -->
-                <h3 style="font-size:1em;font-weight:600;color:#374151;margin:20px 0 10px;">&#x1F3D5;&#xFE0F; Camp-Belegung (aktuell)</h3>
+                <h3 style="font-size:1em;font-weight:600;color:#374151;margin:20px 0 10px;">&#x1F3D5;&#xFE0F; Kamp-Belegung (aktuell)</h3>
                 <div id="occupancy-table-wrap">
                     <div class="loading-placeholder"><span class="loading-spinner"></span> Lade Belegung...</div>
                 </div>
@@ -766,8 +766,8 @@ function toggleSection(name) {
 }
 window.toggleSection = toggleSection;
 
-// ── Load Camps (for dropdowns) ───────────────────────────────────
-async function loadCamps() {
+// ── Load s (for dropdowns) ───────────────────────────────────
+async function loadKamps() {
     const { data, error } = await sb
         .from('farm_camps')
         .select('name')
@@ -910,7 +910,7 @@ async function loadMovements() {
     wrap.innerHTML = html;
 }
 
-// ── 1b. Load Camp Occupancy ─────────────────────────────────────
+// ── 1b. Load Kamp Occupancy ─────────────────────────────────────
 async function loadOccupancy() {
     const wrap = document.getElementById('occupancy-table-wrap');
 
@@ -932,7 +932,7 @@ async function loadOccupancy() {
     }
 
     let html = '<table class="data-table"><thead><tr>';
-    html += '<th>Camp</th><th class="num">Aktuelle Tiere</th><th>Letzter Wechsel</th><th class="num">Tage seit Wechsel</th>';
+    html += '<th>Kamp</th><th class="num">Aktuelle Tiere</th><th>Letzter Wechsel</th><th class="num">Tage seit Wechsel</th>';
     html += '</tr></thead><tbody>';
 
     data.forEach(row => {

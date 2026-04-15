@@ -944,31 +944,52 @@ async function loadH4() {
 // ── H5: Gender/Age Structure ────────────────────────────────────
 async function loadH5() {
     try {
-        const { data, error } = await sb
-            .from('herd_snapshots')
-            .select('snapshot_date, cows, bulls, heifers, oxen, calves')
-            .order('snapshot_date', { ascending: false })
-            .limit(1);
+        // Use herd_animals as single source of truth (same as H6)
+        const { data: animals, error } = await sb
+            .from('herd_animals')
+            .select('sex, animal_id, birth_date, calvings')
+            .eq('active', true);
 
         if (error) throw error;
-        if (!data || data.length === 0) return showPlaceholder('h5');
+        if (!animals || animals.length === 0) return showPlaceholder('h5');
 
-        const snap = data[0];
+        // Categorize animals using same logic as H6
+        const today = new Date();
+        const catCounts = { cows: 0, bulls: 0, heifers: 0, oxen: 0, calves: 0 };
+
+        animals.forEach(a => {
+            const birthDate = a.birth_date ? new Date(a.birth_date) : null;
+            const ageMonths = birthDate ? ((today - birthDate) / (1000 * 60 * 60 * 24 * 30.44)) : null;
+            const isBull = a.sex === 'M' && (a.animal_id && !/^\d/.test(a.animal_id));
+
+            if (ageMonths !== null && ageMonths < 6) {
+                catCounts.calves++;
+            } else if (a.sex === 'F' && (a.calvings || 0) > 0) {
+                catCounts.cows++;
+            } else if (a.sex === 'F') {
+                catCounts.heifers++;
+            } else if (isBull) {
+                catCounts.bulls++;
+            } else {
+                catCounts.oxen++;
+            }
+        });
+
         const categories = [
-            { label: 'K\u00fche', value: snap.cows || 0, color: '#2E75B6' },
-            { label: 'Bullen', value: snap.bulls || 0, color: '#1F4E78' },
-            { label: 'F\u00e4rsen', value: snap.heifers || 0, color: '#60a5fa' },
-            { label: 'Ochsen', value: snap.oxen || 0, color: '#93c5fd' },
-            { label: 'K\u00e4lber', value: snap.calves || 0, color: '#bfdbfe' },
+            { label: 'K\u00fche', value: catCounts.cows, color: '#2E75B6' },
+            { label: 'Bullen', value: catCounts.bulls, color: '#1F4E78' },
+            { label: 'F\u00e4rsen', value: catCounts.heifers, color: '#60a5fa' },
+            { label: 'Ochsen', value: catCounts.oxen, color: '#93c5fd' },
+            { label: 'K\u00e4lber', value: catCounts.calves, color: '#bfdbfe' },
         ];
 
-        const total = categories.reduce((s, c) => s + c.value, 0);
+        const total = animals.length;
         if (total === 0) return showPlaceholder('h5');
 
         hidePlaceholder('h5');
         destroyChart('h5');
 
-        setBadge('h5', total + ' Tiere (' + formatDate(snap.snapshot_date) + ')');
+        setBadge('h5', total + ' Tiere');
 
         charts['h5'] = new Chart(document.getElementById('chart-h5'), {
             type: 'bar',

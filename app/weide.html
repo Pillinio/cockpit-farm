@@ -207,7 +207,7 @@
             margin-top: 8px;
         }
 
-        /* Camp Table */
+        /* Kamp Table */
         #camp-table-wrap {
             overflow-x: auto;
         }
@@ -282,7 +282,7 @@
         .condition-4 { background: #84cc16; }
         .condition-5 { background: #22c55e; }
 
-        /* Camp count badges on map */
+        /* Kamp count badges on map */
         .camp-count-badge {
             background: rgba(255,255,255,0.95);
             border: 2px solid;
@@ -572,7 +572,7 @@
         .utilization-bar-fill.bar-yellow { background: #eab308; }
         .utilization-bar-fill.bar-red { background: #ef4444; }
 
-        /* Camp stocking table */
+        /* Kamp stocking table */
         .camp-stocking-table {
             width: 100%;
             border-collapse: collapse;
@@ -761,7 +761,7 @@
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x1F5FA;&#xFE0F;</span>
-            Farmkarte &mdash; Camps &amp; Weidezustand
+            Farmkarte &mdash; s &amp; Weidezustand
         </div>
         <div class="map-controls">
             <button class="btn" id="ndvi-btn" onclick="toggleNDVI()" title="NDVI Vegetationsindex ein-/ausblenden">
@@ -782,7 +782,7 @@
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x1F331;</span>
-            Besatzdichte (W1)
+            W1 &mdash; Besatzdichte
         </div>
         <div class="kpi-row" id="stocking-kpis">
             <div class="kpi-card">
@@ -793,7 +793,7 @@
             <div class="kpi-card">
                 <div class="kpi-label">Tragekapazitaet</div>
                 <div class="kpi-value" id="kpi-capacity"><span class="loading-spinner"></span></div>
-                <div class="kpi-sub">Gesamt ueber alle Camps</div>
+                <div class="kpi-sub">Gesamt ueber alle Kamps</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Auslastung</div>
@@ -804,11 +804,49 @@
         </div>
     </div>
 
-    <!-- Camp Overview -->
+    <!-- W2: Stocking Rate Detail per Kamp (moved up directly after W1) -->
+    <div class="section">
+        <div class="section-title">
+            <span class="section-icon">&#x1F404;</span>
+            W2 &mdash; Besatzdichte Detail (pro Kamp)
+        </div>
+
+        <!-- Farm-total utilization bar -->
+        <div id="w1-total-container">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+                <span style="font-weight:600; color:#374151;">Farm gesamt</span>
+                <span style="font-size:0.9em; color:#6b7280;" id="w1-total-label"><span class="loading-spinner"></span></span>
+            </div>
+            <div class="utilization-bar-container">
+                <div class="utilization-bar-fill bar-green" id="w1-total-bar" style="width:0%"></div>
+            </div>
+            <div style="font-size:0.8em; color:#9ca3af;" id="w1-total-sub"></div>
+        </div>
+
+        <!-- Per-camp stocking table -->
+        <div class="subsection-title" id="w1-camp-title" style="display:none;">
+            &#x1F3D5;&#xFE0F; Besatzdichte je Kamp
+        </div>
+        <table class="camp-stocking-table" id="w1-camp-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Kamp</th>
+                    <th>Tiere (gesch.)</th>
+                    <th>Flaeche (ha)</th>
+                    <th>Auslastung</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="w1-camp-tbody"></tbody>
+        </table>
+        <div class="no-data" id="w1-camp-nodata" style="display:none;">Keine Kamp-Zuordnung vorhanden. Herd-Eintraege mit Kamp-Zuordnung erfassen, um die Besatzdichte je Kamp zu sehen.</div>
+    </div>
+
+    <!-- Kamp Overview -->
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x1F3D5;&#xFE0F;</span>
-            Camp-Uebersicht
+            Kamp-Uebersicht
             <button onclick="toggleQuickMoveForm()" style="margin-left:auto; background:#2E75B6; color:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:0.85em;">+ Bewegung erfassen</button>
         </div>
 
@@ -818,10 +856,10 @@
             <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:8px; margin-bottom:12px;">
                 <input type="date" id="qm-date" style="padding:8px; border:1px solid #d1d5db; border-radius:6px;">
                 <select id="qm-from" style="padding:8px; border:1px solid #d1d5db; border-radius:6px;">
-                    <option value="">Von Camp (leer = neu)</option>
+                    <option value="">Von Kamp (leer = neu)</option>
                 </select>
                 <select id="qm-to" style="padding:8px; border:1px solid #d1d5db; border-radius:6px;">
-                    <option value="">Nach Camp (leer = Abgang)</option>
+                    <option value="">Nach Kamp (leer = Abgang)</option>
                 </select>
                 <select id="qm-category" style="padding:8px; border:1px solid #d1d5db; border-radius:6px;">
                     <option value="mixed">Herde</option>
@@ -853,17 +891,17 @@
             <table class="data-table" id="camp-table">
                 <thead>
                     <tr>
-                        <th data-sort="name">Camp</th>
+                        <th data-sort="name">Kamp</th>
                         <th data-sort="area" class="num">Flaeche (ha)</th>
                         <th data-sort="herd" class="num">&#x1F404; Herde</th>
                         <th data-sort="bulls" class="num">&#x1F402; Bullen</th>
-                        <th data-sort="days" class="num">Tage auf Camp</th>
+                        <th data-sort="days" class="num">Tage auf Kamp</th>
                         <th data-sort="condition" class="num">Zustand</th>
                         <th data-sort="last_move">Letzter Wechsel</th>
                     </tr>
                 </thead>
                 <tbody id="camp-tbody">
-                    <tr><td colspan="7" class="no-data"><span class="loading-spinner"></span> Lade Camps...</td></tr>
+                    <tr><td colspan="7" class="no-data"><span class="loading-spinner"></span> Lade Kamps...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -970,44 +1008,6 @@
                 <div class="alert-kpi-sub" id="k4-sub">Naechste 14 Tage, Tage &gt; 35 &deg;C</div>
             </div>
         </div>
-    </div>
-
-    <!-- W1 Enhanced: Stocking Rate with Utilization Bar + Per-Camp -->
-    <div class="section">
-        <div class="section-title">
-            <span class="section-icon">&#x1F404;</span>
-            Besatzdichte Detail (W1)
-        </div>
-
-        <!-- Farm-total utilization bar -->
-        <div id="w1-total-container">
-            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
-                <span style="font-weight:600; color:#374151;">Farm gesamt</span>
-                <span style="font-size:0.9em; color:#6b7280;" id="w1-total-label"><span class="loading-spinner"></span></span>
-            </div>
-            <div class="utilization-bar-container">
-                <div class="utilization-bar-fill bar-green" id="w1-total-bar" style="width:0%"></div>
-            </div>
-            <div style="font-size:0.8em; color:#9ca3af;" id="w1-total-sub"></div>
-        </div>
-
-        <!-- Per-camp stocking table -->
-        <div class="subsection-title" id="w1-camp-title" style="display:none;">
-            &#x1F3D5;&#xFE0F; Besatzdichte je Camp
-        </div>
-        <table class="camp-stocking-table" id="w1-camp-table" style="display:none;">
-            <thead>
-                <tr>
-                    <th>Camp</th>
-                    <th>Tiere (gesch.)</th>
-                    <th>Flaeche (ha)</th>
-                    <th>Auslastung</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="w1-camp-tbody"></tbody>
-        </table>
-        <div class="no-data" id="w1-camp-nodata" style="display:none;">Keine Camp-Zuordnung vorhanden. Herd-Eintraege mit Camp-Zuordnung erfassen, um die Besatzdichte je Camp zu sehen.</div>
     </div>
 
     <div class="footer">
@@ -1187,8 +1187,8 @@ async function loadCamps() {
         });
 
         // Initial sort
-        sortCampTable(campSortCol, false);
-        renderCampTable();
+        sortTable(campSortCol, false);
+        renderKampTable();
 
     } catch (err) {
         console.error('loadCamps error:', err);
@@ -1263,9 +1263,9 @@ function toggleQuickMoveForm() {
             `<option value="${escHtml(c.name)}">${escHtml(c.name)}</option>`
         ).join('');
         document.getElementById('qm-from').innerHTML =
-            '<option value="">Von Camp (leer = neu)</option>' + campOpts;
+            '<option value="">Von Kamp (leer = neu)</option>' + campOpts;
         document.getElementById('qm-to').innerHTML =
-            '<option value="">Nach Camp (leer = Abgang)</option>' + campOpts;
+            '<option value="">Nach Kamp (leer = Abgang)</option>' + campOpts;
     }
 }
 
@@ -1678,7 +1678,7 @@ async function loadMap() {
 
         if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
             document.getElementById('map-legend').innerHTML =
-                '<span style="color:#9ca3af; font-style:italic;">Keine Camp-Geometrien vorhanden. Camps muessen mit Polygonen erfasst werden.</span>';
+                '<span style="color:#9ca3af; font-style:italic;">Keine Kamp-Geometrien vorhanden. Kamps muessen mit Polygonen erfasst werden.</span>';
             return;
         }
 
@@ -1753,7 +1753,7 @@ async function loadMap() {
                 popupContent += '<strong>Weidezustand:</strong> <span style="color:' + scoreColor + ';font-weight:600;">' + scoreText + '</span><br>';
                 if (herdCount > 0) popupContent += '<strong>&#x1F404; Herde:</strong> ' + herdCount + '<br>';
                 if (bullCount > 0) popupContent += '<strong>&#x1F402; Bullen:</strong> ' + bullCount + '<br>';
-                if (days != null) popupContent += '<strong>Tage auf Camp:</strong> ' + days + '<br>';
+                if (days != null) popupContent += '<strong>Tage auf Kamp:</strong> ' + days + '<br>';
                 if (lastMove) popupContent += '<strong>Letzter Wechsel:</strong> ' + new Date(lastMove).toLocaleDateString('de-DE') + '<br>';
                 if (p.purpose) {
                     popupContent += '<strong>Nutzung:</strong> ' + escHtml(p.purpose) + '<br>';
@@ -2221,17 +2221,17 @@ async function loadW1Detail() {
         // Get latest assignment per camp
         const latestPerCamp = {};
         assignments.forEach(a => {
-            if (!latestPerCamp[a.camp_id]) {
-                latestPerCamp[a.camp_id] = a;
+            if (!latestPerKamp[a.camp_id]) {
+                latestPerKamp[a.camp_id] = a;
             }
         });
 
-        // Build camp map
+        // Build kamp map
         const campMap = {};
         (camps || []).forEach(c => { campMap[c.id] = c; });
 
-        const rows = Object.values(latestPerCamp).map(a => {
-            const camp = campMap[a.camp_id];
+        const rows = Object.values(latestPerKamp).map(a => {
+            const kamp = campMap[a.camp_id];
             if (!camp) return null;
 
             const campCapacity = (camp.area_ha || 0) * defaultLsuPerHa;
@@ -2283,8 +2283,8 @@ function escHtml(str) {
 async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
-    // loadCamps must run before loadMap (populates campOccupancyMap)
-    await loadCamps();
+    // loads must run before loadMap (populates campOccupancyMap)
+    await loadKamps();
 
     await Promise.allSettled([
         loadStockingRate(),
@@ -2309,12 +2309,12 @@ async function loadAll() {
     const user = await checkAuth();
     if (!user) return; // redirect in progress
 
-    // Camp table sort delegation
+    // Kamp table sort delegation
     const thead = document.querySelector('#camp-table thead');
     if (thead) {
         thead.addEventListener('click', function(e) {
             const th = e.target.closest('th[data-sort]');
-            if (th) sortCampTable(th.dataset.sort);
+            if (th) sortKampTable(th.dataset.sort);
         });
     }
 

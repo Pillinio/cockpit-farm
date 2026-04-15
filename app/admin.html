@@ -463,7 +463,7 @@
                 fuer alle zukuenftigen Bewegungen verwendet.
             </p>
             <div style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:8px; margin-bottom:16px;">
-                <select id="init-camp"><option value="">-- Camp waehlen --</option></select>
+                <select id="init-camp"><option value="">-- Kamp waehlen --</option></select>
                 <select id="init-category">
                     <option value="mixed">Herde</option>
                     <option value="bulls">Bullen</option>
@@ -1293,7 +1293,7 @@ async function loadInitialCampDropdown() {
 
     const select = document.getElementById('init-camp');
     if (select && camps) {
-        select.innerHTML = '<option value="">-- Camp waehlen --</option>' +
+        select.innerHTML = '<option value="">-- Kamp waehlen --</option>' +
             camps.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
     }
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="favicon.ico">
+    <link rel="icon" href="../favicon.ico">
     <title>Bonussystem - Farm Controlling</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -589,11 +589,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="logo.png" alt="Farm Farm Logo" class="header-logo">
+            <img src="../logo.png" alt="Farm Logo" class="header-logo">
             <div class="header-content">
-                <h1>Bonussystem - Farm Controlling</h1>
+                <h1>Bonussystem &amp; Prognose</h1>
             </div>
-            <img src="namibia-flag.png" alt="Namibia Flag" class="header-logo">
+            <img src="../namibia-flag.png" alt="Namibia Flag" class="header-logo">
             <button class="admin-toggle" id="adminToggle" onclick="toggleAdminMode()">🔒 Admin-Modus</button>
         </div>
 
@@ -1818,7 +1818,7 @@
             if (tabName === 'prognose') {
                 const frame = document.getElementById('prognose-frame');
                 if (!frame.src || frame.src === '' || frame.src === window.location.href) {
-                    frame.src = 'app/forecast.html?embed=1';
+                    frame.src = 'forecast.html?embed=1';
                 }
             }
         }
@@ -2439,30 +2439,13 @@
     </script>
     <script type="module">
       import { initLiveDefaults } from './shared/bonus-live-loader.js';
+      import { renderNav } from './shared/nav.js';
+      renderNav('bonus');
       window.addEventListener('load', () => {
         setTimeout(() => {
           initLiveDefaults('https://vhwlcnfxslkftswksqrw.supabase.co', 'sb_publishable_2a5cKq6CF2Qfe1D1DqLrTw_0kHRD4Cd');
-        }, 500); // Delay to let existing localStorage init run first
+        }, 500);
       });
-
-      // Render shared navigation (paths adjusted for root location)
-      const NAV_ITEMS = [
-        { key: 'cockpit',  label: 'Cockpit',      href: 'app/cockpit.html' },
-        { key: 'finanzen', label: 'Finanzen',      href: 'app/finanzen.html' },
-        { key: 'herde',    label: 'Herde',         href: 'app/herde.html' },
-        { key: 'weide',    label: 'Weide & Klima', href: 'app/weide.html' },
-        { key: 'markt',    label: 'Markt',         href: 'app/markt.html' },
-        { key: 'operativ', label: 'Operativ',      href: 'app/operativ.html' },
-        { key: 'bonus',    label: 'Bonus',         href: 'farm_bonussystem_komplett.html' },
-        { key: 'forecast', label: 'Prognose',      href: 'app/forecast.html' },
-        { key: 'admin',    label: 'Admin',         href: 'app/admin.html' },
-      ];
-      const links = NAV_ITEMS.map(item => {
-        const cls = item.key === 'bonus' ? ' class="active"' : '';
-        return `<a href="${item.href}"${cls}>${item.label}</a>`;
-      }).join('');
-      const target = document.getElementById('main-nav');
-      if (target) target.outerHTML = `<nav class="nav">${links}</nav>`;
     </script>
 </body>
 </html>

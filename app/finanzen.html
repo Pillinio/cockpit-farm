@@ -425,7 +425,7 @@
         <div class="section" id="sec-f1">
             <div class="section-header">
                 <span class="section-icon">&#x1F4B0;</span>
-                <span class="section-title">F1 &mdash; Liquiditaetsreichweite (Cash Runway)</span>
+                <span class="section-title">F1 &mdash; Liquiditätsreichweite (Cash Runway)</span>
                 <span class="section-badge badge-gray" id="badge-f1">...</span>
             </div>
             <div class="section-body" id="body-f1">
@@ -437,7 +437,7 @@
         <div class="section" id="sec-f1b">
             <div class="section-header">
                 <span class="section-icon">&#x1F3E6;</span>
-                <span class="section-title">Kontostände</span>
+                <span class="section-title">F2 &mdash; Kontostände</span>
                 <span class="section-badge badge-gray" id="badge-f1b">...</span>
             </div>
             <div class="section-body" id="body-f1b">
@@ -449,7 +449,7 @@
         <div class="section" id="sec-cf">
             <div class="section-header">
                 <span class="section-icon">&#x1F4B8;</span>
-                <span class="section-title">Cashflow &mdash; Monatlich</span>
+                <span class="section-title">F3 &mdash; Cashflow Monatlich</span>
                 <span class="section-badge badge-gray" id="badge-cf">...</span>
             </div>
             <div class="section-body" id="body-cf">
@@ -464,22 +464,10 @@
         <div class="section" id="sec-f3">
             <div class="section-header">
                 <span class="section-icon">&#x1F4B5;</span>
-                <span class="section-title">F3 &mdash; Umsatz YTD (nach Kategorie)</span>
+                <span class="section-title">F4 &mdash; Umsatz YTD (nach Kategorie)</span>
                 <span class="section-badge badge-gray" id="badge-f3">...</span>
             </div>
             <div class="section-body" id="body-f3">
-                <div class="loading-block"><span class="loading-spinner"></span></div>
-            </div>
-        </div>
-
-        <!-- F7: Hunt & Lease Revenue -->
-        <div class="section" id="sec-f7">
-            <div class="section-header">
-                <span class="section-icon">&#x1F3AF;</span>
-                <span class="section-title">F7 &mdash; Jagd- &amp; Pachteinnahmen</span>
-                <span class="section-badge badge-gray" id="badge-f7">...</span>
-            </div>
-            <div class="section-body" id="body-f7">
                 <div class="loading-block"><span class="loading-spinner"></span></div>
             </div>
         </div>
@@ -491,7 +479,7 @@
         <div class="section" id="sec-f2">
             <div class="section-header">
                 <span class="section-icon">&#x1F4CA;</span>
-                <span class="section-title">Budget &amp; Ausgaben nach Kategorie</span>
+                <span class="section-title">F5 &mdash; Budget &amp; Ausgaben nach Kategorie</span>
                 <span class="section-badge badge-gray" id="badge-f2">...</span>
             </div>
             <div class="section-body" id="body-f2">
@@ -515,7 +503,7 @@
         <div class="section" id="sec-f4">
             <div class="section-header">
                 <span class="section-icon">&#x1F4C8;</span>
-                <span class="section-title">F4 &mdash; Kosten pro kg verkauft</span>
+                <span class="section-title">F7 &mdash; Kosten pro kg verkauft</span>
                 <span class="section-badge badge-gray" id="badge-f4">...</span>
             </div>
             <div class="section-body" id="body-f4">
@@ -539,7 +527,7 @@
         <div class="section" id="sec-f5">
             <div class="section-header">
                 <span class="section-icon">&#x1F4B9;</span>
-                <span class="section-title">F5 &mdash; EBIT-Marge (Ergebnis)</span>
+                <span class="section-title">F9 &mdash; EBIT-Marge (Ergebnis)</span>
                 <span class="section-badge badge-gray" id="badge-f5">...</span>
             </div>
             <div class="section-body" id="body-f5">
@@ -1245,48 +1233,9 @@ async function loadF6() {
 }
 
 // ── F7: Hunt & Lease Revenue ─────────────────────────────────────
-async function loadF7() {
-    try {
-        const { data } = await sb
-            .from('transactions')
-            .select('amount_nad, category, transaction_date, description')
-            .or('category.ilike.%jagd%,category.ilike.%hunt%,category.ilike.%pacht%,category.ilike.%rent%,category.ilike.%lease%,category.ilike.%miete%');
+// F7 entfernt — Jagd/Pacht wird in F3 Umsatz YTD als Einnahmen-Kategorie gezeigt.
 
-        if (!data?.length) return showNoData('f7');
-
-        const total = data.reduce((s, r) => s + (r.amount_nad || 0), 0);
-        const status = total > 0 ? 'green' : 'gray';
-        setBadge('f7', 'N$ ' + fmtInt(total), status);
-
-        // Group by category
-        const byCat = {};
-        data.forEach(r => {
-            const cat = r.category || 'Sonstige';
-            if (!byCat[cat]) byCat[cat] = 0;
-            byCat[cat] += r.amount_nad || 0;
-        });
-
-        let html = `
-            <div class="kpi-big">
-                <span class="value">N$ ${fmt(total)}</span>
-                <span class="unit">Gesamt</span>
-            </div>
-            <table class="data-table" style="margin-top:12px;">
-            <thead><tr><th>Kategorie</th><th class="num">Betrag (N$)</th></tr></thead><tbody>`;
-
-        Object.entries(byCat).sort((a, b) => b[1] - a[1]).forEach(([cat, amt]) => {
-            html += `<tr><td>${cat}</td><td class="num">${fmt(amt)}</td></tr>`;
-        });
-
-        html += '</tbody></table>';
-        document.getElementById('body-f7').innerHTML = html;
-    } catch (e) {
-        console.error('F7:', e);
-        showNoData('f7');
-    }
-}
-
-// ── F8: Cost per LSU / Month ─────────────────────────────────────
+// ── F8: Cost per LSU / Monat ─────────────────────────────────────
 async function loadF8() {
     try {
         const { data: snap } = await sb
@@ -1333,7 +1282,7 @@ async function loadAll() {
 
     await Promise.allSettled([
         loadF1(), loadF1b(), loadCashflow(), loadF2(), loadF3(), loadF4(),
-        loadF5(), loadF6(), loadF7(), loadF8()
+        loadF5(), loadF6(), loadF8()
     ]);
 
     const now = new Date();

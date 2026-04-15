@@ -12,7 +12,7 @@ export const PAGES = {
   markt:     'markt.html',
   operativ:  'operativ.html',
   bericht:   'bericht.html',
-  bonus:     '../farm_bonussystem_komplett.html',
+  bonus:     'bonus.html',
   admin:     'admin.html',
   forecast:  'forecast.html',
   herdEntry: 'herd-entry.html',

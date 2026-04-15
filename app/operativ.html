@@ -546,9 +546,9 @@
                 </select>
             </div>
             <div>
-                <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Camp (optional)</label>
+                <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Kamp (optional)</label>
                 <select id="goal-camp" style="width:100%; padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:0.9em;">
-                    <option value="">-- Kein Camp --</option>
+                    <option value="">-- Kein Kamp --</option>
                 </select>
             </div>
             <div>
@@ -825,7 +825,7 @@ async function loadCampDropdown() {
     if (!select) return;
     const { data } = await sb.from('farm_camps').select('name').eq('active', true).order('name');
     if (data) {
-        select.innerHTML = '<option value="">-- Kein Camp --</option>' +
+        select.innerHTML = '<option value="">-- Kein Kamp --</option>' +
             data.map(c => '<option value="' + escHtml(c.name) + '">' + escHtml(c.name) + '</option>').join('');
     }
 }

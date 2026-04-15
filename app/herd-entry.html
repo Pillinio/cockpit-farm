@@ -157,7 +157,7 @@
         }
         .sub-heading:first-child { margin-top: 0; }
 
-        /* ── Camp / Asset rows ── */
+        /* ── Kamp / Asset rows ── */
         .dynamic-row {
             display: flex;
             align-items: center;
@@ -561,7 +561,7 @@
                 </div>
                 <div class="field">
                     <label>Beschreibung</label>
-                    <textarea id="sickNotes" placeholder="z.B. 2 Kuehe mit Durchfall, Camp 3..."></textarea>
+                    <textarea id="sickNotes" placeholder="z.B. 2 Kuehe mit Durchfall, Kamp 3..."></textarea>
                 </div>
             </div>
         </div>
@@ -573,7 +573,7 @@
                 <span class="chevron">&#9660;</span>
             </div>
             <div class="section-body">
-                <div class="sub-heading">Veld Condition pro Camp</div>
+                <div class="sub-heading">Veld Condition pro Kamp</div>
                 <div id="campList">
                     <div class="loading-placeholder">Camps werden geladen...</div>
                 </div>
@@ -742,7 +742,7 @@ async function showForm() {
     document.getElementById('snapshotDate').value = formatDate(firstOfMonth);
 
     // Load reference data in parallel
-    await Promise.all([loadCamps(), loadAssets(), loadTasks()]);
+    await Promise.all([loads(), loadAssets(), loadTasks()]);
 
     // Restore draft if available
     restoreDraft();
@@ -751,7 +751,7 @@ async function showForm() {
     draftTimer = setInterval(saveDraft, 30000);
 }
 
-async function loadCamps() {
+async function loadKamps() {
     const container = document.getElementById('campList');
     const { data, error } = await sb.from('farm_camps').select('id, name').order('name');
     if (error || !data || data.length === 0) {
@@ -973,7 +973,7 @@ function restoreDraft() {
         });
         if (d.sickNotes) setVal('sickNotes', d.sickNotes);
         if (d.openNotes) setVal('openNotes', d.openNotes);
-        // Camp scores (after load)
+        // Kamp scores (after load)
         if (d.campScores) {
             camps.forEach((c, i) => {
                 const el = document.getElementById('camp_score_' + i);
