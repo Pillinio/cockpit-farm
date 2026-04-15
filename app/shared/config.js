@@ -17,7 +17,8 @@ export const PAGES = {
   bonus:     'bonus.html',
   admin:     'admin.html',
   forecast:  'forecast.html',
-  herdEntry: 'herd-entry.html',
+  // herdEntry has been merged into berichte.html#monat (Monatsmeldung erfassen)
+  herdEntry: 'berichte.html#monat',
 };
 
 // LSU (Large Stock Unit) conversion factors

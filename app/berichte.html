@@ -495,6 +495,226 @@
             color: #9ca3af;
         }
 
+        /* ============ Monatsmeldung (form) styles ============ */
+        .mm-form-container {
+            padding: 4px 0 12px;
+        }
+        .mm-sub-heading {
+            font-size: 0.78em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6b7280;
+            margin: 18px 0 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+        }
+        .mm-sub-heading:first-child { margin-top: 0; }
+        .mm-field { margin-bottom: 14px; }
+        .mm-field label {
+            display: block;
+            font-size: 0.82em;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+        .mm-field input[type="number"],
+        .mm-field input[type="date"],
+        .mm-field input[type="text"],
+        .mm-field textarea,
+        .mm-field select {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-family: inherit;
+            background: white;
+            color: #374151;
+        }
+        .mm-field input:focus,
+        .mm-field textarea:focus,
+        .mm-field select:focus {
+            outline: none;
+            border-color: #2E75B6;
+            box-shadow: 0 0 0 3px rgba(46,117,182,0.15);
+        }
+        .mm-field textarea { min-height: 70px; resize: vertical; }
+        .mm-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .mm-row .mm-field { flex: 1; min-width: 140px; }
+        .mm-dynamic-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f3f4f6;
+            flex-wrap: wrap;
+        }
+        .mm-dynamic-row:last-child { border-bottom: none; }
+        .mm-dynamic-row .mm-name {
+            flex: 1;
+            min-width: 140px;
+            font-size: 0.9em;
+            font-weight: 500;
+            color: #374151;
+        }
+        .mm-dynamic-row select,
+        .mm-dynamic-row input {
+            padding: 8px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.88em;
+        }
+        .mm-dynamic-row select { min-width: 120px; }
+        .mm-dynamic-row input[type="number"] { width: 90px; }
+        .mm-task-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .mm-task-row:last-child { border-bottom: none; }
+        .mm-task-row input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            accent-color: #2E75B6;
+            flex-shrink: 0;
+        }
+        .mm-task-info { flex: 1; }
+        .mm-task-info .mm-task-name { font-size: 0.9em; font-weight: 500; color: #374151; }
+        .mm-task-info .mm-task-meta { font-size: 0.78em; color: #6b7280; margin-top: 2px; }
+        .mm-task-counts input[type="number"] {
+            width: 60px;
+            padding: 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.88em;
+        }
+        .mm-incident-card {
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .mm-incident-card .mm-row { margin-bottom: 10px; }
+        .mm-remove-incident {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.82em;
+            cursor: pointer;
+        }
+        .mm-photo-slot {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            position: relative;
+        }
+        .mm-photo-slot.has-photo {
+            border-style: solid;
+            border-color: #2E75B6;
+            padding: 10px;
+        }
+        .mm-photo-slot .mm-photo-icon { font-size: 1.4em; color: #9ca3af; }
+        .mm-photo-slot .mm-photo-text { font-size: 0.82em; color: #6b7280; }
+        .mm-photo-slot img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 4px;
+        }
+        .mm-photo-slot input[type="file"] { display: none; }
+        .mm-photo-label-input {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.82em;
+            margin-top: 6px;
+        }
+        .mm-photo-remove {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(220,53,69,0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            font-size: 0.95em;
+            cursor: pointer;
+            line-height: 26px;
+            text-align: center;
+        }
+        .mm-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .mm-btn:active { transform: scale(0.97); }
+        .mm-btn-primary {
+            background: linear-gradient(135deg, #1F4E78, #2E75B6);
+            color: white;
+        }
+        .mm-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .mm-btn-outline {
+            background: transparent;
+            color: #2E75B6;
+            border: 2px solid #2E75B6;
+        }
+        .mm-submit-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .mm-draft-indicator {
+            font-size: 0.78em;
+            color: #6b7280;
+        }
+        .mm-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .mm-text-muted { color: #9ca3af; font-size: 0.85em; }
+        .mm-subsection-title {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #374151;
+            margin: 14px 0 10px;
+        }
+        .mm-subsection-title:first-child { margin-top: 0; }
+
         /* ============ Woche-specific styles ============ */
         .week-nav-btn {
             background: #e5e7eb;
@@ -956,6 +1176,144 @@
                     <label for="month-picker" style="font-weight:600;">Monat:</label>
                     <input type="month" id="month-picker">
                     <button onclick="Monat.loadAll()">Aktualisieren</button>
+                </div>
+            </div>
+
+            <!-- 0. Monatsmeldung erfassen (data entry, collapsed by default) -->
+            <div class="section" id="sec-meldung">
+                <div class="section-header" onclick="Monat.toggleSection('meldung')">
+                    <span class="section-icon">&#x1F4DD;</span>
+                    <span class="section-title">Monatsmeldung erfassen</span>
+                    <span class="section-badge badge-gray" id="badge-meldung">Neu</span>
+                    <span class="section-collapse-toggle collapsed" id="toggle-meldung">&#x25BC;</span>
+                </div>
+                <div class="section-body hidden" id="body-meldung">
+                    <div class="mm-form-container" id="mm-form-screen">
+
+                        <!-- Subsection: Herde -->
+                        <h3 class="mm-subsection-title">&#x1F404; Herde</h3>
+                        <div class="mm-field">
+                            <label for="mm-snapshotDate">Stichtag</label>
+                            <input type="date" id="mm-snapshotDate">
+                        </div>
+
+                        <div class="mm-sub-heading">Aktueller Bestand</div>
+                        <div class="mm-row">
+                            <div class="mm-field">
+                                <label for="mm-cows">K&uuml;he</label>
+                                <input type="number" id="mm-cows" min="0" inputmode="numeric">
+                            </div>
+                            <div class="mm-field">
+                                <label for="mm-bulls">Bullen</label>
+                                <input type="number" id="mm-bulls" min="0" inputmode="numeric">
+                            </div>
+                            <div class="mm-field">
+                                <label for="mm-heifers">F&auml;rsen</label>
+                                <input type="number" id="mm-heifers" min="0" inputmode="numeric">
+                            </div>
+                            <div class="mm-field">
+                                <label for="mm-oxen">Ochsen</label>
+                                <input type="number" id="mm-oxen" min="0" inputmode="numeric">
+                            </div>
+                            <div class="mm-field">
+                                <label for="mm-calves">K&auml;lber</label>
+                                <input type="number" id="mm-calves" min="0" inputmode="numeric">
+                            </div>
+                        </div>
+
+                        <div class="mm-sub-heading">Seit letzter Z&auml;hlung</div>
+                        <div class="mm-row">
+                            <div class="mm-field">
+                                <label for="mm-births">Geburten</label>
+                                <input type="number" id="mm-births" min="0" value="0" inputmode="numeric">
+                            </div>
+                            <div class="mm-field">
+                                <label for="mm-deathsCalves">Tode K&auml;lber</label>
+                                <input type="number" id="mm-deathsCalves" min="0" value="0" inputmode="numeric">
+                            </div>
+                            <div class="mm-field">
+                                <label for="mm-deathsAdult">Tode Adult</label>
+                                <input type="number" id="mm-deathsAdult" min="0" value="0" inputmode="numeric">
+                            </div>
+                            <div class="mm-field">
+                                <label for="mm-sales">Verk&auml;ufe</label>
+                                <input type="number" id="mm-sales" min="0" value="0" inputmode="numeric">
+                            </div>
+                            <div class="mm-field">
+                                <label for="mm-purchases">Zuk&auml;ufe</label>
+                                <input type="number" id="mm-purchases" min="0" value="0" inputmode="numeric">
+                            </div>
+                        </div>
+
+                        <div class="mm-sub-heading">Kranke Tiere (optional)</div>
+                        <div class="mm-row">
+                            <div class="mm-field">
+                                <label for="mm-sickCount">Anzahl</label>
+                                <input type="number" id="mm-sickCount" min="0" inputmode="numeric">
+                            </div>
+                        </div>
+                        <div class="mm-field">
+                            <label for="mm-sickNotes">Beschreibung</label>
+                            <textarea id="mm-sickNotes" placeholder="z.B. 2 K&uuml;he mit Durchfall, Kamp 3..."></textarea>
+                        </div>
+
+                        <!-- Subsection: Weide & Wasser -->
+                        <h3 class="mm-subsection-title" style="margin-top:24px;">&#x1F331; Weide &amp; Wasser</h3>
+                        <div class="mm-sub-heading">Veld Condition pro Kamp</div>
+                        <div id="mm-campList">
+                            <div class="mm-text-muted">Camps werden geladen...</div>
+                        </div>
+                        <div class="mm-sub-heading">Bohrl&ouml;cher &amp; D&auml;mme</div>
+                        <div id="mm-assetList">
+                            <div class="mm-text-muted">Assets werden geladen...</div>
+                        </div>
+
+                        <!-- Subsection: Operatives -->
+                        <h3 class="mm-subsection-title" style="margin-top:24px;">&#x1F6E0;&#xFE0F; Operatives</h3>
+                        <div class="mm-sub-heading">Aufgaben-Checkliste</div>
+                        <div id="mm-taskList">
+                            <div class="mm-text-muted">Aufgaben werden geladen...</div>
+                        </div>
+                        <div class="mm-sub-heading">Neue Vorf&auml;lle</div>
+                        <div id="mm-incidentList"></div>
+                        <button type="button" class="mm-btn mm-btn-outline" onclick="Monat.meldung.addIncident()" style="margin-top:8px;padding:8px 14px;font-size:0.85em;">
+                            + Vorfall hinzuf&uuml;gen
+                        </button>
+                        <div class="mm-sub-heading">Offene Punkte / W&uuml;nsche</div>
+                        <div class="mm-field">
+                            <textarea id="mm-openNotes" placeholder="Freitext f&uuml;r offene Themen, W&uuml;nsche, Hinweise..."></textarea>
+                        </div>
+
+                        <!-- Subsection: Fotos -->
+                        <h3 class="mm-subsection-title" style="margin-top:24px;">&#x1F4F7; Fotos (optional)</h3>
+                        <div id="mm-photoSlots">
+                            <div class="mm-photo-slot" onclick="this.querySelector('input').click()">
+                                <span class="mm-photo-icon">&#128247;</span>
+                                <span class="mm-photo-text">Foto aufnehmen oder ausw&auml;hlen</span>
+                                <input type="file" accept="image/*" capture="environment" onchange="Monat.meldung.handlePhoto(this, 0)">
+                            </div>
+                            <div class="mm-photo-slot" onclick="this.querySelector('input').click()">
+                                <span class="mm-photo-icon">&#128247;</span>
+                                <span class="mm-photo-text">Foto aufnehmen oder ausw&auml;hlen</span>
+                                <input type="file" accept="image/*" capture="environment" onchange="Monat.meldung.handlePhoto(this, 1)">
+                            </div>
+                            <div class="mm-photo-slot" onclick="this.querySelector('input').click()">
+                                <span class="mm-photo-icon">&#128247;</span>
+                                <span class="mm-photo-text">Foto aufnehmen oder ausw&auml;hlen</span>
+                                <input type="file" accept="image/*" capture="environment" onchange="Monat.meldung.handlePhoto(this, 2)">
+                            </div>
+                        </div>
+
+                        <!-- Submit bar -->
+                        <div class="mm-submit-bar">
+                            <button type="button" class="mm-btn mm-btn-primary" id="mm-submitBtn" onclick="Monat.meldung.submit()">
+                                Monatsmeldung absenden
+                            </button>
+                            <div class="mm-draft-indicator" id="mm-draftIndicator"></div>
+                            <div class="form-msg" id="mm-msg" style="flex-basis:100%;"></div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
 
@@ -1779,6 +2137,460 @@ const Monat = {
 
         await this.loadCamps();
         await this.loadAll();
+
+        // Initialize Monatsmeldung sub-module (data entry form)
+        this.meldung.init();
+    }
+};
+
+// ══════════════════════════════════════════════════════════════════
+// Monat.meldung — Monatsmeldung data entry (migrated from herd-entry.html)
+// ══════════════════════════════════════════════════════════════════
+Monat.meldung = {
+    // State
+    camps: [],
+    assets: [],
+    tasks: [],
+    photoFiles: [null, null, null],
+    photoLabels: ['', '', ''],
+    draftTimer: null,
+    isSubmitting: false,
+    incidentCount: 0,
+    initialized: false,
+
+    DRAFT_KEY: 'monatsbericht_draft',
+
+    // ── Helpers ──
+    val(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; },
+    num(id) { return parseInt(this.val(id)) || 0; },
+    setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v; },
+    esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; },
+    formatDate(d) {
+        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    },
+
+    showMsg(text, cls) {
+        const msg = document.getElementById('mm-msg');
+        if (!msg) return;
+        msg.textContent = text;
+        msg.className = 'form-msg ' + (cls || '');
+        if (cls === 'success') {
+            setTimeout(() => { msg.style.display = 'none'; msg.className = 'form-msg'; }, 5000);
+        }
+    },
+
+    // ── Init ──
+    async init() {
+        if (this.initialized) return;
+        this.initialized = true;
+
+        // Set default date to 1st of current month
+        const now = new Date();
+        const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        this.setVal('mm-snapshotDate', this.formatDate(firstOfMonth));
+
+        // Load reference data (parallel)
+        await Promise.all([this.loadCamps(), this.loadAssets(), this.loadTasks()]);
+
+        // Restore draft
+        this.restoreDraft();
+
+        // Auto-save every 30s
+        const self = this;
+        this.draftTimer = setInterval(() => self.saveDraft(), 30000);
+    },
+
+    // ── Load camps ──
+    async loadCamps() {
+        const container = document.getElementById('mm-campList');
+        const { data, error } = await sb.from('farm_camps').select('id, name').order('name');
+        if (error || !data || data.length === 0) {
+            container.innerHTML = '<div class="mm-text-muted">Keine Camps gefunden.</div>';
+            return;
+        }
+        this.camps = data;
+        const self = this;
+        container.innerHTML = this.camps.map((c, i) => `
+            <div class="mm-dynamic-row">
+                <span class="mm-name">${self.esc(c.name)}</span>
+                <select id="mm-camp_score_${i}" data-camp-id="${c.id}" data-camp-name="${self.esc(c.name)}">
+                    <option value="">--</option>
+                    <option value="5">5 Exzellent</option>
+                    <option value="4">4 Gut</option>
+                    <option value="3">3 Mittel</option>
+                    <option value="2">2 Schlecht</option>
+                    <option value="1">1 Kritisch</option>
+                </select>
+            </div>
+        `).join('');
+    },
+
+    // ── Load assets ──
+    async loadAssets() {
+        const container = document.getElementById('mm-assetList');
+        const { data, error } = await sb
+            .from('farm_assets')
+            .select('id, name, asset_type')
+            .in('asset_type', ['borehole', 'dam'])
+            .order('name');
+        if (error || !data || data.length === 0) {
+            container.innerHTML = '<div class="mm-text-muted">Keine Bohrl&ouml;cher/D&auml;mme gefunden.</div>';
+            return;
+        }
+        this.assets = data;
+        const self = this;
+        container.innerHTML = this.assets.map((a, i) => {
+            const unit = a.asset_type === 'borehole' ? 'l/h' : 'F&uuml;llstand %';
+            const typeLabel = a.asset_type === 'borehole' ? 'Bohrloch' : 'Damm';
+            return `
+            <div class="mm-dynamic-row">
+                <span class="mm-name">${self.esc(a.name)} <span class="mm-text-muted">(${typeLabel})</span></span>
+                <select id="mm-asset_status_${i}" data-asset-id="${a.id}">
+                    <option value="">--</option>
+                    <option value="gruen">Gr&uuml;n</option>
+                    <option value="gelb">Gelb</option>
+                    <option value="rot">Rot</option>
+                    <option value="offline">Offline</option>
+                </select>
+                <input type="number" id="mm-asset_metric_${i}" placeholder="${unit}" min="0" step="any" inputmode="decimal">
+            </div>`;
+        }).join('');
+    },
+
+    // ── Load tasks ──
+    async loadTasks() {
+        const container = document.getElementById('mm-taskList');
+        const { data, error } = await sb.from('task_templates').select('id, name, description, target_scope').order('name');
+        if (error || !data || data.length === 0) {
+            container.innerHTML = '<div class="mm-text-muted">Keine Aufgabenvorlagen gefunden.</div>';
+            return;
+        }
+        this.tasks = data;
+        const self = this;
+        container.innerHTML = this.tasks.map((t, i) => `
+            <div class="mm-task-row">
+                <input type="checkbox" id="mm-task_done_${i}" data-task-id="${t.id}">
+                <div class="mm-task-info">
+                    <div class="mm-task-name">${self.esc(t.name)}</div>
+                    ${t.description ? `<div class="mm-task-meta">${self.esc(t.description)}</div>` : ''}
+                </div>
+                <div class="mm-task-counts">
+                    <input type="number" id="mm-task_count_${i}" min="0" value="0" inputmode="numeric" placeholder="Anz.">
+                </div>
+            </div>
+        `).join('');
+    },
+
+    // ── Incidents ──
+    addIncident() {
+        const idx = this.incidentCount++;
+        const html = `
+        <div class="mm-incident-card" id="mm-incident_${idx}">
+            <div class="mm-row">
+                <div class="mm-field">
+                    <label>Art</label>
+                    <select id="mm-inc_type_${idx}">
+                        <option value="Diebstahl">Diebstahl</option>
+                        <option value="Raubtier">Raubtier</option>
+                        <option value="Unfall">Unfall</option>
+                        <option value="Krankheit">Krankheit</option>
+                        <option value="Verletzung">Verletzung</option>
+                        <option value="Sonstiges">Sonstiges</option>
+                    </select>
+                </div>
+                <div class="mm-field">
+                    <label>Schwere</label>
+                    <select id="mm-inc_severity_${idx}">
+                        <option value="niedrig">Niedrig</option>
+                        <option value="mittel" selected>Mittel</option>
+                        <option value="hoch">Hoch</option>
+                        <option value="kritisch">Kritisch</option>
+                    </select>
+                </div>
+                <div class="mm-field">
+                    <label>Betroffene Tiere</label>
+                    <input type="number" id="mm-inc_count_${idx}" min="0" value="1" inputmode="numeric">
+                </div>
+            </div>
+            <div class="mm-field">
+                <label>Beschreibung</label>
+                <textarea id="mm-inc_desc_${idx}" placeholder="Was ist passiert?"></textarea>
+            </div>
+            <button type="button" class="mm-remove-incident" onclick="Monat.meldung.removeIncident(${idx})">Entfernen</button>
+        </div>`;
+        document.getElementById('mm-incidentList').insertAdjacentHTML('beforeend', html);
+    },
+
+    removeIncident(idx) {
+        const el = document.getElementById('mm-incident_' + idx);
+        if (el) el.remove();
+    },
+
+    // ── Photos ──
+    handlePhoto(input, idx) {
+        const file = input.files[0];
+        if (!file) return;
+        this.photoFiles[idx] = file;
+        const slot = input.closest('.mm-photo-slot');
+        const self = this;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            slot.classList.add('has-photo');
+            slot.innerHTML = `
+                <button type="button" class="mm-photo-remove" onclick="event.stopPropagation(); Monat.meldung.removePhoto(${idx})">&times;</button>
+                <img src="${e.target.result}" alt="Foto ${idx + 1}">
+                <input type="text" class="mm-photo-label-input" placeholder="Beschriftung..." value="${self.esc(self.photoLabels[idx])}" onchange="Monat.meldung.photoLabels[${idx}]=this.value">
+                <input type="file" accept="image/*" capture="environment" onchange="Monat.meldung.handlePhoto(this, ${idx})">
+            `;
+        };
+        reader.readAsDataURL(file);
+    },
+
+    removePhoto(idx) {
+        this.photoFiles[idx] = null;
+        this.photoLabels[idx] = '';
+        const slots = document.getElementById('mm-photoSlots').children;
+        slots[idx].classList.remove('has-photo');
+        slots[idx].innerHTML = `
+            <span class="mm-photo-icon">&#128247;</span>
+            <span class="mm-photo-text">Foto aufnehmen oder ausw&auml;hlen</span>
+            <input type="file" accept="image/*" capture="environment" onchange="Monat.meldung.handlePhoto(this, ${idx})">
+        `;
+    },
+
+    async uploadPhotos(snapshotDate) {
+        const urls = [];
+        for (let i = 0; i < 3; i++) {
+            if (!this.photoFiles[i]) continue;
+            const ext = this.photoFiles[i].name.split('.').pop();
+            const path = `herd-photos/${snapshotDate}/${Date.now()}_${i}.${ext}`;
+            const { error } = await sb.storage.from('farm-uploads').upload(path, this.photoFiles[i]);
+            if (!error) {
+                urls.push({ path, label: this.photoLabels[i] || '' });
+            }
+        }
+        return urls;
+    },
+
+    // ── Draft save / restore ──
+    saveDraft() {
+        try {
+            const self = this;
+            const draft = {
+                snapshotDate: this.val('mm-snapshotDate'),
+                cows: this.val('mm-cows'), bulls: this.val('mm-bulls'), heifers: this.val('mm-heifers'),
+                oxen: this.val('mm-oxen'), calves: this.val('mm-calves'),
+                births: this.val('mm-births'), deathsCalves: this.val('mm-deathsCalves'),
+                deathsAdult: this.val('mm-deathsAdult'), sales: this.val('mm-sales'), purchases: this.val('mm-purchases'),
+                sickCount: this.val('mm-sickCount'), sickNotes: this.val('mm-sickNotes'),
+                openNotes: this.val('mm-openNotes'),
+                campScores: {},
+                assetStatuses: {},
+                assetMetrics: {},
+                savedAt: new Date().toISOString()
+            };
+            this.camps.forEach((c, i) => {
+                const el = document.getElementById('mm-camp_score_' + i);
+                if (el) draft.campScores[c.id] = el.value;
+            });
+            this.assets.forEach((a, i) => {
+                const sEl = document.getElementById('mm-asset_status_' + i);
+                const mEl = document.getElementById('mm-asset_metric_' + i);
+                if (sEl) draft.assetStatuses[a.id] = sEl.value;
+                if (mEl) draft.assetMetrics[a.id] = mEl.value;
+            });
+            localStorage.setItem(this.DRAFT_KEY, JSON.stringify(draft));
+            const indicator = document.getElementById('mm-draftIndicator');
+            if (indicator) {
+                indicator.textContent = 'Entwurf gespeichert ' + new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
+            }
+        } catch(e) { /* ignore */ }
+    },
+
+    restoreDraft() {
+        try {
+            const raw = localStorage.getItem(this.DRAFT_KEY);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            const self = this;
+            if (d.snapshotDate) this.setVal('mm-snapshotDate', d.snapshotDate);
+            ['cows','bulls','heifers','oxen','calves','births','deathsCalves','deathsAdult','sales','purchases','sickCount'].forEach(k => {
+                if (d[k]) self.setVal('mm-' + k, d[k]);
+            });
+            if (d.sickNotes) this.setVal('mm-sickNotes', d.sickNotes);
+            if (d.openNotes) this.setVal('mm-openNotes', d.openNotes);
+            if (d.campScores) {
+                this.camps.forEach((c, i) => {
+                    const el = document.getElementById('mm-camp_score_' + i);
+                    if (el && d.campScores[c.id]) el.value = d.campScores[c.id];
+                });
+            }
+            if (d.assetStatuses) {
+                this.assets.forEach((a, i) => {
+                    const sEl = document.getElementById('mm-asset_status_' + i);
+                    const mEl = document.getElementById('mm-asset_metric_' + i);
+                    if (sEl && d.assetStatuses[a.id]) sEl.value = d.assetStatuses[a.id];
+                    if (mEl && d.assetMetrics && d.assetMetrics[a.id]) mEl.value = d.assetMetrics[a.id];
+                });
+            }
+            const savedAt = d.savedAt ? new Date(d.savedAt).toLocaleString('de-DE') : '';
+            const indicator = document.getElementById('mm-draftIndicator');
+            if (indicator && savedAt) {
+                indicator.textContent = 'Entwurf vom ' + savedAt + ' wiederhergestellt';
+            }
+        } catch(e) { /* ignore */ }
+    },
+
+    clearDraft() {
+        localStorage.removeItem(this.DRAFT_KEY);
+        if (this.draftTimer) { clearInterval(this.draftTimer); this.draftTimer = null; }
+    },
+
+    // ── Reset form after success ──
+    resetForm() {
+        const container = document.getElementById('mm-form-screen');
+        if (!container) return;
+        container.querySelectorAll('input[type="number"]').forEach(el => el.value = el.defaultValue || '');
+        container.querySelectorAll('textarea').forEach(el => el.value = '');
+        container.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+        container.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+        document.getElementById('mm-incidentList').innerHTML = '';
+        this.incidentCount = 0;
+        this.photoFiles = [null, null, null];
+        this.photoLabels = ['', '', ''];
+        for (let i = 0; i < 3; i++) this.removePhoto(i);
+        const now = new Date();
+        this.setVal('mm-snapshotDate', this.formatDate(new Date(now.getFullYear(), now.getMonth(), 1)));
+        // Restart auto-save
+        const self = this;
+        if (!this.draftTimer) this.draftTimer = setInterval(() => self.saveDraft(), 30000);
+    },
+
+    // ── Submit ──
+    async submit() {
+        if (this.isSubmitting) return;
+        this.isSubmitting = true;
+
+        const btn = document.getElementById('mm-submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="mm-spinner"></span> Wird gesendet...';
+
+        try {
+            const snapshotDate = this.val('mm-snapshotDate');
+            if (!snapshotDate) throw new Error('Bitte Stichtag angeben.');
+
+            const cows = this.num('mm-cows');
+            const bulls = this.num('mm-bulls');
+            const heifers = this.num('mm-heifers');
+            const oxen = this.num('mm-oxen');
+            const calves = this.num('mm-calves');
+            const births = this.num('mm-births');
+            const deathsCalves = this.num('mm-deathsCalves');
+            const deathsAdult = this.num('mm-deathsAdult');
+            const salesVal = this.num('mm-sales');
+            const purchasesVal = this.num('mm-purchases');
+            const sickCount = this.num('mm-sickCount');
+            const sickNotes = this.val('mm-sickNotes');
+            const openNotes = this.val('mm-openNotes');
+
+            let notes = '';
+            if (sickCount > 0) notes += `Kranke Tiere: ${sickCount} - ${sickNotes}\n`;
+            if (openNotes) notes += `Offene Punkte: ${openNotes}\n`;
+
+            // Upload photos
+            const photoRefs = await this.uploadPhotos(snapshotDate);
+
+            // 1. herd_snapshots
+            const { data: snapshot, error: snapErr } = await sb.from('herd_snapshots').insert({
+                snapshot_date: snapshotDate,
+                cows, bulls, heifers, calves, oxen,
+                births,
+                deaths: deathsCalves + deathsAdult,
+                sales: salesVal,
+                purchases: purchasesVal,
+                notes: notes || null,
+                photos_ref: photoRefs.length > 0 ? photoRefs : null
+            }).select().single();
+
+            if (snapErr) throw new Error('Herde speichern fehlgeschlagen: ' + snapErr.message);
+
+            // 2. veld_observations
+            let veldCount = 0;
+            for (let i = 0; i < this.camps.length; i++) {
+                const scoreEl = document.getElementById('mm-camp_score_' + i);
+                if (!scoreEl || !scoreEl.value) continue;
+                const { error } = await sb.from('veld_observations').insert({
+                    snapshot_date: snapshotDate,
+                    camp_name: this.camps[i].name,
+                    condition_score: parseInt(scoreEl.value)
+                });
+                if (!error) veldCount++;
+            }
+
+            // 3. asset_status_reports
+            let assetCount = 0;
+            for (let i = 0; i < this.assets.length; i++) {
+                const statusEl = document.getElementById('mm-asset_status_' + i);
+                const metricEl = document.getElementById('mm-asset_metric_' + i);
+                if (!statusEl || !statusEl.value) continue;
+                const { error } = await sb.from('asset_status_reports').insert({
+                    snapshot_date: snapshotDate,
+                    asset_id: this.assets[i].id,
+                    status: statusEl.value,
+                    metric_value: metricEl && metricEl.value ? parseFloat(metricEl.value) : null
+                });
+                if (!error) assetCount++;
+            }
+
+            // 4. task_executions
+            let taskCount = 0;
+            for (let i = 0; i < this.tasks.length; i++) {
+                const doneEl = document.getElementById('mm-task_done_' + i);
+                if (!doneEl || !doneEl.checked) continue;
+                const countEl = document.getElementById('mm-task_count_' + i);
+                const { error } = await sb.from('task_executions').insert({
+                    snapshot_date: snapshotDate,
+                    task_template_id: this.tasks[i].id,
+                    completed: true,
+                    covered_count: countEl ? parseInt(countEl.value) || 0 : 0
+                });
+                if (!error) taskCount++;
+            }
+
+            // 5. incidents
+            let incCount = 0;
+            const incidentCards = document.querySelectorAll('#mm-incidentList .mm-incident-card');
+            for (const card of incidentCards) {
+                const idx = card.id.split('_')[1];
+                const { error } = await sb.from('incidents').insert({
+                    snapshot_date: snapshotDate,
+                    incident_type: this.val('mm-inc_type_' + idx),
+                    severity: this.val('mm-inc_severity_' + idx),
+                    affected_count: this.num('mm-inc_count_' + idx),
+                    description: this.val('mm-inc_desc_' + idx)
+                });
+                if (!error) incCount++;
+            }
+
+            // Success
+            this.clearDraft();
+            const total = cows + bulls + heifers + oxen + calves;
+            this.showMsg(
+                `Monatsmeldung gespeichert: ${total} Tiere, ${veldCount} Veld, ${assetCount} Assets, ${taskCount} Aufgaben, ${incCount} Vorf&auml;lle, ${photoRefs.length} Fotos.`,
+                'success'
+            );
+            this.resetForm();
+
+            // Reload the display sections so new data appears
+            if (Monat.loadAll) { try { await Monat.loadAll(); } catch(e) {} }
+
+        } catch (err) {
+            this.showMsg('Fehler: ' + err.message, 'error');
+        } finally {
+            this.isSubmitting = false;
+            btn.disabled = false;
+            btn.textContent = 'Monatsmeldung absenden';
+        }
     }
 };
 

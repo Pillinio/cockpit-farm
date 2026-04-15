@@ -5,7 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createLogger } from "../_shared/logger.ts";
 
-const FORM_URL = "https://erichsfelde.farm/herd-entry.html";
+const FORM_URL = "https://erichsfelde.farm/app/berichte.html#monat";
 
 Deno.serve(async (_req: Request) => {
   // Use Africa/Windhoek timezone for date checks (Namibia local time)

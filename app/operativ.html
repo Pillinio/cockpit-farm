@@ -447,46 +447,6 @@
         <button onclick="loadAll()">Aktualisieren</button>
     </div>
 
-    <!-- O1: Task Coverage -->
-    <div class="section">
-        <div class="section-title">
-            <span class="section-icon">&#x2705;</span>
-            Aufgabenabdeckung (O1)
-        </div>
-        <div class="kpi-row">
-            <div class="kpi-card">
-                <div class="kpi-label">Gesamt-Abdeckung</div>
-                <div class="kpi-value" id="kpi-coverage"><span class="loading-spinner"></span></div>
-                <div class="kpi-sub">Erledigte vs. geplante Aufgaben</div>
-                <div class="kpi-status-bar status-gray" id="kpi-coverage-bar"></div>
-            </div>
-        </div>
-        <div class="task-list" id="task-list">
-            <div class="no-data"><span class="loading-spinner"></span> Lade Aufgaben...</div>
-        </div>
-    </div>
-
-    <!-- O2: Open Maintenance -->
-    <div class="section">
-        <div class="section-title">
-            <span class="section-icon">&#x1F527;</span>
-            Offene Wartung (O2)
-        </div>
-        <div class="kpi-row">
-            <div class="kpi-card">
-                <div class="kpi-label">Offene Tickets &gt; 30 Tage</div>
-                <div class="kpi-value" id="kpi-open-tickets"><span class="loading-spinner"></span></div>
-                <div class="kpi-sub" id="kpi-open-tickets-sub">Ungeloeste Vorfaelle</div>
-                <div class="kpi-status-bar status-gray" id="kpi-open-tickets-bar"></div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Gesamt offene Tickets</div>
-                <div class="kpi-value" id="kpi-total-open"><span class="loading-spinner"></span></div>
-                <div class="kpi-sub">Alle offenen Vorgaenge</div>
-            </div>
-        </div>
-    </div>
-
     <!-- O3: Incident Log -->
     <div class="section">
         <div class="section-title">
@@ -601,113 +561,6 @@ function formatDate(dateStr) {
     if (!dateStr) return '\u2014';
     const d = new Date(dateStr);
     return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-// ── O1: Task Coverage ────────────────────────────────────────────
-async function loadTaskCoverage() {
-    const listEl = document.getElementById('task-list');
-    const covEl = document.getElementById('kpi-coverage');
-    const barEl = document.getElementById('kpi-coverage-bar');
-
-    try {
-        const { data: templates } = await sb
-            .from('task_templates')
-            .select('id, name, frequency')
-            .eq('active', true)
-            .order('name');
-
-        if (!templates?.length) {
-            listEl.innerHTML = '<div class="no-data">Keine Aufgabenvorlagen definiert.</div>';
-            covEl.textContent = '\u2014';
-            return;
-        }
-
-        // Get all task executions
-        const { data: executions } = await sb
-            .from('task_executions')
-            .select('template_id, executed_date, covered_count, target_count')
-            .order('executed_date', { ascending: false });
-
-        // Build coverage per template
-        const now = new Date();
-        let totalDone = 0;
-        let totalExpected = 0;
-
-        const items = templates.map(t => {
-            const tExecs = (executions || []).filter(e => e.template_id === t.id);
-            const totalCovered = tExecs.reduce((sum, e) => sum + (e.covered_count || 0), 0);
-            const totalTarget = tExecs.reduce((sum, e) => sum + (e.target_count || 1), 0) || 1;
-            const pct = Math.round(totalCovered / totalTarget * 100);
-
-            totalDone += totalCovered;
-            totalExpected += totalTarget;
-
-            const color = pct >= 80 ? '#22c55e' : pct >= 50 ? '#eab308' : '#ef4444';
-
-            return `
-                <div class="task-item">
-                    <span class="task-name">${escHtml(t.name)}</span>
-                    <span class="task-frequency">${escHtml(t.frequency || '')}</span>
-                    <span class="task-coverage" style="color:${color}">${pct}%</span>
-                    <div class="coverage-bar">
-                        <div class="coverage-fill" style="width:${pct}%; background:${color}"></div>
-                    </div>
-                </div>
-            `;
-        });
-
-        listEl.innerHTML = items.join('');
-
-        const totalPct = totalExpected > 0 ? Math.round(totalDone / totalExpected * 100) : 0;
-        covEl.textContent = totalPct + ' %';
-
-        ['status-green','status-yellow','status-red','status-gray'].forEach(c => barEl.classList.remove(c));
-        barEl.classList.add(totalPct >= 80 ? 'status-green' : totalPct >= 50 ? 'status-yellow' : 'status-red');
-    } catch {
-        listEl.innerHTML = '<div class="no-data">Fehler beim Laden der Aufgaben.</div>';
-        covEl.textContent = '\u2014';
-    }
-}
-
-// ── O2: Open Maintenance ─────────────────────────────────────────
-async function loadOpenMaintenance() {
-    const ticketEl = document.getElementById('kpi-open-tickets');
-    const totalEl = document.getElementById('kpi-total-open');
-    const barEl = document.getElementById('kpi-open-tickets-bar');
-    const subEl = document.getElementById('kpi-open-tickets-sub');
-
-    try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
-
-        // Tickets older than 30 days (open = resolution is null)
-        const { count: oldCount } = await sb
-            .from('incidents')
-            .select('id', { count: 'exact', head: true })
-            .is('resolution', null)
-            .lte('incident_date', cutoff);
-
-        // All open tickets (resolution is null)
-        const { count: totalCount } = await sb
-            .from('incidents')
-            .select('id', { count: 'exact', head: true })
-            .is('resolution', null);
-
-        const old = oldCount ?? 0;
-        const total = totalCount ?? 0;
-
-        ticketEl.textContent = old;
-        totalEl.textContent = total;
-
-        subEl.textContent = old === 0 ? 'Keine ueberfaelligen Tickets' : old + ' ueberfaellig (> 30 Tage)';
-
-        ['status-green','status-yellow','status-red','status-gray'].forEach(c => barEl.classList.remove(c));
-        barEl.classList.add(old === 0 ? 'status-green' : old <= 3 ? 'status-yellow' : 'status-red');
-    } catch {
-        ticketEl.textContent = '\u2014';
-        totalEl.textContent = '\u2014';
-    }
 }
 
 // ── O3: Incident Log ─────────────────────────────────────────────
@@ -873,8 +726,6 @@ async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
     await Promise.allSettled([
-        loadTaskCoverage(),
-        loadOpenMaintenance(),
         loadIncidents(),
         loadGoals()
     ]);
