@@ -600,6 +600,7 @@
         </div>
         <div class="form-actions">
             <button class="btn-submit" id="cal-submit-btn" onclick="submitCalendarEntry()">Speichern</button>
+            <button id="cal-cancel-edit-btn" onclick="cancelEditMode()" style="display:none; background:#6b7280; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; margin-left:8px;">Abbrechen</button>
         </div>
         <div class="form-message" id="cal-form-message"></div>
     </div>
@@ -696,6 +697,7 @@ let _currentMonth; // 0-11
 let _userId = null;
 let _userRole = null;
 let _monthEntries = [];
+let _editingEntryId = null;
 
 // ── Helpers ─────────────────────────────────────────────────────
 function ymd(y, m, d) {
@@ -912,13 +914,19 @@ function renderEntriesTable(monthStart, monthEnd) {
         else if (e.status === 'rejected') statusLabel = '<span class="status-label rejected">Abgelehnt</span>';
 
         let actionHtml = '';
+        const canEditOrDelete = _userRole === 'owner' || (e.requested_by === _userId && e.status === 'requested');
+
         if (_userRole === 'owner' && e.status === 'requested') {
-            actionHtml =
+            actionHtml +=
                 '<button class="btn-approve" onclick="approveCalendarEntry(\'' + e.id + '\')">Bestaetigen</button>' +
                 '<button class="btn-reject" onclick="rejectCalendarEntry(\'' + e.id + '\')">Ablehnen</button>';
-        } else {
-            actionHtml = '—';
         }
+        if (canEditOrDelete) {
+            actionHtml +=
+                '<button class="btn-edit" onclick="editCalendarEntry(\'' + e.id + '\')" style="background:#6b7280; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; margin-left:4px;">Bearbeiten</button>' +
+                '<button class="btn-delete" onclick="deleteCalendarEntry(\'' + e.id + '\')" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; margin-left:4px;">Loeschen</button>';
+        }
+        if (!actionHtml) actionHtml = '—';
 
         tr.innerHTML =
             '<td>' + calendarDateFmt(e.start_date) + ' – ' + calendarDateFmt(e.end_date) + '</td>' +
@@ -951,6 +959,69 @@ async function approveCalendarEntry(entryId) {
         console.error('Approve error:', err);
         alert('Fehler beim Bestaetigen: ' + (err.message || err));
     }
+}
+
+async function deleteCalendarEntry(entryId) {
+    if (!confirm('Eintrag wirklich loeschen?')) return;
+    try {
+        // If entry was synced to Google Calendar, try to remove it there too
+        const entry = _monthEntries.find(e => e.id === entryId);
+        if (entry?.google_event_id) {
+            sb.functions.invoke('notify-calendar', { body: { action: 'rejected', entryId } })
+                .catch(e => console.warn('Calendar cleanup failed:', e));
+        }
+        const { error } = await sb.from('farm_calendar').delete().eq('id', entryId);
+        if (error) throw error;
+        await loadMonthData();
+    } catch (err) {
+        console.error('Delete error:', err);
+        alert('Fehler beim Loeschen: ' + (err.message || err));
+    }
+}
+
+function editCalendarEntry(entryId) {
+    const entry = _monthEntries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    // Populate form with entry data
+    const personSelect = document.getElementById('cal-person');
+    const personCustom = document.getElementById('cal-person-custom');
+
+    if (entry.person_name === 'Werner Jacobi' || entry.person_name === 'Wanda Jacobi') {
+        personSelect.value = entry.person_name;
+        personCustom.style.display = 'none';
+        personCustom.value = '';
+    } else {
+        personSelect.value = '_custom';
+        personCustom.style.display = 'block';
+        personCustom.value = entry.person_name;
+    }
+
+    document.getElementById('cal-type').value = entry.entry_type;
+    document.getElementById('cal-start').value = entry.start_date;
+    document.getElementById('cal-end').value = entry.end_date;
+    document.getElementById('cal-reason').value = entry.reason || '';
+
+    // Set edit mode
+    _editingEntryId = entryId;
+    document.getElementById('cal-submit-btn').textContent = 'Aenderungen speichern';
+    document.getElementById('cal-cancel-edit-btn').style.display = 'inline-block';
+
+    // Scroll to form
+    document.querySelector('.new-entry-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelEditMode() {
+    _editingEntryId = null;
+    document.getElementById('cal-submit-btn').textContent = 'Speichern';
+    document.getElementById('cal-cancel-edit-btn').style.display = 'none';
+    document.getElementById('cal-start').value = '';
+    document.getElementById('cal-end').value = '';
+    document.getElementById('cal-reason').value = '';
+    document.getElementById('cal-person').value = 'Werner Jacobi';
+    document.getElementById('cal-person-custom').style.display = 'none';
+    document.getElementById('cal-person-custom').value = '';
+    document.getElementById('cal-type').value = 'leave';
 }
 
 async function rejectCalendarEntry(entryId) {
@@ -1028,42 +1099,52 @@ async function submitCalendarEntry() {
     btn.textContent = 'Wird gespeichert...';
 
     try {
-        const insertData = {
+        let entryId;
+        const payload = {
             entry_type: entryType,
             person_name: personName,
             person_role: personRole,
             start_date: startDate,
             end_date: endDate,
             reason: reason || null,
-            notes: null,
-            status: status,
-            requested_by: _userId,
-            decided_by: status === 'approved' ? _userId : null,
-            decided_at: status === 'approved' ? new Date().toISOString() : null
         };
 
-        const { data: inserted, error } = await sb.from('farm_calendar').insert(insertData).select('id').single();
-        if (error) throw error;
+        if (_editingEntryId) {
+            // UPDATE mode
+            const { error } = await sb.from('farm_calendar')
+                .update(payload)
+                .eq('id', _editingEntryId);
+            if (error) throw error;
+            entryId = _editingEntryId;
+            msgEl.className = 'form-message success';
+            msgEl.textContent = 'Aenderungen gespeichert.';
+        } else {
+            // INSERT mode
+            const insertData = {
+                ...payload,
+                notes: null,
+                status: status,
+                requested_by: _userId,
+                decided_by: status === 'approved' ? _userId : null,
+                decided_at: status === 'approved' ? new Date().toISOString() : null
+            };
+            const { data: inserted, error } = await sb.from('farm_calendar').insert(insertData).select('id').single();
+            if (error) throw error;
+            entryId = inserted.id;
 
-        const notifyAction = status === 'approved' ? 'approved' : 'created';
-        sb.functions.invoke('notify-calendar', { body: { action: notifyAction, entryId: inserted.id } })
-            .catch(e => console.warn('Notification failed:', e));
+            const notifyAction = status === 'approved' ? 'approved' : 'created';
+            sb.functions.invoke('notify-calendar', { body: { action: notifyAction, entryId } })
+                .catch(e => console.warn('Notification failed:', e));
 
-        msgEl.className = 'form-message success';
-        msgEl.textContent = status === 'approved'
-            ? 'Eintrag gespeichert und genehmigt.'
-            : 'Anfrage wurde erstellt und wartet auf Genehmigung.';
+            msgEl.className = 'form-message success';
+            msgEl.textContent = status === 'approved'
+                ? 'Eintrag gespeichert und genehmigt.'
+                : 'Anfrage wurde erstellt und wartet auf Genehmigung.';
+        }
 
-        // Reset form
-        document.getElementById('cal-start').value = '';
-        document.getElementById('cal-end').value = '';
-        document.getElementById('cal-reason').value = '';
-        document.getElementById('cal-person').value = 'Werner Jacobi';
-        document.getElementById('cal-person-custom').style.display = 'none';
-        document.getElementById('cal-person-custom').value = '';
-        document.getElementById('cal-type').value = 'leave';
+        cancelEditMode();
 
-        // Navigate to the month of the new entry so user sees it
+        // Navigate to the month of the entry so user sees it
         const d = new Date(startDate + 'T00:00:00');
         setMonth(d.getFullYear(), d.getMonth());
 
@@ -1074,7 +1155,7 @@ async function submitCalendarEntry() {
         msgEl.textContent = 'Fehler: ' + (err.message || err);
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Speichern';
+        btn.textContent = _editingEntryId ? 'Aenderungen speichern' : 'Speichern';
     }
 }
 
