@@ -817,35 +817,49 @@ function noData(id, subtitle) {
 // F1 — Cash Runway (months)
 async function loadF1() {
     try {
+        const YEAR = new Date().getFullYear();
+
+        // Sum latest balance across all accounts (Nedbank + Pointbreak)
         const { data: balRows } = await sb
             .from('account_balances')
-            .select('balance_nad')
-            .order('balance_date', { ascending: false })
-            .limit(1);
+            .select('balance_nad, balance_date, account_name')
+            .order('balance_date', { ascending: false });
 
-        const { data: costs } = await sb
-            .from('budgets')
-            .select('actual_nad')
-            .eq('fiscal_year', new Date().getFullYear())
-            .neq('month', 0);
+        if (!balRows?.length) return noData('f1', 'Keine Kontostände');
 
-        if (!balRows?.length || !costs?.length) return noData('f1');
+        // Latest per account
+        const latest = {};
+        balRows.forEach(r => {
+            if (!latest[r.account_name] || r.balance_date > latest[r.account_name].balance_date) {
+                latest[r.account_name] = r;
+            }
+        });
+        const totalBalance = Object.values(latest).reduce((s, r) => s + Number(r.balance_nad || 0), 0);
 
-        const balance = balRows[0].balance_nad;
-        const totalSpend = costs.reduce((s, r) => s + (r.actual_nad || 0), 0);
-        const avgMonthly = totalSpend / costs.length;
+        // Average monthly expenses from bank_transactions (YTD)
+        const { data: txns } = await sb
+            .from('bank_transactions')
+            .select('transaction_date, debit_nad')
+            .gte('transaction_date', YEAR + '-01-01')
+            .not('debit_nad', 'is', null);
+
+        if (!txns?.length) return noData('f1', 'Keine Ausgaben erfasst');
+
+        const monthsSet = new Set(txns.map(t => t.transaction_date.substring(0, 7)));
+        const totalSpend = txns.reduce((s, t) => s + Number(t.debit_nad || 0), 0);
+        const avgMonthly = totalSpend / Math.max(monthsSet.size, 1);
 
         if (avgMonthly <= 0) return noData('f1', 'Keine Ausgaben');
 
-        const months = Math.round(balance / avgMonthly * 10) / 10;
+        const months = Math.round(totalBalance / avgMonthly * 10) / 10;
         const status = months >= 6 ? 'green' : months >= 3 ? 'yellow' : 'red';
 
         setCard('f1', {
             value: months + ' Mon.',
-            subtitle: 'Monate Deckung',
+            subtitle: 'N$ ' + Math.round(totalBalance).toLocaleString('de-DE') + ' gesamt',
             status
         });
-    } catch { noData('f1'); }
+    } catch (e) { console.error('F1 cockpit:', e); noData('f1'); }
 }
 
 // F2 — Budget deviation (max category %)
