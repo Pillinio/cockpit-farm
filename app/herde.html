@@ -1137,35 +1137,56 @@ async function loadH6() {
 
         const totalAnimals = animals.length;
         const avgWeight = totalWeight / totalAnimals;
-        const totalValue = totalWeight * beefPricePerKgLive;
+        // Value calculations: Live-weight value (based on live kg × live $/kg) AND carcass value (based on dressed kg × carcass $/kg)
+        const totalCarcassWeight = totalWeight * dressingPct;
+        const valueLive = totalWeight * beefPricePerKgLive;           // same formula but labeled as "Lebend-Wert"
+        const valueCarcass = totalCarcassWeight * beefPricePerKgCarcass; // equivalent, but makes basis explicit
+        // totalValue for badge = carcass value (what Meatco pays)
+        const totalValue = valueCarcass;
 
-        setBadge('h6', new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(totalValue));
+        const fmtNAD = v => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(v);
+        const fmtKG = v => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(v) + ' kg';
+
+        setBadge('h6', fmtNAD(totalValue));
+
+        // Price info box
+        let priceInfo = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; padding:12px 16px; background:#f1f5f9; border-left:4px solid #2E75B6; border-radius:6px;">';
+        priceInfo += '<div><strong>Preis Schlachtgewicht (Meatco):</strong><br><span style="font-size:1.15em; color:#2E75B6; font-weight:700;">' + beefPricePerKgCarcass.toFixed(2) + ' NAD/kg</span></div>';
+        priceInfo += '<div><strong>Preis Lebendgewicht (ø' + (dressingPct * 100).toFixed(0) + '% Ausschlachtung):</strong><br><span style="font-size:1.15em; color:#2E75B6; font-weight:700;">' + beefPricePerKgLive.toFixed(2) + ' NAD/kg</span></div>';
+        priceInfo += '</div>';
 
         // Build HTML
-        let html = '<div class="summary-cards">';
+        let html = priceInfo;
+        html += '<div class="summary-cards">';
         html += '<div class="summary-card"><div class="card-value">' + totalAnimals + '</div><div class="card-label">Tiere (aktiv)</div></div>';
-        html += '<div class="summary-card"><div class="card-value">' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(totalWeight) + ' kg</div><div class="card-label">Gesamtgewicht (gesch.)</div></div>';
-        html += '<div class="summary-card"><div class="card-value">' + Math.round(avgWeight) + ' kg</div><div class="card-label">Durchschnittsgewicht</div></div>';
-        html += '<div class="summary-card"><div class="card-value">' + new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(totalValue) + '</div><div class="card-label">Gesch. Herdenwert</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + fmtKG(totalWeight) + '</div><div class="card-label">Gesamt-Lebendgewicht</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + fmtKG(totalCarcassWeight) + '</div><div class="card-label">Gesamt-Schlachtgewicht</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + Math.round(avgWeight) + ' kg</div><div class="card-label">ø Lebendgewicht / Tier</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + fmtNAD(valueLive) + '</div><div class="card-label">Wert Lebendgewicht</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + fmtNAD(valueCarcass) + '</div><div class="card-label">Wert Schlachtgewicht</div></div>';
         html += '</div>';
 
         // Category table
         const catOrder = ['calf', 'weaner', 'young', 'heifer', 'cow', 'bull_young', 'ox_bull'];
         html += '<table class="data-table"><thead><tr>';
-        html += '<th>Kategorie</th><th class="num">Anzahl</th><th class="num">&#x2300; Gewicht</th><th class="num">Gesamtgewicht</th><th class="num">Gesch. Wert</th>';
+        html += '<th>Kategorie</th><th class="num">Anzahl</th><th class="num">&#x2300; Gewicht</th><th class="num">Lebendgewicht</th><th class="num">Schlachtgewicht</th><th class="num">Wert Lebend</th><th class="num">Wert Schlacht</th>';
         html += '</tr></thead><tbody>';
 
         catOrder.forEach(key => {
             const cat = categories[key];
             if (!cat) return;
             const catAvg = cat.totalWeight / cat.count;
-            const catValue = cat.totalWeight * beefPricePerKgLive;
+            const catCarcassWeight = cat.totalWeight * dressingPct;
+            const catValueLive = cat.totalWeight * beefPricePerKgLive;
+            const catValueCarcass = catCarcassWeight * beefPricePerKgCarcass;
             html += '<tr>';
             html += '<td>' + cat.label + '</td>';
             html += '<td class="num">' + cat.count + '</td>';
             html += '<td class="num">' + Math.round(catAvg) + ' kg</td>';
-            html += '<td class="num">' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(cat.totalWeight) + ' kg</td>';
-            html += '<td class="num">' + new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(catValue) + '</td>';
+            html += '<td class="num">' + fmtKG(cat.totalWeight) + '</td>';
+            html += '<td class="num">' + fmtKG(catCarcassWeight) + '</td>';
+            html += '<td class="num">' + fmtNAD(catValueLive) + '</td>';
+            html += '<td class="num">' + fmtNAD(catValueCarcass) + '</td>';
             html += '</tr>';
         });
 
@@ -1174,8 +1195,10 @@ async function loadH6() {
         html += '<td>Gesamt</td>';
         html += '<td class="num">' + totalAnimals + '</td>';
         html += '<td class="num">' + Math.round(avgWeight) + ' kg</td>';
-        html += '<td class="num">' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(totalWeight) + ' kg</td>';
-        html += '<td class="num">' + new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(totalValue) + '</td>';
+        html += '<td class="num">' + fmtKG(totalWeight) + '</td>';
+        html += '<td class="num">' + fmtKG(totalCarcassWeight) + '</td>';
+        html += '<td class="num">' + fmtNAD(valueLive) + '</td>';
+        html += '<td class="num">' + fmtNAD(valueCarcass) + '</td>';
         html += '</tr></tfoot></table>';
 
         // Notes
@@ -1187,9 +1210,9 @@ async function loadH6() {
             : '';
         html += '<div class="note-text">';
         html += 'Letzte Wiegung: ' + weighDateStr + ' &mdash; Hochrechnung basierend auf Tageszunahme-Annahmen. ';
-        html += 'Bewertung: ' + beefPricePerKgCarcass.toFixed(2) + ' NAD/kg Schlachtgewicht (' + priceSource;
+        html += 'Preisbasis: ' + beefPricePerKgCarcass.toFixed(2) + ' NAD/kg Schlachtgewicht (' + priceSource;
         if (priceDateStr) html += ', ' + priceDateStr;
-        html += '), Ausschlachtung ' + (dressingPct * 100).toFixed(0) + '%.';
+        html += '), umgerechnet ' + beefPricePerKgLive.toFixed(2) + ' NAD/kg Lebendgewicht bei ' + (dressingPct * 100).toFixed(0) + '% Ausschlachtung.';
         html += '</div>';
 
         ph.style.display = 'none';
