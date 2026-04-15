@@ -207,41 +207,73 @@
             margin-top: 8px;
         }
 
-        /* Camp Grid */
-        .camp-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 14px;
+        /* Camp Table */
+        #camp-table-wrap {
+            overflow-x: auto;
         }
-
-        .camp-card {
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
             background: #fff;
-            border-radius: 10px;
-            padding: 14px 16px;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-
-        .camp-name {
+        .data-table th, .data-table td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .data-table th {
+            background: #f9fafb;
             font-weight: 600;
             color: #374151;
-            margin-bottom: 6px;
+            font-size: 0.88em;
+            white-space: nowrap;
         }
-
-        .camp-detail {
-            font-size: 0.85em;
-            color: #6b7280;
-            margin-bottom: 2px;
+        .data-table td.num, .data-table th.num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .data-table tr:hover td {
+            background: #f9fafb;
+        }
+        .data-table th[data-sort] {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 24px;
+        }
+        .data-table th[data-sort]::after {
+            content: '\25B4\25BE';
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7em;
+            opacity: 0.3;
+        }
+        .data-table th[data-sort].sort-asc::after {
+            content: '\25B4';
+            opacity: 1;
+        }
+        .data-table th[data-sort].sort-desc::after {
+            content: '\25BE';
+            opacity: 1;
+        }
+        .data-table tr.camp-empty td {
+            color: #9ca3af;
+            font-style: italic;
         }
 
         .condition-badge {
             display: inline-block;
-            padding: 3px 10px;
-            border-radius: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
             font-size: 0.8em;
             font-weight: 600;
             color: white;
-            margin-top: 6px;
         }
 
         .condition-1 { background: #ef4444; }
@@ -249,6 +281,20 @@
         .condition-3 { background: #eab308; }
         .condition-4 { background: #84cc16; }
         .condition-5 { background: #22c55e; }
+
+        /* Camp count badges on map */
+        .camp-count-badge {
+            background: rgba(255,255,255,0.95);
+            border: 2px solid;
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+        }
+        .camp-count-badge.herd { border-color: #16a34a; color: #15803d; }
+        .camp-count-badge.bulls { border-color: #c2410c; color: #9a3412; background: #fef3c7; }
 
         /* Chart */
         .chart-container {
@@ -659,9 +705,11 @@
             .kpi-row { flex-direction: column; gap: 12px; }
             .kpi-value { font-size: 1.6em; }
 
-            .camp-grid {
-                grid-template-columns: 1fr;
+            #camp-table-wrap {
+                -webkit-overflow-scrolling: touch;
             }
+            .data-table { font-size: 0.82em; }
+            .data-table th, .data-table td { padding: 8px 10px; }
 
             .chart-container { height: 250px; }
 
@@ -761,9 +809,51 @@
         <div class="section-title">
             <span class="section-icon">&#x1F3D5;&#xFE0F;</span>
             Camp-Uebersicht
+            <button onclick="toggleInitialForm()" style="margin-left:auto; background:#2E75B6; color:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:0.85em;">Herdenstandorte erfassen</button>
         </div>
-        <div class="camp-grid" id="camp-grid">
-            <div class="no-data"><span class="loading-spinner"></span> Lade Camps...</div>
+        <div id="camp-table-wrap">
+            <table class="data-table" id="camp-table">
+                <thead>
+                    <tr>
+                        <th data-sort="name">Camp</th>
+                        <th data-sort="area" class="num">Flaeche (ha)</th>
+                        <th data-sort="herd" class="num">&#x1F404; Herde</th>
+                        <th data-sort="bulls" class="num">&#x1F402; Bullen</th>
+                        <th data-sort="days" class="num">Tage auf Camp</th>
+                        <th data-sort="condition" class="num">Zustand</th>
+                        <th data-sort="last_move">Letzter Wechsel</th>
+                    </tr>
+                </thead>
+                <tbody id="camp-tbody">
+                    <tr><td colspan="7" class="no-data"><span class="loading-spinner"></span> Lade Camps...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Initial-Positions-Formular (wird angezeigt bei Bedarf) -->
+        <div id="initial-form" style="display:none; margin-top:20px; padding:16px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px;">
+            <div style="font-weight:600; margin-bottom:12px; color:#92400e;">
+                Herdenverteilung erfassen &mdash; Initialer Stand
+            </div>
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:8px; margin-bottom:12px;">
+                <select id="init-camp" style="padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                    <option value="">-- Camp waehlen --</option>
+                </select>
+                <select id="init-category" style="padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                    <option value="mixed">&#x1F404; Herde</option>
+                    <option value="bulls">&#x1F402; Bullen</option>
+                </select>
+                <input type="number" id="init-count" placeholder="Anzahl" min="1" style="padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                <button onclick="addInitialPosition()" style="background:#22c55e; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Hinzufuegen</button>
+            </div>
+            <div id="init-list" style="font-size:0.9em; margin-bottom:12px;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span id="init-progress" style="font-size:0.9em; color:#6b7280;">0 / 463 Tiere erfasst</span>
+                <div>
+                    <button onclick="saveInitialPositions()" style="background:#2E75B6; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:500;">Speichern</button>
+                    <button onclick="toggleInitialForm()" style="background:#6b7280; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; margin-left:8px;">Schliessen</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1000,68 +1090,238 @@ async function loadStockingRate() {
     }
 }
 
-// ── Camp Overview ────────────────────────────────────────────────
+// ── Camp Overview (sortable table) ───────────────────────────────
+let campTableData = [];
+let campSortCol = 'herd';
+let campSortDir = 'desc';
+let campOccupancyMap = {};  // camp_name -> { herd_count, bull_count, last_movement, days }
+
 async function loadCamps() {
-    const grid = document.getElementById('camp-grid');
+    const tbody = document.getElementById('camp-tbody');
     try {
         const { data: camps } = await sb
             .from('farm_camps')
             .select('id, name, area_ha')
+            .eq('active', true)
+            .neq('name', 'Außengrenze Farm')
             .order('name');
 
-        const { data: capAssump } = await sb
-            .from('carrying_capacity_assumptions')
-            .select('lsu_per_ha')
-            .order('effective_from', { ascending: false })
-            .limit(1);
-
-        const lsuPerHa = capAssump?.[0]?.lsu_per_ha || 0.07;
-
         if (!camps?.length) {
-            grid.innerHTML = '<div class="no-data">Keine Camps gefunden.</div>';
+            tbody.innerHTML = '<tr><td colspan="7" class="no-data">Keine Camps gefunden.</td></tr>';
             return;
         }
 
-        // Get latest veld observation per camp
+        // Load all movements and aggregate client-side
+        const { data: movements } = await sb
+            .from('herd_movements')
+            .select('to_camp, from_camp, head_count, animal_category, movement_date');
+
+        // Build occupancy map (herd vs bulls separately)
+        campOccupancyMap = {};
+        const today = new Date();
+        (movements || []).forEach(m => {
+            const bucket = m.animal_category === 'bulls' ? 'bull_count' : 'herd_count';
+            // Add to destination
+            if (m.to_camp) {
+                if (!campOccupancyMap[m.to_camp]) campOccupancyMap[m.to_camp] = { herd_count: 0, bull_count: 0, last_movement: null };
+                campOccupancyMap[m.to_camp][bucket] += m.head_count;
+                if (!campOccupancyMap[m.to_camp].last_movement || m.movement_date > campOccupancyMap[m.to_camp].last_movement) {
+                    campOccupancyMap[m.to_camp].last_movement = m.movement_date;
+                }
+            }
+            // Subtract from source
+            if (m.from_camp) {
+                if (!campOccupancyMap[m.from_camp]) campOccupancyMap[m.from_camp] = { herd_count: 0, bull_count: 0, last_movement: null };
+                campOccupancyMap[m.from_camp][bucket] -= m.head_count;
+                if (!campOccupancyMap[m.from_camp].last_movement || m.movement_date > campOccupancyMap[m.from_camp].last_movement) {
+                    campOccupancyMap[m.from_camp].last_movement = m.movement_date;
+                }
+            }
+        });
+
+        // Compute days_since_last_movement
+        Object.keys(campOccupancyMap).forEach(c => {
+            const lm = campOccupancyMap[c].last_movement;
+            if (lm) {
+                const days = Math.floor((today - new Date(lm)) / (1000 * 60 * 60 * 24));
+                campOccupancyMap[c].days = days;
+            }
+        });
+
+        // Latest veld observation per camp
         const { data: obs } = await sb
             .from('veld_observations')
             .select('camp_name, condition_score, snapshot_date')
             .order('snapshot_date', { ascending: false });
 
-        // Build a map: camp_name -> latest observation
         const latestObs = {};
-        if (obs) {
-            obs.forEach(o => {
-                if (!latestObs[o.camp_name]) {
-                    latestObs[o.camp_name] = o;
-                }
-            });
+        (obs || []).forEach(o => {
+            if (!latestObs[o.camp_name]) latestObs[o.camp_name] = o;
+        });
+
+        // Build data array
+        campTableData = camps.map(c => {
+            const occ = campOccupancyMap[c.name] || { herd_count: 0, bull_count: 0, last_movement: null, days: null };
+            const ob = latestObs[c.name];
+            return {
+                name: c.name,
+                area_ha: c.area_ha,
+                herd_count: Math.max(0, occ.herd_count || 0),
+                bull_count: Math.max(0, occ.bull_count || 0),
+                days: occ.days,
+                condition_score: ob?.condition_score,
+                last_movement: occ.last_movement,
+            };
+        });
+
+        // Initial sort
+        sortCampTable(campSortCol, false);
+        renderCampTable();
+
+        // Populate init form camp dropdown
+        const initDropdown = document.getElementById('init-camp');
+        if (initDropdown) {
+            initDropdown.innerHTML = '<option value="">-- Camp waehlen --</option>' +
+                camps.map(c => `<option value="${escHtml(c.name)}">${escHtml(c.name)}</option>`).join('');
         }
 
-        grid.innerHTML = camps.map(c => {
-            const ob = latestObs[c.name];
-            const score = ob ? ob.condition_score : null;
-            const condClass = score ? 'condition-' + Math.min(5, Math.max(1, score)) : '';
-            const condLabel = score
-                ? 'Zustand: ' + score + '/5'
-                : 'Keine Bewertung';
+        // Auto-show initial form if no movements exist yet
+        if (!movements || movements.length === 0) {
+            const form = document.getElementById('initial-form');
+            if (form) form.style.display = 'block';
+        }
 
-            const capLSU = lsuPerHa > 0
-                ? Math.round((c.area_ha || 0) * lsuPerHa)
-                : '\u2014';
-
-            return `
-                <div class="camp-card">
-                    <div class="camp-name">${escHtml(c.name)}</div>
-                    <div class="camp-detail">${c.area_ha ? Number(c.area_ha).toFixed(2) : '\u2014'} ha</div>
-                    <div class="camp-detail">Kapazitaet: ${capLSU} LSU</div>
-                    <span class="condition-badge ${condClass}">${condLabel}</span>
-                </div>
-            `;
-        }).join('');
-    } catch {
-        grid.innerHTML = '<div class="no-data">Fehler beim Laden der Camps.</div>';
+    } catch (err) {
+        console.error('loadCamps error:', err);
+        tbody.innerHTML = '<tr><td colspan="7" class="no-data">Fehler beim Laden der Camps.</td></tr>';
     }
+}
+
+function renderCampTable() {
+    const tbody = document.getElementById('camp-tbody');
+    tbody.innerHTML = campTableData.map(c => {
+        const isEmpty = !c.herd_count && !c.bull_count;
+        const rowClass = isEmpty ? 'camp-empty' : '';
+        const condClass = c.condition_score ? 'condition-' + Math.min(5, Math.max(1, c.condition_score)) : '';
+        const condBadge = c.condition_score
+            ? `<span class="condition-badge ${condClass}">${c.condition_score}/5</span>`
+            : '\u2014';
+        return `<tr class="${rowClass}">
+            <td><strong>${escHtml(c.name)}</strong></td>
+            <td class="num">${c.area_ha ? Number(c.area_ha).toFixed(2) : '\u2014'}</td>
+            <td class="num">${c.herd_count || '\u2014'}</td>
+            <td class="num">${c.bull_count || '\u2014'}</td>
+            <td class="num">${c.days != null ? c.days : '\u2014'}</td>
+            <td class="num">${condBadge}</td>
+            <td>${c.last_movement ? new Date(c.last_movement).toLocaleDateString('de-DE') : '\u2014'}</td>
+        </tr>`;
+    }).join('');
+}
+
+function sortCampTable(col, toggle = true) {
+    if (toggle) {
+        if (campSortCol === col) {
+            campSortDir = campSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            campSortCol = col;
+            campSortDir = (col === 'name' || col === 'last_move') ? 'asc' : 'desc';
+        }
+    }
+    const comparators = {
+        name:      (a, b) => (a.name || '').localeCompare(b.name || '', 'de'),
+        area:      (a, b) => (a.area_ha || 0) - (b.area_ha || 0),
+        herd:      (a, b) => (a.herd_count || 0) - (b.herd_count || 0),
+        bulls:     (a, b) => (a.bull_count || 0) - (b.bull_count || 0),
+        days:      (a, b) => (a.days ?? -1) - (b.days ?? -1),
+        condition: (a, b) => (a.condition_score || 0) - (b.condition_score || 0),
+        last_move: (a, b) => (a.last_movement || '').localeCompare(b.last_movement || '')
+    };
+    const cmp = comparators[col] || comparators.name;
+    const dir = campSortDir === 'asc' ? 1 : -1;
+    campTableData.sort((a, b) => cmp(a, b) * dir);
+
+    document.querySelectorAll('#camp-table th[data-sort]').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.sort === col) {
+            th.classList.add('sort-' + campSortDir);
+        }
+    });
+    renderCampTable();
+}
+
+// ── Initial Positions Form ───────────────────────────────────────
+let initialPositions = [];
+
+function toggleInitialForm() {
+    const form = document.getElementById('initial-form');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    if (form.style.display === 'block') renderInitList();
+}
+
+function addInitialPosition() {
+    const camp = document.getElementById('init-camp').value;
+    const category = document.getElementById('init-category').value;
+    const count = parseInt(document.getElementById('init-count').value);
+    if (!camp || !count || count < 1) {
+        alert('Bitte Camp und gueltige Anzahl angeben.');
+        return;
+    }
+    initialPositions.push({ camp, category, count });
+    document.getElementById('init-count').value = '';
+    renderInitList();
+}
+
+function renderInitList() {
+    const listEl = document.getElementById('init-list');
+    const progEl = document.getElementById('init-progress');
+    if (!initialPositions.length) {
+        listEl.innerHTML = '<span style="color:#9ca3af;">Noch keine Positionen erfasst.</span>';
+        progEl.textContent = '0 / 463 Tiere erfasst';
+        return;
+    }
+    listEl.innerHTML = initialPositions.map((p, i) => {
+        const label = p.category === 'bulls' ? '🐂 Bullen' : '🐄 Herde';
+        return `<div style="padding:4px 0;">
+            &bull; ${escHtml(p.camp)}: ${p.count} ${label}
+            <button onclick="removeInitialPosition(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;margin-left:8px;">&times;</button>
+        </div>`;
+    }).join('');
+    const total = initialPositions.reduce((s, p) => s + p.count, 0);
+    const target = 463;
+    const color = total === target ? '#16a34a' : total > target ? '#dc2626' : '#ca8a04';
+    progEl.innerHTML = `<span style="color:${color};font-weight:600;">${total} / ${target} Tiere erfasst</span>`;
+}
+
+function removeInitialPosition(idx) {
+    initialPositions.splice(idx, 1);
+    renderInitList();
+}
+
+async function saveInitialPositions() {
+    if (!initialPositions.length) {
+        alert('Keine Positionen zum Speichern.');
+        return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    const rows = initialPositions.map(p => ({
+        movement_date: today,
+        from_camp: null,
+        to_camp: p.camp,
+        head_count: p.count,
+        animal_category: p.category,
+        reason: 'initial',
+        notes: 'Initial-Erfassung Herdenstandorte',
+    }));
+
+    const { error } = await sb.from('herd_movements').insert(rows);
+    if (error) {
+        alert('Fehler beim Speichern: ' + error.message);
+        return;
+    }
+    alert(initialPositions.length + ' Positionen gespeichert.');
+    initialPositions = [];
+    document.getElementById('initial-form').style.display = 'none';
+    await loadAll();
 }
 
 // ── Rainfall Chart ───────────────────────────────────────────────
@@ -1477,34 +1737,9 @@ async function loadMap() {
             };
         }
 
-        // Load camp list and herd assignments for enhanced popups
-        const { data: campList } = await sb.from('farm_camps').select('id, name');
-        const campIdByName = {};
-        campList?.forEach(c => { campIdByName[c.name] = c.id; });
+        // campOccupancyMap is populated by loadCamps() — shared data source
 
-        const { data: campAssignments } = await sb
-            .from('herd_camp_assignments')
-            .select('camp_id, estimated_animals')
-            .order('created_at', { ascending: false });
-
-        const latestAssignment = {};
-        campAssignments?.forEach(a => {
-            if (!latestAssignment[a.camp_id]) latestAssignment[a.camp_id] = a;
-        });
-
-        // Ampel badge helper
-        function ampelBadge(score) {
-            if (!score) return '';
-            let bg, label;
-            if (score >= 4) { bg = '#22c55e'; label = 'Gut'; }
-            else if (score === 3) { bg = '#eab308'; label = 'Mittel'; }
-            else { bg = '#dc2626'; label = 'Kritisch'; }
-            return '<span style="display:inline-block;padding:1px 8px;border-radius:9999px;' +
-                'background:' + bg + ';color:#fff;font-size:0.75em;font-weight:600;vertical-align:middle;margin-left:4px;">' +
-                label + '</span>';
-        }
-
-        // Add GeoJSON layer
+        // Add GeoJSON layer with popups from occupancy data
         campLayer = L.geoJSON(geojsonData, {
             style: function(feature) {
                 return campStyle(feature.properties.name);
@@ -1518,10 +1753,11 @@ async function loadMap() {
                     : 'Keine Bewertung';
                 const scoreColor = conditionColors[score] || '#9ca3af';
 
-                // Animal count from herd assignments
-                const campId = campIdByName[p.name];
-                const assignment = campId ? latestAssignment[campId] : null;
-                const animalCount = assignment?.estimated_animals;
+                const occ = campOccupancyMap[p.name] || {};
+                const herdCount = Math.max(0, occ.herd_count || 0);
+                const bullCount = Math.max(0, occ.bull_count || 0);
+                const days = occ.days;
+                const lastMove = occ.last_movement;
 
                 let popupContent = '<div style="min-width:200px;">';
                 popupContent += '<strong style="font-size:1.1em;">' + escHtml(p.name) + '</strong><br>';
@@ -1530,19 +1766,99 @@ async function loadMap() {
                 }
                 popupContent += '<br>';
                 popupContent += '<strong>Flaeche:</strong> ' + (p.area_ha ? Number(p.area_ha).toFixed(2) : '\u2014') + ' ha<br>';
-                popupContent += '<strong>Weidezustand:</strong> <span style="color:' + scoreColor + ';font-weight:600;">' + scoreText + '</span>' + ampelBadge(score) + '<br>';
-                if (animalCount != null) {
-                    popupContent += '<strong>Tiere (ca.):</strong> ' + animalCount + '<br>';
-                }
+                popupContent += '<strong>Weidezustand:</strong> <span style="color:' + scoreColor + ';font-weight:600;">' + scoreText + '</span><br>';
+                if (herdCount > 0) popupContent += '<strong>&#x1F404; Herde:</strong> ' + herdCount + '<br>';
+                if (bullCount > 0) popupContent += '<strong>&#x1F402; Bullen:</strong> ' + bullCount + '<br>';
+                if (days != null) popupContent += '<strong>Tage auf Camp:</strong> ' + days + '<br>';
+                if (lastMove) popupContent += '<strong>Letzter Wechsel:</strong> ' + new Date(lastMove).toLocaleDateString('de-DE') + '<br>';
                 if (p.purpose) {
                     popupContent += '<strong>Nutzung:</strong> ' + escHtml(p.purpose) + '<br>';
                 }
-                popupContent += '<span style="color:#6b7280;font-size:0.8em;font-style:italic;">Grasarten: Siehe Camp-Details</span><br>';
                 popupContent += '</div>';
 
                 layer.bindPopup(popupContent);
             }
         }).addTo(farmMap);
+
+        // ── Herde + Bullen Badges ──
+        const herdLayer = L.layerGroup();
+        const bullsLayer = L.layerGroup();
+        campLayer.eachLayer(function(layer) {
+            const name = layer.feature.properties.name;
+            const occ = campOccupancyMap[name];
+            if (!occ) return;
+            const center = layer.getBounds().getCenter();
+            const herdCount = Math.max(0, occ.herd_count || 0);
+            const bullCount = Math.max(0, occ.bull_count || 0);
+
+            if (herdCount > 0) {
+                L.marker(center, {
+                    icon: L.divIcon({
+                        html: '<div class="camp-count-badge herd">&#x1F404; ' + herdCount + '</div>',
+                        className: '',
+                        iconSize: [60, 22],
+                        iconAnchor: [30, 11]
+                    })
+                }).addTo(herdLayer);
+            }
+            if (bullCount > 0) {
+                // Offset slightly if herd also present
+                const offset = herdCount > 0 ? 0.0008 : 0;
+                L.marker([center.lat + offset, center.lng], {
+                    icon: L.divIcon({
+                        html: '<div class="camp-count-badge bulls">&#x1F402; ' + bullCount + '</div>',
+                        className: '',
+                        iconSize: [50, 22],
+                        iconAnchor: [25, 11]
+                    })
+                }).addTo(bullsLayer);
+            }
+        });
+        herdLayer.addTo(farmMap);
+        bullsLayer.addTo(farmMap);
+
+        // ── Bewegungspfeile (Default AUS) ──
+        const movementLayer = L.layerGroup();
+        const { data: moveData } = await sb
+            .from('herd_movements')
+            .select('movement_date, from_camp, to_camp, head_count, animal_category, reason')
+            .not('from_camp', 'is', null)
+            .not('to_camp', 'is', null)
+            .order('movement_date', { ascending: false })
+            .limit(50);
+
+        // Build centroid map
+        const campCentroids = {};
+        campLayer.eachLayer(l => {
+            campCentroids[l.feature.properties.name] = l.getBounds().getCenter();
+        });
+
+        (moveData || []).forEach(m => {
+            const from = campCentroids[m.from_camp];
+            const to = campCentroids[m.to_camp];
+            if (!from || !to) return;
+            const line = L.polyline([from, to], {
+                color: '#3b82f6',
+                weight: 2,
+                opacity: 0.7,
+                dashArray: '6 4'
+            });
+            const dateStr = new Date(m.movement_date).toLocaleDateString('de-DE');
+            line.bindPopup(
+                '<strong>' + escHtml(m.from_camp) + ' &rarr; ' + escHtml(m.to_camp) + '</strong><br>' +
+                dateStr + ' &mdash; ' + m.head_count + ' Tiere<br>' +
+                '<span style="color:#6b7280;">' + (m.animal_category || '') + ' / ' + (m.reason || '') + '</span>'
+            );
+            line.addTo(movementLayer);
+        });
+        // NOT added to map — default OFF
+
+        const layersCtrl = farmMap._layersControl;
+        if (layersCtrl) {
+            layersCtrl.addOverlay(herdLayer, '\u{1F404} Herdenstandort');
+            layersCtrl.addOverlay(bullsLayer, '\u{1F402} Bullen');
+            layersCtrl.addOverlay(movementLayer, '\u27A1\uFE0F Herdenbewegungen');
+        }
 
         // Fit bounds
         const bounds = campLayer.getBounds();
@@ -1983,9 +2299,11 @@ function escHtml(str) {
 async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
+    // loadCamps must run before loadMap (populates campOccupancyMap)
+    await loadCamps();
+
     await Promise.allSettled([
         loadStockingRate(),
-        loadCamps(),
         loadRainfall(),
         loadSeasonalForecast(),
         loadMap(),
@@ -2006,8 +2324,17 @@ async function loadAll() {
 (async function init() {
     const user = await checkAuth();
     if (!user) return; // redirect in progress
+
+    // Camp table sort delegation
+    const thead = document.querySelector('#camp-table thead');
+    if (thead) {
+        thead.addEventListener('click', function(e) {
+            const th = e.target.closest('th[data-sort]');
+            if (th) sortCampTable(th.dataset.sort);
+        });
+    }
+
     loadAll();
-    // Auto-refresh every 5 minutes
     setInterval(loadAll, 5 * 60 * 1000);
 })();
 </script>
