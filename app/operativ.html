@@ -482,11 +482,79 @@
         </div>
     </div>
 
+    <!-- O4: Kauf- & Verkaufsplanung -->
+    <div class="section">
+        <div class="section-title">
+            <span class="section-icon">&#x1F404;</span>
+            O4 — Kauf- &amp; Verkaufsplanung
+            <button onclick="toggleTradeForm()" style="margin-left:auto; background:#2E75B6; color:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:0.85em;">+ Neue Planung</button>
+        </div>
+
+        <!-- Formular (versteckt bis geöffnet) -->
+        <div id="trade-form-section" style="display:none; margin-bottom:16px; padding:16px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;">
+            <div style="font-weight:600; margin-bottom:12px; color:#1e40af;" id="trade-form-title">Kauf / Verkauf planen</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:12px;">
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85em;color:#374151;margin-bottom:4px;">Art</label>
+                    <select id="trade-type" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9em;">
+                        <option value="sell">Verkauf</option>
+                        <option value="buy">Kauf</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85em;color:#374151;margin-bottom:4px;">Tierkategorie</label>
+                    <select id="trade-category" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9em;">
+                        <option value="cows">Kühe</option>
+                        <option value="bulls">Bullen</option>
+                        <option value="heifers">Färsen</option>
+                        <option value="oxen">Ochsen</option>
+                        <option value="calves">Kälber</option>
+                        <option value="weaners">Absetzer</option>
+                        <option value="tollies">Tollies</option>
+                        <option value="mixed">Gemischt</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85em;color:#374151;margin-bottom:4px;">Anzahl</label>
+                    <input type="number" id="trade-count" min="1" placeholder="z.B. 30" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9em;">
+                </div>
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85em;color:#374151;margin-bottom:4px;">Zieldatum</label>
+                    <input type="date" id="trade-date" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9em;">
+                </div>
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85em;color:#374151;margin-bottom:4px;">Preis pro Tier (NAD)</label>
+                    <input type="number" id="trade-price" step="100" min="0" placeholder="z.B. 12000" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9em;">
+                </div>
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85em;color:#374151;margin-bottom:4px;">Abnehmer / Herkunft</label>
+                    <input type="text" id="trade-destination" placeholder="z.B. Meatco, WHKLA Auktion" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9em;">
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-weight:600;font-size:0.85em;color:#374151;margin-bottom:4px;">Notizen</label>
+                <textarea id="trade-notes" rows="2" placeholder="Optional — besondere Merkmale, Bedingungen, Referenzen..." style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9em;font-family:inherit;"></textarea>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="saveTrade()" style="background:#22c55e;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:500;">Speichern</button>
+                <button onclick="cancelTrade()" style="background:#6b7280;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:500;">Abbrechen</button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div id="trade-summary" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;"></div>
+
+        <!-- Liste -->
+        <div id="trade-list">
+            <div class="no-data"><span class="loading-spinner"></span> Lade Planungen...</div>
+        </div>
+    </div>
+
     <!-- Neues Ziel Formular (hidden) -->
     <div class="section" id="goal-form-section" style="display:none;">
         <div class="section-title">
             <span class="section-icon">&#x270F;&#xFE0F;</span>
-            Ziel erfassen
+            <span id="goal-form-title">Ziel erfassen</span>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
             <div>
@@ -519,7 +587,7 @@
             <textarea id="goal-description" rows="3" placeholder="Details, Umfang, benoetigte Ressourcen..." style="width:100%; padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:0.9em; font-family:inherit;"></textarea>
         </div>
         <div style="display:flex; gap:8px;">
-            <button onclick="saveGoal()" style="background:#22c55e; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:500;">Speichern</button>
+            <button id="goal-save-btn" onclick="saveGoal()" style="background:#22c55e; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:500;">Speichern</button>
             <button onclick="cancelGoal()" style="background:#6b7280; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:500;">Abbrechen</button>
         </div>
     </div>
@@ -605,6 +673,9 @@ async function loadIncidents() {
 }
 
 // ── Jahresziele ─────────────────────────────────────────────────
+let _goalsCache = [];
+let _editingGoalId = null;
+
 async function loadGoals() {
     const list = document.getElementById('goals-list');
     try {
@@ -616,12 +687,13 @@ async function loadGoals() {
             .order('due_date', { ascending: true });
 
         if (error && error.code === '42P01') {
-            // Table doesn't exist yet — show empty state
             list.innerHTML = '<div class="no-data">Jahresziele werden geladen... (Tabelle wird erstellt)</div>';
             return;
         }
 
-        if (!data?.length) {
+        _goalsCache = data || [];
+
+        if (!_goalsCache.length) {
             list.innerHTML = '<div class="no-data">Noch keine Jahresziele erfasst. Klicke oben auf "+ Neues Ziel".</div>';
             return;
         }
@@ -641,7 +713,7 @@ async function loadGoals() {
             cancelled:   { label: 'Abgebrochen', cls: 'status-red',    bg: 'opacity:0.5;' }
         };
 
-        list.innerHTML = data.map(g => {
+        list.innerHTML = _goalsCache.map(g => {
             const st = statusMeta[g.status] || statusMeta.open;
             const icon = catIcons[g.category] || catIcons.other;
             const dueStr = g.due_date ? formatDate(g.due_date) : 'Kein Datum';
@@ -663,6 +735,8 @@ async function loadGoals() {
                     <option value="done" ${g.status === 'done' ? 'selected' : ''}>Erledigt</option>
                     <option value="cancelled" ${g.status === 'cancelled' ? 'selected' : ''}>Abgebrochen</option>
                 </select>
+                <button onclick="editGoal('${g.id}')" style="padding:4px 10px; border:1px solid #d1d5db; background:#fff; border-radius:4px; cursor:pointer; font-size:0.82em; margin-left:4px;">Bearbeiten</button>
+                <button onclick="deleteGoal('${g.id}')" style="padding:4px 10px; border:none; background:#dc2626; color:white; border-radius:4px; cursor:pointer; font-size:0.82em; margin-left:4px;">Löschen</button>
             </div>`;
         }).join('');
     } catch (e) {
@@ -681,13 +755,43 @@ async function loadCampDropdown() {
     }
 }
 
-function addGoal() {
+async function addGoal() {
+    _editingGoalId = null;
     document.getElementById('goal-form-section').style.display = 'block';
+    document.getElementById('goal-form-title').textContent = 'Ziel erfassen';
+    document.getElementById('goal-save-btn').textContent = 'Speichern';
+    // clear form
+    document.getElementById('goal-title').value = '';
+    document.getElementById('goal-category').value = 'infrastructure';
+    document.getElementById('goal-due').value = '';
+    document.getElementById('goal-description').value = '';
+    await loadCampDropdown();
+    document.getElementById('goal-camp').value = '';
     document.getElementById('goal-title').focus();
-    loadCampDropdown();
+    document.getElementById('goal-form-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function editGoal(id) {
+    const g = _goalsCache.find(x => x.id === id);
+    if (!g) return;
+
+    _editingGoalId = id;
+    document.getElementById('goal-form-section').style.display = 'block';
+    document.getElementById('goal-form-title').textContent = 'Ziel bearbeiten';
+    document.getElementById('goal-save-btn').textContent = 'Änderungen speichern';
+
+    document.getElementById('goal-title').value = g.title || '';
+    document.getElementById('goal-category').value = g.category || 'infrastructure';
+    document.getElementById('goal-due').value = g.due_date || '';
+    document.getElementById('goal-description').value = g.description || '';
+    await loadCampDropdown();
+    document.getElementById('goal-camp').value = g.camp_name || '';
+
+    document.getElementById('goal-form-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function cancelGoal() {
+    _editingGoalId = null;
     document.getElementById('goal-form-section').style.display = 'none';
     document.getElementById('goal-title').value = '';
     document.getElementById('goal-description').value = '';
@@ -697,22 +801,39 @@ async function saveGoal() {
     const title = document.getElementById('goal-title').value.trim();
     if (!title) return;
 
-    const { error } = await sb.from('farm_goals').insert({
+    const payload = {
         year: new Date().getFullYear(),
         title: title,
         category: document.getElementById('goal-category').value,
         camp_name: document.getElementById('goal-camp').value || null,
         due_date: document.getElementById('goal-due').value || null,
         description: document.getElementById('goal-description').value.trim() || null,
-        status: 'open'
-    });
+    };
+
+    let error;
+    if (_editingGoalId) {
+        ({ error } = await sb.from('farm_goals').update(payload).eq('id', _editingGoalId));
+    } else {
+        ({ error } = await sb.from('farm_goals').insert({ ...payload, status: 'open' }));
+    }
 
     if (error) {
         console.error('Save goal error:', error);
+        alert('Fehler beim Speichern: ' + error.message);
         return;
     }
 
     cancelGoal();
+    loadGoals();
+}
+
+async function deleteGoal(id) {
+    const g = _goalsCache.find(x => x.id === id);
+    const label = g?.title || 'Ziel';
+    if (!confirm('Jahresziel "' + label + '" wirklich löschen?')) return;
+    const { error } = await sb.from('farm_goals').delete().eq('id', id);
+    if (error) { alert('Fehler beim Löschen: ' + error.message); return; }
+    if (_editingGoalId === id) cancelGoal();
     loadGoals();
 }
 
@@ -721,13 +842,213 @@ async function updateGoalStatus(id, status) {
     loadGoals();
 }
 
+// ── O4: Kauf- & Verkaufsplanung ──────────────────────────────────
+let _tradesCache = [];
+let _editingTradeId = null;
+
+const TRADE_CAT_LABELS = {
+    cows: 'Kühe', bulls: 'Bullen', heifers: 'Färsen', oxen: 'Ochsen',
+    calves: 'Kälber', weaners: 'Absetzer', tollies: 'Tollies', mixed: 'Gemischt'
+};
+const TRADE_STATUS_LABELS = {
+    planned: 'Geplant', in_progress: 'In Umsetzung',
+    completed: 'Abgeschlossen', cancelled: 'Storniert'
+};
+
+function toggleTradeForm() {
+    const sec = document.getElementById('trade-form-section');
+    if (sec.style.display === 'none') {
+        _editingTradeId = null;
+        document.getElementById('trade-form-title').textContent = 'Kauf / Verkauf planen';
+        document.getElementById('trade-type').value = 'sell';
+        document.getElementById('trade-category').value = 'oxen';
+        document.getElementById('trade-count').value = '';
+        document.getElementById('trade-date').value = '';
+        document.getElementById('trade-price').value = '';
+        document.getElementById('trade-destination').value = '';
+        document.getElementById('trade-notes').value = '';
+        sec.style.display = 'block';
+    } else {
+        sec.style.display = 'none';
+    }
+}
+
+function cancelTrade() {
+    _editingTradeId = null;
+    document.getElementById('trade-form-section').style.display = 'none';
+}
+
+async function saveTrade() {
+    const type = document.getElementById('trade-type').value;
+    const category = document.getElementById('trade-category').value;
+    const count = parseInt(document.getElementById('trade-count').value);
+    const date = document.getElementById('trade-date').value || null;
+    const price = parseFloat(document.getElementById('trade-price').value) || null;
+    const destination = document.getElementById('trade-destination').value.trim() || null;
+    const notes = document.getElementById('trade-notes').value.trim() || null;
+
+    if (!count || count < 1) { alert('Bitte Anzahl eintragen (mindestens 1).'); return; }
+
+    const payload = {
+        trade_type: type,
+        animal_category: category,
+        head_count: count,
+        target_date: date,
+        estimated_price_per_head: price,
+        estimated_total_nad: price ? price * count : null,
+        destination,
+        notes
+    };
+
+    let error;
+    if (_editingTradeId) {
+        ({ error } = await sb.from('cattle_trade_plans').update(payload).eq('id', _editingTradeId));
+    } else {
+        ({ error } = await sb.from('cattle_trade_plans').insert(payload));
+    }
+    if (error) { alert('Fehler beim Speichern: ' + error.message); return; }
+    cancelTrade();
+    loadTrades();
+}
+
+function editTrade(id) {
+    const t = _tradesCache.find(x => x.id === id);
+    if (!t) return;
+    _editingTradeId = id;
+    document.getElementById('trade-form-title').textContent = 'Planung bearbeiten';
+    document.getElementById('trade-type').value = t.trade_type;
+    document.getElementById('trade-category').value = t.animal_category;
+    document.getElementById('trade-count').value = t.head_count;
+    document.getElementById('trade-date').value = t.target_date || '';
+    document.getElementById('trade-price').value = t.estimated_price_per_head || '';
+    document.getElementById('trade-destination').value = t.destination || '';
+    document.getElementById('trade-notes').value = t.notes || '';
+    document.getElementById('trade-form-section').style.display = 'block';
+    document.getElementById('trade-form-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function deleteTrade(id) {
+    const t = _tradesCache.find(x => x.id === id);
+    const label = t ? `${t.trade_type === 'sell' ? 'Verkauf' : 'Kauf'} ${t.head_count} ${TRADE_CAT_LABELS[t.animal_category]}` : 'Planung';
+    if (!confirm(`"${label}" wirklich löschen?`)) return;
+    const { error } = await sb.from('cattle_trade_plans').delete().eq('id', id);
+    if (error) { alert('Fehler beim Löschen: ' + error.message); return; }
+    if (_editingTradeId === id) cancelTrade();
+    loadTrades();
+}
+
+async function updateTradeStatus(id, status) {
+    const { error } = await sb.from('cattle_trade_plans').update({ status }).eq('id', id);
+    if (error) { alert('Fehler: ' + error.message); return; }
+    loadTrades();
+}
+
+function renderTradeSummary(trades) {
+    const active = trades.filter(t => t.status === 'planned' || t.status === 'in_progress');
+    const sells = active.filter(t => t.trade_type === 'sell');
+    const buys = active.filter(t => t.trade_type === 'buy');
+    const sellHead = sells.reduce((s, t) => s + t.head_count, 0);
+    const buyHead = buys.reduce((s, t) => s + t.head_count, 0);
+    const sellNad = sells.reduce((s, t) => s + (Number(t.estimated_total_nad) || 0), 0);
+    const buyNad = buys.reduce((s, t) => s + (Number(t.estimated_total_nad) || 0), 0);
+    const netNad = sellNad - buyNad;
+
+    const fmt = n => n ? n.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' NAD' : '—';
+
+    const cards = [
+        { label: 'Geplante Verkäufe', val: sellHead + ' Tiere', sub: fmt(sellNad), color: '#22c55e' },
+        { label: 'Geplante Käufe', val: buyHead + ' Tiere', sub: fmt(buyNad), color: '#ef4444' },
+        { label: 'Netto-Erlös (geplant)', val: fmt(netNad), sub: (sellHead - buyHead >= 0 ? '+' : '') + (sellHead - buyHead) + ' Tiere netto', color: netNad >= 0 ? '#2E75B6' : '#f59e0b' }
+    ];
+
+    document.getElementById('trade-summary').innerHTML = cards.map(c => `
+        <div style="background:white; border:1px solid #e5e7eb; border-left:4px solid ${c.color}; padding:12px 14px; border-radius:8px;">
+            <div style="font-size:0.78em; color:#6b7280; text-transform:uppercase; letter-spacing:0.3px;">${c.label}</div>
+            <div style="font-size:1.3em; font-weight:600; color:#111827; margin-top:4px;">${c.val}</div>
+            <div style="font-size:0.82em; color:#6b7280; margin-top:2px;">${c.sub}</div>
+        </div>
+    `).join('');
+}
+
+async function loadTrades() {
+    const container = document.getElementById('trade-list');
+    try {
+        const { data, error } = await sb
+            .from('cattle_trade_plans')
+            .select('*')
+            .order('target_date', { ascending: true, nullsFirst: false })
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        _tradesCache = data || [];
+        renderTradeSummary(_tradesCache);
+
+        if (_tradesCache.length === 0) {
+            container.innerHTML = '<div class="no-data">Noch keine Kauf- oder Verkaufsplanungen erfasst.</div>';
+            return;
+        }
+
+        const rows = _tradesCache.map(t => {
+            const typeLabel = t.trade_type === 'sell'
+                ? '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;">Verkauf</span>'
+                : '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;">Kauf</span>';
+            const total = t.estimated_total_nad ? Number(t.estimated_total_nad).toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' NAD' : '—';
+            const price = t.estimated_price_per_head ? Number(t.estimated_price_per_head).toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' NAD' : '—';
+            return `
+                <tr>
+                    <td>${typeLabel}</td>
+                    <td>${t.head_count}× ${escHtml(TRADE_CAT_LABELS[t.animal_category] || t.animal_category)}</td>
+                    <td>${formatDate(t.target_date)}</td>
+                    <td>${price}</td>
+                    <td style="font-weight:600;">${total}</td>
+                    <td>${escHtml(t.destination || '—')}</td>
+                    <td>
+                        <select onchange="updateTradeStatus('${t.id}', this.value)" style="padding:4px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:0.85em;">
+                            ${Object.entries(TRADE_STATUS_LABELS).map(([k, v]) =>
+                                `<option value="${k}"${t.status === k ? ' selected' : ''}>${v}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <button onclick="editTrade('${t.id}')" style="background:#2E75B6;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.8em;margin-right:4px;">Bearbeiten</button>
+                        <button onclick="deleteTrade('${t.id}')" style="background:#ef4444;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.8em;">Löschen</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
+                    <thead>
+                        <tr style="background:#f9fafb; text-align:left;">
+                            <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Art</th>
+                            <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Tiere</th>
+                            <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Zieldatum</th>
+                            <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Preis/Tier</th>
+                            <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Summe</th>
+                            <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Abnehmer / Herkunft</th>
+                            <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Status</th>
+                            <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    } catch (err) {
+        console.error('loadTrades error', err);
+        container.innerHTML = '<div class="no-data" style="color:#ef4444;">Fehler beim Laden: ' + escHtml(err.message || '') + '</div>';
+    }
+}
+
 // ── Load All ─────────────────────────────────────────────────────
 async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
     await Promise.allSettled([
         loadIncidents(),
-        loadGoals()
+        loadGoals(),
+        loadTrades()
     ]);
 
     const now = new Date();
