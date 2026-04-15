@@ -9,13 +9,33 @@ export async function sendEmail(options: {
   html: string;
   from?: string;
 }): Promise<{ sent: boolean; error?: string }> {
-  // DRY RUN MODE: Set RESEND_DRY_RUN=true to log emails without sending
-  const dryRun = Deno.env.get("RESEND_DRY_RUN") === "true";
-  if (dryRun) {
-    const to = Array.isArray(options.to) ? options.to.join(", ") : options.to;
-    console.log(`[DRY RUN] Email NOT sent — To: ${to} | Subject: ${options.subject}`);
+  // EMAIL SAFETY: Only send to whitelisted addresses until fully tested
+  // Set RESEND_WHITELIST to a comma-separated list of allowed emails
+  // If not set or empty, falls back to DRY RUN (no emails sent)
+  const whitelist = (Deno.env.get("RESEND_WHITELIST") || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+  const recipients = Array.isArray(options.to) ? options.to : [options.to];
+
+  if (whitelist.length === 0) {
+    // No whitelist = full dry run
+    console.log(`[DRY RUN] Email NOT sent — To: ${recipients.join(", ")} | Subject: ${options.subject}`);
     return { sent: true, error: "dry_run" };
   }
+
+  // Filter recipients to only whitelisted emails
+  const allowedRecipients = recipients.filter(r => whitelist.includes(r.toLowerCase()));
+  const blockedRecipients = recipients.filter(r => !whitelist.includes(r.toLowerCase()));
+
+  if (blockedRecipients.length > 0) {
+    console.log(`[WHITELIST] Blocked: ${blockedRecipients.join(", ")} | Allowed: ${allowedRecipients.join(", ") || "none"}`);
+  }
+
+  if (allowedRecipients.length === 0) {
+    console.log(`[WHITELIST] All recipients blocked — Subject: ${options.subject}`);
+    return { sent: true, error: "all_recipients_blocked" };
+  }
+
+  // Override recipients with only allowed ones
+  options.to = allowedRecipients;
 
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) return { sent: false, error: "RESEND_API_KEY not set" };

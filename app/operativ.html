@@ -615,6 +615,7 @@ async function loadTaskCoverage() {
         const { data: templates } = await sb
             .from('task_templates')
             .select('id, name, frequency')
+            .eq('active', true)
             .order('name');
 
         if (!templates?.length) {

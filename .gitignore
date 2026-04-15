@@ -67,3 +67,4 @@ supabase/.temp/
 
 # Generated satellite data
 app/data/
+.vercel
