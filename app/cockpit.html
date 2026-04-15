@@ -727,27 +727,12 @@
         </a>
     </div>
 
-    <!-- Farm-Kalender Section -->
+    <!-- Anstehende Termine (Read-only, volle Ansicht auf /kalender.html) -->
     <div class="calendar-section" id="calendar-section">
-        <h2><span class="section-icon">&#x1F4C5;</span> Farm-Kalender</h2>
-
-        <!-- Presence indicators -->
-        <div class="presence-row" id="presence-row">
-            <span class="presence-badge">
-                <span class="presence-dot status-gray" id="presence-dot-werner"></span>
-                <span id="presence-label-werner">Werner: ...</span>
-            </span>
-            <span class="presence-badge">
-                <span class="presence-dot status-gray" id="presence-dot-wanda"></span>
-                <span id="presence-label-wanda">Wanda: ...</span>
-            </span>
-        </div>
-
-        <!-- Leave balance -->
-        <div class="leave-balance-row" id="leave-balance-row">
-            <div class="leave-balance-item">Werner: <span class="used-count" id="leave-werner">--</span>/20 Tage verbraucht</div>
-            <div class="leave-balance-item">Wanda: <span class="used-count" id="leave-wanda">--</span>/20 Tage verbraucht</div>
-        </div>
+        <h2 style="display:flex; align-items:center; gap:10px;">
+            <span class="section-icon">&#x1F4C5;</span> Anstehende Termine
+            <a href="kalender.html" style="margin-left:auto; font-size:0.7em; color:#2E75B6; text-decoration:none; font-weight:600;">Zum Kalender &rarr;</a>
+        </h2>
 
         <!-- Pending approvals (owner only) -->
         <div class="pending-approvals-box" id="pending-approvals-box" style="display:none;">
@@ -756,7 +741,6 @@
         </div>
 
         <!-- Upcoming 30 days -->
-        <h3 style="font-size:1em; font-weight:600; color:#374151; margin-bottom:8px;">Termine der naechsten 30 Tage</h3>
         <div class="calendar-table-wrap">
             <table class="calendar-table" id="upcoming-table">
                 <thead>
@@ -771,45 +755,6 @@
                     <tr><td colspan="4" class="calendar-empty">Wird geladen...</td></tr>
                 </tbody>
             </table>
-        </div>
-
-        <!-- New entry form -->
-        <button class="new-entry-toggle" onclick="toggleNewEntryForm()">+ Neuer Eintrag</button>
-        <div class="new-entry-form" id="new-entry-form">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="cal-person">Person</label>
-                    <select id="cal-person">
-                        <option value="Werner Jacobi">Werner Jacobi</option>
-                        <option value="Wanda Jacobi">Wanda Jacobi</option>
-                        <option value="_custom">Andere (Gesellschafter)...</option>
-                    </select>
-                    <input type="text" id="cal-person-custom" placeholder="Name eingeben" style="display:none; margin-top:4px;">
-                </div>
-                <div class="form-group">
-                    <label for="cal-type">Typ</label>
-                    <select id="cal-type">
-                        <option value="leave">Urlaub</option>
-                        <option value="shareholder_visit">Gesellschafter-Besuch</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="cal-start">Von</label>
-                    <input type="date" id="cal-start">
-                </div>
-                <div class="form-group">
-                    <label for="cal-end">Bis</label>
-                    <input type="date" id="cal-end">
-                </div>
-                <div class="form-group full-width">
-                    <label for="cal-reason">Grund / Notizen</label>
-                    <textarea id="cal-reason" placeholder="Optional"></textarea>
-                </div>
-            </div>
-            <div class="form-actions">
-                <button class="btn-submit" id="cal-submit-btn" onclick="submitCalendarEntry()">Anfragen</button>
-            </div>
-            <div class="form-message" id="cal-form-message"></div>
         </div>
     </div>
 
@@ -1206,51 +1151,9 @@ async function loadCalendar() {
     }
 }
 
-function renderPresence(entries) {
-    // Check Werner
-    const wernerAbsent = entries.find(e => e.person_name === 'Werner Jacobi');
-    const dotWerner = document.getElementById('presence-dot-werner');
-    const lblWerner = document.getElementById('presence-label-werner');
-
-    dotWerner.className = 'presence-dot';
-    if (wernerAbsent) {
-        dotWerner.classList.add('abwesend');
-        const reason = CAL_TYPE_LABELS[wernerAbsent.entry_type] || wernerAbsent.entry_type;
-        lblWerner.textContent = 'Werner: ' + reason;
-    } else {
-        dotWerner.classList.add('auf-farm');
-        lblWerner.textContent = 'Werner: Auf Farm';
-    }
-
-    // Check Wanda
-    const wandaAbsent = entries.find(e => e.person_name === 'Wanda Jacobi');
-    const dotWanda = document.getElementById('presence-dot-wanda');
-    const lblWanda = document.getElementById('presence-label-wanda');
-
-    dotWanda.className = 'presence-dot';
-    if (wandaAbsent) {
-        dotWanda.classList.add('abwesend');
-        const reason = CAL_TYPE_LABELS[wandaAbsent.entry_type] || wandaAbsent.entry_type;
-        lblWanda.textContent = 'Wanda: ' + reason;
-    } else {
-        dotWanda.classList.add('auf-farm');
-        lblWanda.textContent = 'Wanda: Auf Farm';
-    }
-}
-
-function renderLeaveBalance(leaveEntries) {
-    let wernerDays = 0;
-    let wandaDays = 0;
-
-    for (const e of leaveEntries) {
-        const days = countWorkingDays(e.start_date, e.end_date);
-        if (e.person_name === 'Werner Jacobi') wernerDays += days;
-        else if (e.person_name === 'Wanda Jacobi') wandaDays += days;
-    }
-
-    document.getElementById('leave-werner').textContent = wernerDays;
-    document.getElementById('leave-wanda').textContent = wandaDays;
-}
+// Presence indicators + leave balance moved to Kalender page.
+function renderPresence() { /* no-op on cockpit */ }
+function renderLeaveBalance() { /* no-op on cockpit */ }
 
 function renderPendingApprovals(pending, todayStr) {
     const box = document.getElementById('pending-approvals-box');
@@ -1375,114 +1278,7 @@ async function rejectCalendarEntry(entryId) {
     }
 }
 
-function toggleNewEntryForm() {
-    const form = document.getElementById('new-entry-form');
-    form.classList.toggle('open');
-}
-
-// Handle custom person dropdown
-document.getElementById('cal-person').addEventListener('change', function() {
-    const custom = document.getElementById('cal-person-custom');
-    custom.style.display = this.value === '_custom' ? 'block' : 'none';
-    if (this.value !== '_custom') custom.value = '';
-});
-
-async function submitCalendarEntry() {
-    const btn = document.getElementById('cal-submit-btn');
-    const msgEl = document.getElementById('cal-form-message');
-    msgEl.className = 'form-message';
-    msgEl.style.display = 'none';
-
-    const personSelect = document.getElementById('cal-person');
-    const personCustom = document.getElementById('cal-person-custom');
-    const entryType = document.getElementById('cal-type').value;
-    const startDate = document.getElementById('cal-start').value;
-    const endDate = document.getElementById('cal-end').value;
-    const reason = document.getElementById('cal-reason').value.trim();
-
-    const personName = personSelect.value === '_custom' ? personCustom.value.trim() : personSelect.value;
-
-    // Validation
-    if (!personName) {
-        msgEl.className = 'form-message error';
-        msgEl.textContent = 'Bitte Person angeben.';
-        return;
-    }
-    if (!startDate || !endDate) {
-        msgEl.className = 'form-message error';
-        msgEl.textContent = 'Bitte Von- und Bis-Datum angeben.';
-        return;
-    }
-    if (endDate < startDate) {
-        msgEl.className = 'form-message error';
-        msgEl.textContent = 'Bis-Datum muss nach Von-Datum liegen.';
-        return;
-    }
-
-    // Determine person_role
-    let personRole = CAL_PERSON_ROLES[personName] || 'other';
-    if (entryType === 'shareholder_visit') personRole = 'gesellschafter';
-
-    // Determine status
-    let status = 'requested';
-    if (entryType === 'shareholder_visit') {
-        status = 'approved';
-    } else if (_calendarUserRole === 'owner') {
-        // Owners can directly approve their own requests
-        status = 'approved';
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Wird gespeichert...';
-
-    try {
-        const insertData = {
-            entry_type: entryType,
-            person_name: personName,
-            person_role: personRole,
-            start_date: startDate,
-            end_date: endDate,
-            reason: reason || null,
-            notes: null,
-            status: status,
-            requested_by: _calendarUserId,
-            decided_by: status === 'approved' ? _calendarUserId : null,
-            decided_at: status === 'approved' ? new Date().toISOString() : null
-        };
-
-        const { data: inserted, error } = await sb.from('farm_calendar').insert(insertData).select('id').single();
-        if (error) throw error;
-
-        const notifyAction = status === 'approved' ? 'approved' : 'created';
-        sb.functions.invoke('notify-calendar', { body: { action: notifyAction, entryId: inserted.id } })
-            .catch(e => console.warn('Notification failed:', e));
-
-        msgEl.className = 'form-message success';
-        msgEl.textContent = status === 'approved'
-            ? 'Eintrag gespeichert und genehmigt.'
-            : 'Anfrage wurde erstellt und wartet auf Genehmigung.';
-
-        // Reset form
-        document.getElementById('cal-start').value = '';
-        document.getElementById('cal-end').value = '';
-        document.getElementById('cal-reason').value = '';
-        document.getElementById('cal-person').value = 'Werner Jacobi';
-        document.getElementById('cal-person-custom').style.display = 'none';
-        document.getElementById('cal-person-custom').value = '';
-        document.getElementById('cal-type').value = 'leave';
-
-        await loadCalendar();
-
-        setTimeout(() => { msgEl.style.display = 'none'; msgEl.className = 'form-message'; }, 4000);
-    } catch (err) {
-        console.error('Submit error:', err);
-        msgEl.className = 'form-message error';
-        msgEl.textContent = 'Fehler: ' + (err.message || err);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Anfragen';
-    }
-}
+// Entry form moved to kalender.html — cockpit is read-only for calendar.
 
 // ── Load All ─────────────────────────────────────────────────────
 async function loadAll() {
