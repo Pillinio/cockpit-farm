@@ -833,7 +833,7 @@ async function deleteRule(btn) {
 
     const { error } = await sb.from('category_rules').delete().eq('id', id);
     if (error) return showStatus('Fehler: ' + error.message, 'error');
-    showStatus('Regel geloescht.');
+    showStatus('Regel gelöscht.');
     loadCategoryRules();
 }
 
@@ -1045,7 +1045,7 @@ async function deleteMarketPrice(id) {
     if (!confirm('Preis wirklich löschen?')) return;
     const { error } = await sb.from('market_prices').delete().eq('id', id);
     if (error) return showStatus('Fehler: ' + error.message, 'error');
-    showStatus('Preis geloescht.');
+    showStatus('Preis gelöscht.');
     loadRecentPrices();
 }
 
@@ -1274,7 +1274,7 @@ async function deleteEmployee(btn) {
 
     const { error } = await sb.from('farm_employees').delete().eq('id', id);
     if (error) return showStatus('Fehler: ' + error.message, 'error');
-    showStatus('Mitarbeiter geloescht.');
+    showStatus('Mitarbeiter gelöscht.');
     loadEmployees();
 }
 

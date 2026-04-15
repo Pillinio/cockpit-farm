@@ -1042,11 +1042,11 @@ async function loadH5() {
         });
 
         const categories = [
-            { label: 'K\u00fche', value: catCounts.cows, color: '#2E75B6' },
+            { label: 'Kühe', value: catCounts.cows, color: '#2E75B6' },
             { label: 'Bullen', value: catCounts.bulls, color: '#1F4E78' },
-            { label: 'F\u00e4rsen', value: catCounts.heifers, color: '#60a5fa' },
+            { label: 'Färsen', value: catCounts.heifers, color: '#60a5fa' },
             { label: 'Ochsen', value: catCounts.oxen, color: '#93c5fd' },
-            { label: 'K\u00e4lber', value: catCounts.calves, color: '#bfdbfe' },
+            { label: 'Kälber', value: catCounts.calves, color: '#bfdbfe' },
         ];
 
         const total = animals.length;
@@ -1104,18 +1104,18 @@ function categorizeAnimal(animal, today) {
 
     if (ageMonths === null) {
         // Unknown age: guess from weight or default
-        if (sex === 'F' && calvings > 0) return { key: 'cow', label: 'K\u00fche', gainKey: 'cow_adult', maxKg: 550 };
+        if (sex === 'F' && calvings > 0) return { key: 'cow', label: 'Kühe', gainKey: 'cow_adult', maxKg: 550 };
         if (sex === 'M') return { key: 'bull_young', label: 'Jungbullen', gainKey: 'bull_young', maxKg: 800 };
-        return { key: 'heifer', label: 'F\u00e4rsen', gainKey: 'heifer_18plus', maxKg: 480 };
+        return { key: 'heifer', label: 'Färsen', gainKey: 'heifer_18plus', maxKg: 480 };
     }
 
-    if (ageMonths < 6) return { key: 'calf', label: 'K\u00e4lber (<6 Mon)', gainKey: 'calf_0_6', maxKg: 250 };
+    if (ageMonths < 6) return { key: 'calf', label: 'Kälber (<6 Mon)', gainKey: 'calf_0_6', maxKg: 250 };
     if (ageMonths < 12) return { key: 'weaner', label: 'Absetzer (6-12 Mon)', gainKey: 'young_6_18', maxKg: 300 };
     if (ageMonths < 18) return { key: 'young', label: 'Jungrinder (12-18 Mon)', gainKey: 'young_6_18', maxKg: 400 };
 
     if (sex === 'F') {
-        if (calvings > 0) return { key: 'cow', label: 'K\u00fche', gainKey: 'cow_adult', maxKg: 550 };
-        return { key: 'heifer', label: 'F\u00e4rsen', gainKey: 'heifer_18plus', maxKg: 480 };
+        if (calvings > 0) return { key: 'cow', label: 'Kühe', gainKey: 'cow_adult', maxKg: 550 };
+        return { key: 'heifer', label: 'Färsen', gainKey: 'heifer_18plus', maxKg: 480 };
     }
 
     if (ageMonths < 24) return { key: 'bull_young', label: 'Jungbullen', gainKey: 'bull_young', maxKg: 800 };
@@ -1395,7 +1395,7 @@ function setupCSVUpload() {
                 });
             }
 
-            if (records.length === 0) throw new Error('Keine g\u00fcltigen Tiereintr\u00e4ge gefunden');
+            if (records.length === 0) throw new Error('Keine gültigen Tiereinträge gefunden');
 
             // Upsert in batches of 100
             const batchSize = 100;
@@ -1412,7 +1412,7 @@ function setupCSVUpload() {
             }
 
             status.className = 'csv-upload-status success';
-            status.textContent = records.length + ' Tiere importiert' + (skipped > 0 ? ', ' + skipped + ' \u00fcbersprungen' : '') + '.';
+            status.textContent = records.length + ' Tiere importiert' + (skipped > 0 ? ', ' + skipped + ' übersprungen' : '') + '.';
 
             // Reload herd value display
             await loadH6();

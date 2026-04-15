@@ -876,7 +876,7 @@ async function loadF2() {
         _f5Totals = { totalPlanned, totalActual, totalUtil, overBudget };
 
         const status = overBudget === 0 ? 'green' : overBudget <= 3 ? 'yellow' : 'red';
-        const statusText = overBudget === 0 ? 'Im Rahmen' : overBudget + ' ueberschritten';
+        const statusText = overBudget === 0 ? 'Im Rahmen' : overBudget + ' überschritten';
         setBadge('f2', statusText, status);
 
         sortF5(_f5SortCol, false);
@@ -926,7 +926,7 @@ function renderF5() {
         </div>
         <div class="budget-summary-card">
             <div class="bsc-value" style="color:${overBudget > 0 ? '#dc2626' : '#166534'}">${overBudget}</div>
-            <div class="bsc-label">Kategorien ueberschritten</div>
+            <div class="bsc-label">Kategorien überschritten</div>
         </div>
     </div>`;
 

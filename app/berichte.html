@@ -1190,8 +1190,80 @@
                 <div class="section-body hidden" id="body-meldung">
                     <div class="mm-form-container" id="mm-form-screen">
 
+                        <!-- Subsection: Herdenbewegungen -->
+                        <h3 class="mm-subsection-title">&#x1F404; Herdenbewegungen (Rotation / Zugang / Abgang)</h3>
+
+                        <details id="movement-form-details" style="margin-bottom:18px;">
+                            <summary style="cursor:pointer;font-weight:600;color:#2E75B6;font-size:0.95em;margin-bottom:10px;">
+                                &#x2795; Neue Bewegung erfassen
+                            </summary>
+                            <div class="entry-form" id="movement-form">
+                                <div class="form-group">
+                                    <label for="mv-date">Datum</label>
+                                    <input type="date" id="mv-date">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mv-from">Von Kamp</label>
+                                    <select id="mv-from">
+                                        <option value="">-- Zugang / Geburt --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mv-to">Nach Kamp</label>
+                                    <select id="mv-to">
+                                        <option value="">-- Abgang / Verkauf / Tod --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mv-count">Anzahl</label>
+                                    <input type="number" id="mv-count" min="1" value="1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mv-category">Tierkategorie</label>
+                                    <select id="mv-category">
+                                        <option value="cows">Kühe</option>
+                                        <option value="bulls">Bullen</option>
+                                        <option value="heifers">Färsen</option>
+                                        <option value="calves">Kälber</option>
+                                        <option value="oxen">Ochsen</option>
+                                        <option value="mixed">Gemischt</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mv-reason">Grund</label>
+                                    <select id="mv-reason">
+                                        <option value="rotation">Rotation</option>
+                                        <option value="birth">Geburt</option>
+                                        <option value="purchase">Zukauf</option>
+                                        <option value="sale">Verkauf</option>
+                                        <option value="death">Tod</option>
+                                        <option value="separation">Separation</option>
+                                        <option value="other">Sonstiges</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="mv-notes">Notizen</label>
+                                    <textarea id="mv-notes" rows="2" placeholder="Optional..."></textarea>
+                                </div>
+                                <div class="form-group full-width" style="flex-direction:row;gap:12px;align-items:center;">
+                                    <button class="btn-save" id="btn-save-movement" onclick="Monat.saveMovement()">Speichern</button>
+                                    <div class="form-msg" id="mv-msg"></div>
+                                </div>
+                            </div>
+                        </details>
+
+                        <div class="mm-sub-heading">Bewegungen im ausgewählten Monat</div>
+                        <div id="movements-table-wrap">
+                            <div class="loading-placeholder"><span class="loading-spinner"></span> Lade Bewegungen...</div>
+                        </div>
+
+                        <div class="mm-sub-heading" style="margin-top:16px;">Kamp-Belegung (aktuell)</div>
+                        <div id="occupancy-table-wrap">
+                            <div class="loading-placeholder"><span class="loading-spinner"></span> Lade Belegung...</div>
+                        </div>
+
                         <!-- Subsection: Herde -->
-                        <h3 class="mm-subsection-title">&#x1F404; Herde</h3>
+                        <h3 class="mm-subsection-title" style="margin-top:24px;">&#x1F404; Herde</h3>
                         <div class="mm-field">
                             <label for="mm-snapshotDate">Stichtag</label>
                             <input type="date" id="mm-snapshotDate">
@@ -1317,88 +1389,7 @@
                 </div>
             </div>
 
-            <!-- 1. Herdenbewegung -->
-            <div class="section" id="sec-movements">
-                <div class="section-header" onclick="Monat.toggleSection('movements')">
-                    <span class="section-icon">&#x1F404;</span>
-                    <span class="section-title">Herdenbewegung</span>
-                    <span class="section-badge badge-gray" id="badge-movements">--</span>
-                    <span class="section-collapse-toggle" id="toggle-movements">&#x25BC;</span>
-                </div>
-                <div class="section-body" id="body-movements">
-
-                    <!-- Entry form (collapsible) -->
-                    <details id="movement-form-details" style="margin-bottom:18px;">
-                        <summary style="cursor:pointer;font-weight:600;color:#2E75B6;font-size:0.95em;margin-bottom:10px;">
-                            &#x2795; Neue Bewegung erfassen
-                        </summary>
-                        <div class="entry-form" id="movement-form">
-                            <div class="form-group">
-                                <label for="mv-date">Datum</label>
-                                <input type="date" id="mv-date">
-                            </div>
-                            <div class="form-group">
-                                <label for="mv-from">Von Kamp</label>
-                                <select id="mv-from">
-                                    <option value="">-- Zugang / Geburt --</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="mv-to">Nach Kamp</label>
-                                <select id="mv-to">
-                                    <option value="">-- Abgang / Verkauf / Tod --</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="mv-count">Anzahl</label>
-                                <input type="number" id="mv-count" min="1" value="1">
-                            </div>
-                            <div class="form-group">
-                                <label for="mv-category">Tierkategorie</label>
-                                <select id="mv-category">
-                                    <option value="cows">Kühe</option>
-                                    <option value="bulls">Bullen</option>
-                                    <option value="heifers">Färsen</option>
-                                    <option value="calves">Kälber</option>
-                                    <option value="oxen">Ochsen</option>
-                                    <option value="mixed">Gemischt</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="mv-reason">Grund</label>
-                                <select id="mv-reason">
-                                    <option value="rotation">Rotation</option>
-                                    <option value="birth">Geburt</option>
-                                    <option value="purchase">Zukauf</option>
-                                    <option value="sale">Verkauf</option>
-                                    <option value="death">Tod</option>
-                                    <option value="separation">Separation</option>
-                                    <option value="other">Sonstiges</option>
-                                </select>
-                            </div>
-                            <div class="form-group full-width">
-                                <label for="mv-notes">Notizen</label>
-                                <textarea id="mv-notes" rows="2" placeholder="Optional..."></textarea>
-                            </div>
-                            <div class="form-group full-width" style="flex-direction:row;gap:12px;align-items:center;">
-                                <button class="btn-save" id="btn-save-movement" onclick="Monat.saveMovement()">Speichern</button>
-                                <div class="form-msg" id="mv-msg"></div>
-                            </div>
-                        </div>
-                    </details>
-
-                    <!-- Movements table -->
-                    <div id="movements-table-wrap">
-                        <div class="loading-placeholder"><span class="loading-spinner"></span> Lade Bewegungen...</div>
-                    </div>
-
-                    <!-- Camp occupancy -->
-                    <h3 style="font-size:1em;font-weight:600;color:#374151;margin:20px 0 10px;">&#x1F3D5;&#xFE0F; Kamp-Belegung (aktuell)</h3>
-                    <div id="occupancy-table-wrap">
-                        <div class="loading-placeholder"><span class="loading-spinner"></span> Lade Belegung...</div>
-                    </div>
-                </div>
-            </div>
+            <!-- Herdenbewegung ist jetzt Teil der Monatsmeldung oben -->
 
             <!-- 2. Herdenstruktur -->
             <div class="section" id="sec-herd">
@@ -1761,13 +1752,11 @@ const Monat = {
 
         if (error || !data) {
             wrap.innerHTML = '<p style="color:#991b1b;">Fehler beim Laden: ' + ((error && error.message) || '') + '</p>';
-            badge.textContent = 'Fehler';
-            badge.className = 'section-badge badge-red';
+            if (badge) { badge.textContent = 'Fehler'; badge.className = 'section-badge badge-red'; }
             return;
         }
 
-        badge.textContent = data.length + ' Bewegungen';
-        badge.className = 'section-badge badge-gray';
+        if (badge) { badge.textContent = data.length + ' Bewegungen'; badge.className = 'section-badge badge-gray'; }
 
         if (data.length === 0) {
             wrap.innerHTML = '<p style="color:#9ca3af;">Keine Bewegungen in diesem Monat.</p>';
@@ -1901,10 +1890,10 @@ const Monat = {
 
         const { data, error } = await sb
             .from('bank_transactions')
-            .select('amount_nad, description, transaction_date, category')
+            .select('debit_nad, credit_nad, description, transaction_date, category')
             .gte('transaction_date', start)
             .lt('transaction_date', end)
-            .order('amount_nad', { ascending: true });
+            .order('transaction_date', { ascending: true });
 
         if (error || !data) {
             summaryWrap.innerHTML = '<p style="color:#991b1b;">Fehler: ' + ((error && error.message) || '') + '</p>';
@@ -1919,14 +1908,13 @@ const Monat = {
             return;
         }
 
-        let income = 0;
-        let expense = 0;
-
+        // Normalize: signed amount from debit/credit columns
         data.forEach(t => {
-            const amt = t.amount_nad || 0;
-            if (amt >= 0) income += amt;
-            else expense += amt;
+            t._amt = Number(t.credit_nad || 0) - Number(t.debit_nad || 0);
         });
+
+        const income = data.reduce((s, t) => s + Math.max(0, t._amt), 0);
+        const expense = data.reduce((s, t) => s + Math.min(0, t._amt), 0);
 
         const net = income + expense;
         const netClass = net >= 0 ? 'cf-positive' : 'cf-negative';
@@ -1940,7 +1928,7 @@ const Monat = {
             '<div class="cashflow-card"><div class="cf-value ' + netClass + '">' + this.fmtNAD(net) + '</div><div class="cf-label">Netto</div></div>' +
         '</div>';
 
-        const sorted = [...data].sort((a, b) => Math.abs(b.amount_nad || 0) - Math.abs(a.amount_nad || 0));
+        const sorted = [...data].sort((a, b) => Math.abs(b._amt) - Math.abs(a._amt));
         const top5 = sorted.slice(0, 5);
 
         let html = '<table class="data-table"><thead><tr>';
@@ -1949,12 +1937,12 @@ const Monat = {
 
         const self = this;
         top5.forEach(t => {
-            const amtClass = (t.amount_nad || 0) >= 0 ? 'cf-positive' : 'cf-negative';
+            const amtClass = t._amt >= 0 ? 'cf-positive' : 'cf-negative';
             html += '<tr>';
             html += '<td>' + self.fmtDate(t.transaction_date) + '</td>';
             html += '<td>' + (t.description || '--') + '</td>';
             html += '<td>' + (t.category || '--') + '</td>';
-            html += '<td class="num ' + amtClass + '">' + self.fmtNAD(t.amount_nad) + '</td>';
+            html += '<td class="num ' + amtClass + '">' + self.fmtNAD(t._amt) + '</td>';
             html += '</tr>';
         });
 
@@ -1970,8 +1958,8 @@ const Monat = {
 
         const { data, error } = await sb
             .from('veld_observations')
-            .select('camp_name, condition_score, observation_date')
-            .order('observation_date', { ascending: false });
+            .select('camp_name, condition_score, snapshot_date')
+            .order('snapshot_date', { ascending: false });
 
         if (error || !data) {
             wrap.innerHTML = '<p style="color:#991b1b;">Fehler: ' + ((error && error.message) || '') + '</p>';
@@ -2009,7 +1997,7 @@ const Monat = {
             html += '<div class="veld-card ' + colorClass + '">';
             html += '<div class="camp-name">' + (obs.camp_name || '--') + '</div>';
             html += '<div class="camp-score">' + score + '/5</div>';
-            html += '<div class="camp-date">' + label + ' &middot; ' + self.fmtDate(obs.observation_date) + '</div>';
+            html += '<div class="camp-date">' + label + ' &middot; ' + self.fmtDate(obs.snapshot_date) + '</div>';
             html += '</div>';
         });
         html += '</div>';

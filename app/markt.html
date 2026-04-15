@@ -243,6 +243,159 @@
             height: 100% !important;
         }
 
+        /* ── Rindfleischpreis-Sektion ──────────────────────────── */
+        .price-section {
+            padding: 20px 24px 4px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .price-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .price-section-header h2 {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #1a1a2e;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .price-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.88em;
+            color: #6b7280;
+        }
+
+        .price-controls select {
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.9em;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .price-grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .price-panel {
+            background: #fafbfc;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .price-panel h3 {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #374151;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .price-panel .price-panel-sub {
+            font-size: 0.78em;
+            color: #9ca3af;
+            font-weight: 400;
+        }
+
+        .provider-toggles {
+            border: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+        }
+
+        .provider-toggles label {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.82em;
+            color: #4b5563;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .provider-toggles input[type="checkbox"] {
+            accent-color: #2E75B6;
+        }
+
+        .provider-toggles .swatch {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .price-chart-wrap {
+            position: relative;
+            height: 220px;
+            width: 100%;
+        }
+
+        .price-chart-wrap canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .price-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82em;
+        }
+
+        .price-table th,
+        .price-table td {
+            padding: 5px 8px;
+            text-align: right;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .price-table th:first-child,
+        .price-table td:first-child {
+            text-align: left;
+        }
+
+        .price-table thead th {
+            background: #f3f4f6;
+            color: #374151;
+            font-weight: 600;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .price-table tbody td.num {
+            font-variant-numeric: tabular-nums;
+            color: #111827;
+        }
+
+        .price-table .no-data {
+            text-align: center;
+            color: #9ca3af;
+            font-style: italic;
+            padding: 12px;
+        }
+
         /* Colors */
         .status-green  { background-color: #22c55e; }
         .status-yellow { background-color: #eab308; }
@@ -285,6 +438,9 @@
 
             .card-value { font-size: 1.6em; }
             .chart-container { height: 180px; }
+
+            .price-grid-2col { grid-template-columns: 1fr; gap: 14px; }
+            .price-section { padding: 14px 16px 4px; }
         }
 
         /* Footer */
@@ -318,24 +474,81 @@
         <button onclick="loadAll()">Aktualisieren</button>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="grid">
-
-        <!-- M1 — Rindfleischpreis NAD/kg (wide card with chart) -->
-        <div class="card card-wide card-chart" id="card-m1">
-            <div class="card-body">
-                <div class="card-top">
-                    <span class="card-icon">&#x1F4B5;</span>
-                    <span class="card-title">M1 — Rindfleischpreis NAD/kg</span>
-                    <span class="card-status-dot status-gray"></span>
-                </div>
-                <div class="card-value" data-kpi="m1"><span class="loading-spinner"></span></div>
-                <div class="card-subtitle">Meatco A2/B2 aktuell</div>
-            </div>
-            <div class="chart-container">
-                <canvas id="chart-m1"></canvas>
+    <!-- M1 — Rindfleischpreise (Schlacht + Lebend nebeneinander) -->
+    <section class="price-section" id="section-rindfleisch">
+        <div class="price-section-header">
+            <h2><span>&#x1F4B5;</span> M1 &mdash; Rindfleischpreise</h2>
+            <div class="price-controls">
+                <label for="grade-filter">Grade:</label>
+                <select id="grade-filter">
+                    <option value="A0">A0</option>
+                    <option value="A1">A1</option>
+                    <option value="A2" selected>A2</option>
+                    <option value="A3">A3</option>
+                    <option value="A4">A4</option>
+                    <option value="A5">A5</option>
+                    <option value="A6">A6</option>
+                    <option value="AB0">AB0</option>
+                    <option value="AB2">AB2</option>
+                    <option value="B0">B0</option>
+                    <option value="B2">B2</option>
+                    <option value="C0">C0</option>
+                    <option value="C2">C2</option>
+                </select>
+                <label for="days-filter" style="margin-left:8px;">Zeitraum:</label>
+                <select id="days-filter">
+                    <option value="30">30 Tage</option>
+                    <option value="90">90 Tage</option>
+                    <option value="180" selected>6 Monate</option>
+                    <option value="365">12 Monate</option>
+                </select>
             </div>
         </div>
+
+        <div class="price-grid-2col">
+            <!-- LINKS: Schlachtgewicht -->
+            <div class="price-panel" id="panel-carcass">
+                <h3>&#x1F969; Schlachtgewicht <span class="price-panel-sub">(NAD/kg cold)</span></h3>
+                <fieldset class="provider-toggles" id="carcass-toggles">
+                    <label><span class="swatch" style="background:#2E75B6"></span><input type="checkbox" value="meatco" checked> Meatco 180&ndash;239</label>
+                    <label><span class="swatch" style="background:#1F4E78"></span><input type="checkbox" value="meatco_fixed" checked> Meatco Fixed 240+</label>
+                    <label><span class="swatch" style="background:#e74c3c"></span><input type="checkbox" value="beefcor" checked> Beefcor</label>
+                    <label><span class="swatch" style="background:#27ae60"></span><input type="checkbox" value="rmaa" checked> RMAA</label>
+                    <label><span class="swatch" style="background:#f39c12"></span><input type="checkbox" value="savannah" checked> Savannah</label>
+                </fieldset>
+                <div class="price-chart-wrap">
+                    <canvas id="chart-carcass"></canvas>
+                </div>
+                <table class="price-table" id="carcass-latest-table">
+                    <thead>
+                        <tr><th>Anbieter</th><th>Letzter Preis</th><th>Datum</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="3" class="no-data"><span class="loading-spinner"></span> Lade Preise&hellip;</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- RECHTS: Lebendgewicht / Auktion -->
+            <div class="price-panel" id="panel-live">
+                <h3>&#x1F402; Lebendgewicht &amp; Auktion <span class="price-panel-sub">(NAD/kg live bzw. NAD/Tier)</span></h3>
+                <div class="price-chart-wrap">
+                    <canvas id="chart-live"></canvas>
+                </div>
+                <table class="price-table" id="auction-latest-table">
+                    <thead>
+                        <tr><th>Kategorie</th><th>Preis</th><th>Einheit</th><th>Datum</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" class="no-data"><span class="loading-spinner"></span> Lade Auktionspreise&hellip;</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- KPI Cards -->
+    <div class="grid">
 
         <!-- M2 — Marge pro kg -->
         <div class="card" id="card-m2">
@@ -362,22 +575,6 @@
                 </div>
                 <div class="card-value" data-kpi="m3"><span class="loading-spinner"></span></div>
                 <div class="card-subtitle">Monatliche Veraenderung</div>
-            </div>
-        </div>
-
-        <!-- M4 — Wechselkurse (wide card with chart) -->
-        <div class="card card-wide card-chart" id="card-m4">
-            <div class="card-body">
-                <div class="card-top">
-                    <span class="card-icon">&#x1F4B1;</span>
-                    <span class="card-title">M4 — Wechselkurse</span>
-                    <span class="card-status-dot status-gray"></span>
-                </div>
-                <div class="card-value" data-kpi="m4"><span class="loading-spinner"></span></div>
-                <div class="card-subtitle">NAD/EUR &amp; NAD/USD (letzte 30 Tage)</div>
-            </div>
-            <div class="chart-container">
-                <canvas id="chart-m4"></canvas>
             </div>
         </div>
 
@@ -468,9 +665,27 @@ async function checkAuth() {
 }
 
 // ── Chart instances ─────────────────────────────────────────────
-let chartM1 = null;
-let chartM4 = null;
+let chartCarcass = null;
+let chartLive = null;
 let chartM5 = null;
+
+// Cached data for client-side filtering (carcass panel)
+let carcassData = [];   // rows: {price_date, price_nad, provider, grade, commodity, source}
+let liveData = [];      // auction + live-per-kg rows
+const PROVIDER_COLORS = {
+    meatco:       '#2E75B6',
+    meatco_fixed: '#1F4E78',
+    beefcor:      '#e74c3c',
+    rmaa:         '#27ae60',
+    savannah:     '#f39c12',
+};
+const PROVIDER_LABELS = {
+    meatco:       'Meatco 180-239',
+    meatco_fixed: 'Meatco Fixed 240+',
+    beefcor:      'Beefcor',
+    rmaa:         'RMAA',
+    savannah:     'Savannah',
+};
 
 // ── Helpers ──────────────────────────────────────────────────────
 function setCard(id, { value, subtitle, status }) {
@@ -499,70 +714,241 @@ function noData(id, subtitle) {
     setCard(id, { value: '\u2014', subtitle: subtitle || 'Keine Daten', status: 'gray' });
 }
 
-// ── M1 — Rindfleischpreis NAD/kg ────────────────────────────────
-async function loadM1() {
+// ── Rindfleischpreise: Schlachtgewicht (links) + Lebend/Auktion (rechts) ──
+function parseBeefCommodity(commodity) {
+    // Fallback-Parser für Zeilen ohne strukturierte Spalten.
+    // 'beef_meatco_fixed_A2' → { provider:'meatco_fixed', grade:'A2' }
+    // 'beef_beefcor_A0'      → { provider:'beefcor', grade:'A0' }
+    if (!commodity || !commodity.startsWith('beef_')) return null;
+    const parts = commodity.split('_');
+    if (parts.length >= 4 && parts[1] === 'meatco' && parts[2] === 'fixed') {
+        return { provider: 'meatco_fixed', grade: parts[3] };
+    }
+    if (parts.length >= 3) return { provider: parts[1], grade: parts[2] };
+    return null;
+}
+
+async function loadCarcassPrices() {
+    const days = parseInt(document.getElementById('days-filter').value, 10);
+    const cutoff = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+
+    try {
+        // Wir holen sowohl strukturierte Zeilen (weight_basis='carcass') als
+        // auch Legacy-beef_%-Zeilen und mergen sie.
+        const { data } = await sb
+            .from('market_prices')
+            .select('commodity, price_date, price_nad, provider, grade, weight_basis, source')
+            .or('weight_basis.eq.carcass,commodity.like.beef_%')
+            .gte('price_date', cutoff)
+            .order('price_date', { ascending: true });
+
+        carcassData = (data || [])
+            .map(r => {
+                if (r.provider && r.grade) return r;
+                const parsed = parseBeefCommodity(r.commodity);
+                return parsed ? { ...r, provider: parsed.provider, grade: parsed.grade } : null;
+            })
+            .filter(Boolean);
+
+        renderCarcassPanel();
+    } catch (err) {
+        console.error('loadCarcassPrices:', err);
+        renderCarcassPanel();
+    }
+}
+
+function renderCarcassPanel() {
+    const grade = document.getElementById('grade-filter').value;
+    const enabled = [...document.querySelectorAll('#carcass-toggles input[type=checkbox]:checked')]
+        .map(c => c.value);
+
+    // Filter nach Grade
+    const filtered = carcassData.filter(r => r.grade === grade);
+
+    // Gruppieren nach Provider
+    const byProvider = {};
+    filtered.forEach(r => {
+        if (!byProvider[r.provider]) byProvider[r.provider] = [];
+        byProvider[r.provider].push({ x: r.price_date, y: r.price_nad });
+    });
+
+    const ctx = document.getElementById('chart-carcass').getContext('2d');
+    if (chartCarcass) chartCarcass.destroy();
+
+    const datasets = Object.keys(PROVIDER_COLORS).map(p => ({
+        label: PROVIDER_LABELS[p],
+        data: (byProvider[p] || []).sort((a, b) => a.x.localeCompare(b.x)),
+        borderColor: PROVIDER_COLORS[p],
+        backgroundColor: PROVIDER_COLORS[p] + '20',
+        tension: 0.25,
+        pointRadius: 2,
+        borderWidth: 2,
+        fill: false,
+        hidden: !enabled.includes(p),
+    }));
+
+    chartCarcass = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { type: 'category', ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+                y: {
+                    title: { display: true, text: 'NAD/kg cold', font: { size: 11 } },
+                    ticks: { font: { size: 10 } },
+                },
+            },
+        },
+    });
+
+    // Latest-Preise-Tabelle (letzter Wert pro Provider, über alle Grades hinweg)
+    const tbody = document.querySelector('#carcass-latest-table tbody');
+    const latestByProvider = {};
+    carcassData.forEach(r => {
+        const key = r.provider + '|' + r.grade;
+        if (!latestByProvider[key] || r.price_date > latestByProvider[key].price_date) {
+            latestByProvider[key] = r;
+        }
+    });
+    const gradeRows = Object.values(latestByProvider).filter(r => r.grade === grade);
+    if (!gradeRows.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="no-data">Keine Preise fuer Grade ' + escHtml(grade) + '</td></tr>';
+        return;
+    }
+    gradeRows.sort((a, b) => (PROVIDER_LABELS[a.provider] || a.provider).localeCompare(PROVIDER_LABELS[b.provider] || b.provider));
+    tbody.innerHTML = gradeRows.map(r => `
+        <tr>
+            <td><span class="swatch" style="background:${PROVIDER_COLORS[r.provider] || '#9ca3af'};display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;"></span>${escHtml(PROVIDER_LABELS[r.provider] || r.provider)}</td>
+            <td class="num">N$ ${Number(r.price_nad).toFixed(2)}</td>
+            <td>${new Date(r.price_date).toLocaleDateString('de-DE')}</td>
+        </tr>
+    `).join('');
+}
+
+async function loadLiveAuctionPrices() {
+    const days = parseInt(document.getElementById('days-filter').value, 10);
+    const cutoff = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+
     try {
         const { data } = await sb
             .from('market_prices')
-            .select('commodity, price_date, price_nad, source')
-            .like('commodity', 'beef_%')
+            .select('commodity, price_date, price_nad, unit, weight_basis, provider, source')
+            .or('weight_basis.in.(live,per_head),commodity.like.auction_%')
+            .gte('price_date', cutoff)
             .order('price_date', { ascending: true });
 
-        if (!data?.length) return noData('m1');
+        liveData = data || [];
+        renderLivePanel();
+    } catch (err) {
+        console.error('loadLiveAuctionPrices:', err);
+        liveData = [];
+        renderLivePanel();
+    }
+}
 
-        // Group by commodity (grade)
-        const grades = {};
-        data.forEach(r => {
-            if (!grades[r.commodity]) grades[r.commodity] = [];
-            grades[r.commodity].push({ date: r.price_date, price: r.price_nad });
+function renderLivePanel() {
+    const days = parseInt(document.getElementById('days-filter').value, 10);
+
+    // Chart: Lebendgewicht NAD/kg (falls vorhanden)
+    const liveKgRows = liveData.filter(r =>
+        r.weight_basis === 'live' || (r.unit && r.unit.startsWith('per_kg') && r.commodity?.includes('live'))
+    );
+
+    const ctx = document.getElementById('chart-live').getContext('2d');
+    if (chartLive) chartLive.destroy();
+
+    if (liveKgRows.length) {
+        // Group by commodity
+        const byCommodity = {};
+        liveKgRows.forEach(r => {
+            if (!byCommodity[r.commodity]) byCommodity[r.commodity] = [];
+            byCommodity[r.commodity].push({ x: r.price_date, y: r.price_nad });
         });
 
-        // Get latest price across all grades
-        const latest = data[data.length - 1];
-        const latestPrice = latest.price_nad;
-        const gradeName = latest.commodity.replace('beef_', '').toUpperCase();
-
-        const sources = [...new Set(data.map(r => r.source).filter(Boolean))];
-        const sourceStr = sources.length ? ' | Quelle: ' + sources.join(', ') : '';
-
-        setCard('m1', {
-            value: 'N$ ' + latestPrice.toFixed(2),
-            subtitle: gradeName + ' aktuell' + sourceStr,
-            status: 'green'
-        });
-
-        // Draw line chart
-        const ctx = document.getElementById('chart-m1').getContext('2d');
-        if (chartM1) chartM1.destroy();
-
-        const colors = ['#2E75B6', '#e74c3c', '#27ae60', '#f39c12', '#8e44ad'];
-        const datasets = Object.entries(grades).map(([commodity, points], i) => ({
-            label: commodity.replace('beef_', '').toUpperCase(),
-            data: points.map(p => ({ x: p.date, y: p.price })),
-            borderColor: colors[i % colors.length],
-            backgroundColor: colors[i % colors.length] + '20',
-            tension: 0.3,
+        const palette = ['#f39c12', '#8e44ad', '#16a085', '#d35400', '#2980b9'];
+        const datasets = Object.entries(byCommodity).map(([cmd, pts], i) => ({
+            label: prettyAuctionLabel(cmd),
+            data: pts.sort((a, b) => a.x.localeCompare(b.x)),
+            borderColor: palette[i % palette.length],
+            tension: 0.25,
             pointRadius: 2,
             borderWidth: 2,
             fill: false,
         }));
 
-        chartM1 = new Chart(ctx, {
+        chartLive = new Chart(ctx, {
             type: 'line',
             data: { datasets },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { font: { size: 11 } } },
-                },
+                plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } },
                 scales: {
                     x: { type: 'category', ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-                    y: { title: { display: true, text: 'NAD/kg', font: { size: 11 } }, ticks: { font: { size: 10 } } },
+                    y: {
+                        title: { display: true, text: 'NAD/kg live', font: { size: 11 } },
+                        ticks: { font: { size: 10 } },
+                    },
                 },
             },
         });
-    } catch { noData('m1'); }
+    } else {
+        // Kein Chart, Hinweis im Canvas-Bereich
+        const canvas = document.getElementById('chart-live');
+        const c = canvas.getContext('2d');
+        c.clearRect(0, 0, canvas.width, canvas.height);
+        c.fillStyle = '#9ca3af';
+        c.font = '12px Segoe UI';
+        c.textAlign = 'center';
+        c.fillText('Keine NAD/kg-Lebendgewicht-Daten (' + days + ' Tage)', canvas.width / 2, canvas.height / 2);
+    }
+
+    // Tabelle: Auktionspreise (per_head) — letzter Preis pro Kategorie
+    const perHeadRows = liveData.filter(r => r.weight_basis === 'per_head' || r.unit === 'per_head');
+    const tbody = document.querySelector('#auction-latest-table tbody');
+    if (!perHeadRows.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="no-data">Keine Auktionspreise im gewaehlten Zeitraum</td></tr>';
+        return;
+    }
+
+    const latestByCommodity = {};
+    perHeadRows.forEach(r => {
+        if (!latestByCommodity[r.commodity] || r.price_date > latestByCommodity[r.commodity].price_date) {
+            latestByCommodity[r.commodity] = r;
+        }
+    });
+    const rows = Object.values(latestByCommodity).sort((a, b) =>
+        prettyAuctionLabel(a.commodity).localeCompare(prettyAuctionLabel(b.commodity))
+    );
+    tbody.innerHTML = rows.map(r => `
+        <tr>
+            <td>${escHtml(prettyAuctionLabel(r.commodity))}</td>
+            <td class="num">N$ ${Number(r.price_nad).toLocaleString('de-DE', {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
+            <td>${escHtml(r.unit || 'per_head')}</td>
+            <td>${new Date(r.price_date).toLocaleDateString('de-DE')}</td>
+        </tr>
+    `).join('');
+}
+
+function prettyAuctionLabel(commodity) {
+    if (!commodity) return '—';
+    const map = {
+        auction_weaner_bull:   'Weaner Bull (Auktion)',
+        auction_weaner_heifer: 'Weaner Heifer (Auktion)',
+        auction_cow_calf:      'Kuh+Kalb (Auktion)',
+        auction_toll_ox:       'Toll Ox (Auktion)',
+        auction_old_cow:       'Altkuh (Auktion)',
+    };
+    return map[commodity] || commodity.replace(/^auction_/, '').replace(/_/g, ' ');
+}
+
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str ?? '';
+    return d.innerHTML;
 }
 
 // ── M2 — Marge pro kg ───────────────────────────────────────────
@@ -686,78 +1072,6 @@ async function loadM3() {
             status
         });
     } catch { noData('m3'); }
-}
-
-// ── M4 — Wechselkurse ───────────────────────────────────────────
-async function loadM4() {
-    try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
-
-        const { data } = await sb
-            .from('market_prices')
-            .select('commodity, price_date, price_nad')
-            .like('commodity', 'fx_%')
-            .gte('price_date', cutoff)
-            .order('price_date', { ascending: true });
-
-        if (!data?.length) return noData('m4', 'Keine Wechselkursdaten');
-
-        // Group by currency pair
-        const pairs = {};
-        data.forEach(r => {
-            if (!pairs[r.commodity]) pairs[r.commodity] = [];
-            pairs[r.commodity].push({ date: r.price_date, rate: r.price_nad });
-        });
-
-        // Show latest rates
-        const latestValues = [];
-        Object.entries(pairs).forEach(([key, points]) => {
-            const latest = points[points.length - 1];
-            const label = key.replace('fx_', '').toUpperCase();
-            latestValues.push(label + ': ' + latest.rate.toFixed(2));
-        });
-
-        if (latestValues.length === 0) return noData('m4');
-
-        setCard('m4', {
-            value: latestValues.join(' | '),
-            subtitle: 'NAD-Wechselkurse aktuell | Quelle: Frankfurter/ECB',
-            status: 'green'
-        });
-
-        // Draw chart
-        const ctx = document.getElementById('chart-m4').getContext('2d');
-        if (chartM4) chartM4.destroy();
-
-        const colors = ['#2E75B6', '#e74c3c', '#27ae60'];
-        const datasets = Object.entries(pairs).map(([commodity, points], i) => ({
-            label: commodity.replace('fx_', '').toUpperCase(),
-            data: points.map(p => ({ x: p.date, y: p.rate })),
-            borderColor: colors[i % colors.length],
-            tension: 0.3,
-            pointRadius: 2,
-            borderWidth: 2,
-            fill: false,
-        }));
-
-        chartM4 = new Chart(ctx, {
-            type: 'line',
-            data: { datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { font: { size: 11 } } },
-                },
-                scales: {
-                    x: { type: 'category', ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-                    y: { title: { display: true, text: 'NAD', font: { size: 11 } }, ticks: { font: { size: 10 } } },
-                },
-            },
-        });
-    } catch { noData('m4'); }
 }
 
 // ── M5 — Grade-Mix ──────────────────────────────────────────────
@@ -904,7 +1218,9 @@ async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
     await Promise.allSettled([
-        loadM1(), loadM2(), loadM3(), loadM4(),
+        loadCarcassPrices(),
+        loadLiveAuctionPrices(),
+        loadM2(), loadM3(),
         loadM5(), loadM6(), loadM7(), loadM8()
     ]);
 
@@ -920,6 +1236,17 @@ async function loadAll() {
 (async function init() {
     const user = await checkAuth();
     if (!user) return;
+
+    // Grade/Zeitraum-Filter: bei Änderung neu rendern (Zeitraum braucht Refetch)
+    document.getElementById('grade-filter').addEventListener('change', renderCarcassPanel);
+    document.getElementById('days-filter').addEventListener('change', async () => {
+        await Promise.all([loadCarcassPrices(), loadLiveAuctionPrices()]);
+    });
+
+    // Provider-Toggles: Client-seitiges Re-Render (kein Query)
+    document.querySelectorAll('#carcass-toggles input[type=checkbox]')
+        .forEach(cb => cb.addEventListener('change', renderCarcassPanel));
+
     loadAll();
     setInterval(loadAll, 5 * 60 * 1000);
 })();

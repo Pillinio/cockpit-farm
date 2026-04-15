@@ -464,7 +464,7 @@
                     </tr>
                 </thead>
                 <tbody id="incident-tbody">
-                    <tr><td colspan="4" class="no-data"><span class="loading-spinner"></span> Lade Vorfaelle...</td></tr>
+                    <tr><td colspan="4" class="no-data"><span class="loading-spinner"></span> Lade Vorfälle...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -510,7 +510,7 @@
                 </select>
             </div>
             <div>
-                <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Faellig bis</label>
+                <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Fällig bis</label>
                 <input type="date" id="goal-due" style="width:100%; padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:0.9em;">
             </div>
         </div>
@@ -575,7 +575,7 @@ async function loadIncidents() {
             .limit(20);
 
         if (!data?.length) {
-            tbody.innerHTML = '<tr><td colspan="4" class="no-data">Keine Vorfaelle vorhanden.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="no-data">Keine Vorfälle vorhanden.</td></tr>';
             return;
         }
 
@@ -588,7 +588,7 @@ async function loadIncidents() {
                 critical: 'Kritisch'
             }[r.severity] || r.severity || 'Unbekannt';
 
-            const statusLabel = r.resolution ? 'Geloest' : 'Offen';
+            const statusLabel = r.resolution ? 'Gelöst' : 'Offen';
 
             return `
                 <tr>
@@ -600,7 +600,7 @@ async function loadIncidents() {
             `;
         }).join('');
     } catch {
-        tbody.innerHTML = '<tr><td colspan="4" class="no-data">Fehler beim Laden der Vorfaelle.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="no-data">Fehler beim Laden der Vorfälle.</td></tr>';
     }
 }
 
@@ -656,7 +656,7 @@ async function loadGoals() {
                     </span>
                     ${g.description ? '<div style="font-size:0.82em;color:#6b7280;margin-top:2px;">' + escHtml(g.description) + '</div>' : ''}
                 </div>
-                <span class="task-frequency">${dueStr}${overdue ? ' (ueberfaellig!)' : ''}</span>
+                <span class="task-frequency">${dueStr}${overdue ? ' (überfällig!)' : ''}</span>
                 <select onchange="updateGoalStatus('${g.id}', this.value)" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.82em;">
                     <option value="open" ${g.status === 'open' ? 'selected' : ''}>Offen</option>
                     <option value="in_progress" ${g.status === 'in_progress' ? 'selected' : ''}>In Arbeit</option>
