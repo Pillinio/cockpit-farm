@@ -326,7 +326,7 @@
             <div class="card-body">
                 <div class="card-top">
                     <span class="card-icon">&#x1F4B5;</span>
-                    <span class="card-title">M1 &mdash; Rindfleischpreis NAD/kg</span>
+                    <span class="card-title">M1 — Rindfleischpreis NAD/kg</span>
                     <span class="card-status-dot status-gray"></span>
                 </div>
                 <div class="card-value" data-kpi="m1"><span class="loading-spinner"></span></div>
@@ -343,7 +343,7 @@
             <div class="card-body">
                 <div class="card-top">
                     <span class="card-icon">&#x1F4CA;</span>
-                    <span class="card-title">M2 &mdash; Marge pro verkauftem kg</span>
+                    <span class="card-title">M2 — Marge pro verkauftem kg</span>
                     <span class="card-status-dot status-gray"></span>
                 </div>
                 <div class="card-value" data-kpi="m2"><span class="loading-spinner"></span></div>
@@ -357,7 +357,7 @@
             <div class="card-body">
                 <div class="card-top">
                     <span class="card-icon">&#x1F33E;</span>
-                    <span class="card-title">M3 &mdash; Futter-/Input-Kosten-Index</span>
+                    <span class="card-title">M3 — Futter-/Input-Kosten-Index</span>
                     <span class="card-status-dot status-gray"></span>
                 </div>
                 <div class="card-value" data-kpi="m3"><span class="loading-spinner"></span></div>
@@ -370,7 +370,7 @@
             <div class="card-body">
                 <div class="card-top">
                     <span class="card-icon">&#x1F4B1;</span>
-                    <span class="card-title">M4 &mdash; Wechselkurse</span>
+                    <span class="card-title">M4 — Wechselkurse</span>
                     <span class="card-status-dot status-gray"></span>
                 </div>
                 <div class="card-value" data-kpi="m4"><span class="loading-spinner"></span></div>
@@ -386,7 +386,7 @@
             <div class="card-body">
                 <div class="card-top">
                     <span class="card-icon">&#x1F969;</span>
-                    <span class="card-title">M5 &mdash; Grade-Mix</span>
+                    <span class="card-title">M5 — Grade-Mix</span>
                     <span class="card-status-dot status-gray"></span>
                 </div>
                 <div class="card-value" data-kpi="m5"><span class="loading-spinner"></span></div>
@@ -403,7 +403,7 @@
             <div class="card-body">
                 <div class="card-top">
                     <span class="card-icon">&#x26A0;&#xFE0F;</span>
-                    <span class="card-title">M6 &mdash; Condemnation Rate</span>
+                    <span class="card-title">M6 — Condemnation Rate</span>
                     <span class="card-status-dot status-gray"></span>
                 </div>
                 <div class="card-value" data-kpi="m6"><span class="loading-spinner"></span></div>
@@ -417,7 +417,7 @@
             <div class="card-body">
                 <div class="card-top">
                     <span class="card-icon">&#x1F4E6;</span>
-                    <span class="card-title">M7 &mdash; Shortages</span>
+                    <span class="card-title">M7 — Shortages</span>
                     <span class="card-status-dot status-gray"></span>
                 </div>
                 <div class="card-value" data-kpi="m7"><span class="loading-spinner"></span></div>
@@ -431,7 +431,7 @@
             <div class="card-body">
                 <div class="card-top">
                     <span class="card-icon">&#x1F4C8;</span>
-                    <span class="card-title">M8 &mdash; LPO Benchmark vs Meatco</span>
+                    <span class="card-title">M8 — LPO Benchmark vs Meatco</span>
                     <span class="card-status-dot status-gray"></span>
                 </div>
                 <div class="card-value" data-kpi="m8"><span class="loading-spinner"></span></div>
@@ -881,7 +881,7 @@ async function loadM7() {
             .limit(20);
 
         if (!data?.length || !data[0].total_animals) {
-            return noData('m7', 'Daten nicht verfuegbar');
+            return noData('m7', 'Daten nicht verfügbar');
         }
 
         const totalAnimals = data.reduce((s, r) => s + (r.total_animals || 0), 0);
@@ -891,7 +891,7 @@ async function loadM7() {
             subtitle: 'Letzte ' + data.length + ' Berichte',
             status: 'green'
         });
-    } catch { noData('m7', 'Daten nicht verfuegbar'); }
+    } catch { noData('m7', 'Daten nicht verfügbar'); }
 }
 
 // ── M8 — LPO Benchmark (Placeholder) ────────────────────────────

@@ -278,7 +278,7 @@
                     <select id="cc-rainYearType">
                         <option value="below_average">Unterdurchschnittlich</option>
                         <option value="average">Durchschnittlich</option>
-                        <option value="above_average">Ueberdurchschnittlich</option>
+                        <option value="above_average">Überdurchschnittlich</option>
                     </select>
                 </div>
             </div>
@@ -312,7 +312,7 @@
                 <button class="btn btn-primary" onclick="bulkAssignCategory()">Auswahl zuweisen</button>
             </div>
             <div class="form-group" style="max-width:300px; margin-bottom:16px;">
-                <label>Kategorie fuer Auswahl</label>
+                <label>Kategorie für Auswahl</label>
                 <select id="bulk-category"></select>
             </div>
             <table id="uncat-table">
@@ -346,10 +346,10 @@
                 <div class="form-group">
                     <label>Kategorie</label>
                     <select id="mp-category">
-                        <option value="">-- Waehlen --</option>
+                        <option value="">-- Wählen --</option>
                         <optgroup label="Auktionspreise">
                             <option value="auction_weaner_bull">Absetzer Bulle</option>
-                            <option value="auction_weaner_heifer">Absetzer Faerse</option>
+                            <option value="auction_weaner_heifer">Absetzer Färse</option>
                             <option value="auction_cow_calf">Kuh + Kalb</option>
                             <option value="auction_toll_ox">Toll-Ochse</option>
                             <option value="auction_old_cow">Altkuh</option>
@@ -456,11 +456,11 @@
         <!-- I. Ersterfassung -->
         <div id="section-initial" class="section">
             <div class="section-header">
-                <h2>Ersterfassung &mdash; Initiale Herdenverteilung</h2>
+                <h2>Ersterfassung — Initiale Herdenverteilung</h2>
             </div>
             <p style="color:#6b7280; font-size:0.9em; margin-bottom:16px;">
                 Erfassen Sie hier wo die Herde und Bullen aktuell stehen. Diese Daten werden als Ausgangspunkt
-                fuer alle zukuenftigen Bewegungen verwendet.
+                für alle zukuenftigen Bewegungen verwendet.
             </p>
             <div style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:8px; margin-bottom:16px;">
                 <select id="init-camp"><option value="">-- Kamp waehlen --</option></select>
@@ -469,7 +469,7 @@
                     <option value="bulls">Bullen</option>
                 </select>
                 <input type="number" id="init-count" placeholder="Anzahl" min="1">
-                <button class="btn btn-success" onclick="addInitialPosition()">Hinzufuegen</button>
+                <button class="btn btn-success" onclick="addInitialPosition()">Hinzufügen</button>
             </div>
             <div id="init-list" style="margin-bottom:16px; font-size:0.9em;"></div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -769,7 +769,7 @@ async function loadCategoryRules() {
                 <td><input type="number" class="rule-confidence" value="${row.confidence ?? 1}" step="0.1" min="0" max="1" style="width:70px"></td>
                 <td>
                     <button class="btn btn-primary btn-sm" onclick="saveRule(this)">Speichern</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteRule(this)">Loeschen</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRule(this)">Löschen</button>
                 </td>
             </tr>`;
     });
@@ -829,7 +829,7 @@ async function deleteRule(btn) {
     const id = tr.dataset.ruleId;
     if (id === 'new') { tr.remove(); return; }
 
-    if (!confirm('Regel wirklich loeschen?')) return;
+    if (!confirm('Regel wirklich löschen?')) return;
 
     const { error } = await sb.from('category_rules').delete().eq('id', id);
     if (error) return showStatus('Fehler: ' + error.message, 'error');
@@ -1036,13 +1036,13 @@ async function loadRecentPrices() {
             <td>${escapeHtml(r.commodity)}</td>
             <td>N$ ${r.price_nad.toLocaleString('de-DE', {minimumFractionDigits: 2})}</td>
             <td>${escapeHtml(r.source || '-')}</td>
-            <td><button class="btn btn-danger btn-sm" onclick="deleteMarketPrice('${r.id}')">Loeschen</button></td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteMarketPrice('${r.id}')">Löschen</button></td>
         </tr>`;
     }).join('');
 }
 
 async function deleteMarketPrice(id) {
-    if (!confirm('Preis wirklich loeschen?')) return;
+    if (!confirm('Preis wirklich löschen?')) return;
     const { error } = await sb.from('market_prices').delete().eq('id', id);
     if (error) return showStatus('Fehler: ' + error.message, 'error');
     showStatus('Preis geloescht.');
@@ -1211,7 +1211,7 @@ async function loadEmployees() {
             <td class="checkbox-cell"><input type="checkbox" class="emp-active" ${activeChecked}></td>
             <td>
                 <button class="btn btn-primary btn-sm" onclick="saveEmployee(this)">Speichern</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteEmployee(this)">Loeschen</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEmployee(this)">Löschen</button>
             </td>
         </tr>`;
     }).join('');
@@ -1270,7 +1270,7 @@ async function deleteEmployee(btn) {
     const id = tr.dataset.empId;
     if (id === 'new') { tr.remove(); return; }
 
-    if (!confirm('Mitarbeiter wirklich loeschen? Bestehende Wochenberichte bleiben erhalten.')) return;
+    if (!confirm('Mitarbeiter wirklich löschen? Bestehende Wochenberichte bleiben erhalten.')) return;
 
     const { error } = await sb.from('farm_employees').delete().eq('id', id);
     if (error) return showStatus('Fehler: ' + error.message, 'error');

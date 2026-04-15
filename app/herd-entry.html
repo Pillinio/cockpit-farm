@@ -497,7 +497,7 @@
                 <div class="sub-heading">Aktueller Bestand</div>
                 <div class="row">
                     <div class="field">
-                        <label>Kuehe</label>
+                        <label>Kühe</label>
                         <input type="number" id="cows" min="0" inputmode="numeric">
                     </div>
                     <div class="field">
@@ -507,7 +507,7 @@
                 </div>
                 <div class="row">
                     <div class="field">
-                        <label>Faersen</label>
+                        <label>Färsen</label>
                         <input type="number" id="heifers" min="0" inputmode="numeric">
                     </div>
                     <div class="field">
@@ -517,7 +517,7 @@
                 </div>
                 <div class="row">
                     <div class="field">
-                        <label>Kaelber</label>
+                        <label>Kälber</label>
                         <input type="number" id="calves" min="0" inputmode="numeric">
                     </div>
                     <div class="field"></div>
@@ -530,7 +530,7 @@
                         <input type="number" id="births" min="0" value="0" inputmode="numeric">
                     </div>
                     <div class="field">
-                        <label>Tode Kaelber</label>
+                        <label>Tode Kälber</label>
                         <input type="number" id="deathsCalves" min="0" value="0" inputmode="numeric">
                     </div>
                 </div>
@@ -561,7 +561,7 @@
                 </div>
                 <div class="field">
                     <label>Beschreibung</label>
-                    <textarea id="sickNotes" placeholder="z.B. 2 Kuehe mit Durchfall, Kamp 3..."></textarea>
+                    <textarea id="sickNotes" placeholder="z.B. 2 Kühe mit Durchfall, Kamp 3..."></textarea>
                 </div>
             </div>
         </div>
@@ -600,12 +600,12 @@
                 <div class="sub-heading">Neue Vorfaelle</div>
                 <div id="incidentList"></div>
                 <button class="btn btn-outline btn-small" onclick="addIncident()" style="margin-top:8px;">
-                    + Vorfall hinzufuegen
+                    + Vorfall hinzufügen
                 </button>
 
                 <div class="sub-heading">Offene Punkte / Wuensche</div>
                 <div class="field">
-                    <textarea id="openNotes" placeholder="Freitext fuer offene Themen, Wuensche, Hinweise..."></textarea>
+                    <textarea id="openNotes" placeholder="Freitext für offene Themen, Wuensche, Hinweise..."></textarea>
                 </div>
             </div>
         </div>
@@ -1132,12 +1132,12 @@ function showSuccess(s) {
     document.getElementById('formScreen').classList.add('hidden');
     document.getElementById('successScreen').classList.remove('hidden');
     document.getElementById('successText').textContent =
-        `Monatsmeldung fuer ${formatDateDE(s.snapshotDate)} wurde gespeichert.`;
+        `Monatsmeldung für ${formatDateDE(s.snapshotDate)} wurde gespeichert.`;
 
     document.getElementById('summaryTable').innerHTML = `
         <div class="row-item"><span class="label">Gesamtbestand</span><span class="value">${s.total} Tiere</span></div>
-        <div class="row-item"><span class="label">Kuehe / Bullen / Faersen</span><span class="value">${s.cows} / ${s.bulls} / ${s.heifers}</span></div>
-        <div class="row-item"><span class="label">Ochsen / Kaelber</span><span class="value">${s.oxen} / ${s.calves}</span></div>
+        <div class="row-item"><span class="label">Kühe / Bullen / Färsen</span><span class="value">${s.cows} / ${s.bulls} / ${s.heifers}</span></div>
+        <div class="row-item"><span class="label">Ochsen / Kälber</span><span class="value">${s.oxen} / ${s.calves}</span></div>
         <div class="row-item"><span class="label">Geburten / Tode</span><span class="value">${s.births} / ${s.deaths}</span></div>
         <div class="row-item"><span class="label">Verkaeufe / Zukaeufe</span><span class="value">${s.salesVal} / ${s.purchasesVal}</span></div>
         <div class="row-item"><span class="label">Veld-Bewertungen</span><span class="value">${s.veldCount} Camps</span></div>

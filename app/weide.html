@@ -761,7 +761,7 @@
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x1F5FA;&#xFE0F;</span>
-            Farmkarte &mdash; s &amp; Weidezustand
+            Farmkarte &amp; Weidezustand
         </div>
         <div class="map-controls">
             <button class="btn" id="ndvi-btn" onclick="toggleNDVI()" title="NDVI Vegetationsindex ein-/ausblenden">
@@ -782,7 +782,7 @@
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x1F331;</span>
-            W1 &mdash; Besatzdichte
+            W1 — Besatzdichte
         </div>
         <div class="kpi-row" id="stocking-kpis">
             <div class="kpi-card">
@@ -793,7 +793,7 @@
             <div class="kpi-card">
                 <div class="kpi-label">Tragekapazitaet</div>
                 <div class="kpi-value" id="kpi-capacity"><span class="loading-spinner"></span></div>
-                <div class="kpi-sub">Gesamt ueber alle Kamps</div>
+                <div class="kpi-sub">Gesamt über alle Kamps</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Auslastung</div>
@@ -808,7 +808,7 @@
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x1F404;</span>
-            W2 &mdash; Besatzdichte Detail (pro Kamp)
+            W2 — Besatzdichte Detail (pro Kamp)
         </div>
 
         <!-- Farm-total utilization bar -->
@@ -832,7 +832,7 @@
                 <tr>
                     <th>Kamp</th>
                     <th>Tiere (gesch.)</th>
-                    <th>Flaeche (ha)</th>
+                    <th>Fläche (ha)</th>
                     <th>Auslastung</th>
                     <th>Status</th>
                 </tr>
@@ -846,7 +846,7 @@
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x1F3D5;&#xFE0F;</span>
-            Kamp-Uebersicht
+            Kamp-Übersicht
             <button onclick="toggleQuickMoveForm()" style="margin-left:auto; background:#2E75B6; color:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:0.85em;">+ Bewegung erfassen</button>
         </div>
 
@@ -863,10 +863,10 @@
                 </select>
                 <select id="qm-category" style="padding:8px; border:1px solid #d1d5db; border-radius:6px;">
                     <option value="mixed">Herde</option>
-                    <option value="cows">Kuehe</option>
+                    <option value="cows">Kühe</option>
                     <option value="bulls">Bullen</option>
-                    <option value="heifers">Faersen</option>
-                    <option value="calves">Kaelber</option>
+                    <option value="heifers">Färsen</option>
+                    <option value="calves">Kälber</option>
                     <option value="oxen">Ochsen</option>
                 </select>
                 <input type="number" id="qm-count" placeholder="Anzahl" min="1" style="padding:8px; border:1px solid #d1d5db; border-radius:6px;">
@@ -892,7 +892,7 @@
                 <thead>
                     <tr>
                         <th data-sort="name">Kamp</th>
-                        <th data-sort="area" class="num">Flaeche (ha)</th>
+                        <th data-sort="area" class="num">Fläche (ha)</th>
                         <th data-sort="herd" class="num">&#x1F404; Herde</th>
                         <th data-sort="bulls" class="num">&#x1F402; Bullen</th>
                         <th data-sort="days" class="num">Tage auf Kamp</th>
@@ -931,7 +931,7 @@
         <div class="forecast-summary outlook-gray" id="forecast-summary">
             <div class="forecast-summary-icon">&#x1F327;&#xFE0F;</div>
             <div class="forecast-summary-main">
-                <div class="forecast-summary-title">Regenprognose naechste 6 Monate</div>
+                <div class="forecast-summary-title">Regenprognose nächste 6 Monate</div>
                 <div class="forecast-summary-value" id="forecast-outlook-value"><span class="loading-spinner"></span></div>
                 <div class="forecast-summary-sub" id="forecast-outlook-sub">Wird geladen...</div>
             </div>
@@ -1005,7 +1005,7 @@
                 </div>
                 <div class="alert-kpi-value" id="k4-value"><span class="loading-spinner"></span></div>
                 <div class="alert-kpi-label" id="k4-label">Wird geladen...</div>
-                <div class="alert-kpi-sub" id="k4-sub">Naechste 14 Tage, Tage &gt; 35 &deg;C</div>
+                <div class="alert-kpi-sub" id="k4-sub">Nächste 14 Tage, Tage &gt; 35 &deg;C</div>
             </div>
         </div>
     </div>
@@ -1187,8 +1187,8 @@ async function loadCamps() {
         });
 
         // Initial sort
-        sortTable(campSortCol, false);
-        renderKampTable();
+        sortCampTable(campSortCol, false);
+        renderCampTable();
 
     } catch (err) {
         console.error('loadCamps error:', err);
@@ -1436,8 +1436,8 @@ async function loadSeasonalForecast() {
 
         // ── Summary Card ──
         const outlookMap = {
-            'well_above': { label: 'Deutlich ueber Normal', color: 'green', score: 2 },
-            'above':      { label: 'Ueber Normal',          color: 'green', score: 1 },
+            'well_above': { label: 'Deutlich über Normal', color: 'green', score: 2 },
+            'above':      { label: 'Über Normal',          color: 'green', score: 1 },
             'normal':     { label: 'Normal',                 color: 'green', score: 0 },
             'below':      { label: 'Unter Normal',           color: 'yellow', score: -1 },
             'well_below': { label: 'Deutlich unter Normal',  color: 'red', score: -2 }
@@ -1453,7 +1453,7 @@ async function loadSeasonalForecast() {
         let aggColor, aggLabel;
         if (avgScore >= 0) {
             aggColor = 'green';
-            aggLabel = avgScore > 0.5 ? 'Ueber Normal' : 'Normal';
+            aggLabel = avgScore > 0.5 ? 'Über Normal' : 'Normal';
         } else if (avgScore >= -1) {
             aggColor = 'yellow';
             aggLabel = 'Unter Normal';
@@ -1482,7 +1482,7 @@ async function loadSeasonalForecast() {
         if (rain.length > 0) {
             document.getElementById('forecast-chart-container').style.display = 'block';
 
-            const monthNames = ['Jan','Feb','Maerz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+            const monthNames = ['Jan','Feb','März','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
             const labels = rain.map(r => {
                 const d = new Date(r.target_month);
                 return monthNames[d.getMonth()] + ' ' + d.getFullYear();
@@ -1584,7 +1584,7 @@ async function loadSeasonalForecast() {
             document.getElementById('rain-table-title').style.display = 'flex';
             document.getElementById('rain-forecast-table').style.display = 'table';
 
-            const monthNames = ['Jan','Feb','Maerz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+            const monthNames = ['Jan','Feb','März','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
             const tbody = document.getElementById('rain-forecast-tbody');
             tbody.innerHTML = rain.map(r => {
                 const d = new Date(r.target_month);
@@ -1610,7 +1610,7 @@ async function loadSeasonalForecast() {
             document.getElementById('temp-table-title').style.display = 'flex';
             document.getElementById('temp-forecast-table').style.display = 'table';
 
-            const monthNames = ['Jan','Feb','Maerz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+            const monthNames = ['Jan','Feb','März','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
             const tbody = document.getElementById('temp-forecast-tbody');
             tbody.innerHTML = temp.map(r => {
                 const d = new Date(r.target_month);
@@ -1678,7 +1678,7 @@ async function loadMap() {
 
         if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
             document.getElementById('map-legend').innerHTML =
-                '<span style="color:#9ca3af; font-style:italic;">Keine Kamp-Geometrien vorhanden. Kamps muessen mit Polygonen erfasst werden.</span>';
+                '<span style="color:#9ca3af; font-style:italic;">Keine Kamp-Geometrien vorhanden. Kamps müssen mit Polygonen erfasst werden.</span>';
             return;
         }
 
@@ -1733,7 +1733,7 @@ async function loadMap() {
                 const veldData = latestVeld[p.name];
                 const score = veldData?.condition_score;
                 const scoreText = score
-                    ? score + '/5 &mdash; ' + (conditionLabels[score] || '')
+                    ? score + '/5 — ' + (conditionLabels[score] || '')
                     : 'Keine Bewertung';
                 const scoreColor = conditionColors[score] || '#9ca3af';
 
@@ -1749,7 +1749,7 @@ async function loadMap() {
                     popupContent += '<span style="color:#6b7280;font-size:0.85em;">Hauptcamp: ' + escHtml(p.parent_camp) + '</span><br>';
                 }
                 popupContent += '<br>';
-                popupContent += '<strong>Flaeche:</strong> ' + (p.area_ha ? Number(p.area_ha).toFixed(2) : '\u2014') + ' ha<br>';
+                popupContent += '<strong>Fläche:</strong> ' + (p.area_ha ? Number(p.area_ha).toFixed(2) : '\u2014') + ' ha<br>';
                 popupContent += '<strong>Weidezustand:</strong> <span style="color:' + scoreColor + ';font-weight:600;">' + scoreText + '</span><br>';
                 if (herdCount > 0) popupContent += '<strong>&#x1F404; Herde:</strong> ' + herdCount + '<br>';
                 if (bullCount > 0) popupContent += '<strong>&#x1F402; Bullen:</strong> ' + bullCount + '<br>';
@@ -1830,7 +1830,7 @@ async function loadMap() {
             const dateStr = new Date(m.movement_date).toLocaleDateString('de-DE');
             line.bindPopup(
                 '<strong>' + escHtml(m.from_camp) + ' &rarr; ' + escHtml(m.to_camp) + '</strong><br>' +
-                dateStr + ' &mdash; ' + m.head_count + ' Tiere<br>' +
+                dateStr + ' — ' + m.head_count + ' Tiere<br>' +
                 '<span style="color:#6b7280;">' + (m.animal_category || '') + ' / ' + (m.reason || '') + '</span>'
             );
             line.addTo(movementLayer);
@@ -1853,11 +1853,11 @@ async function loadMap() {
         // Render legend
         const legendEl = document.getElementById('map-legend');
         const legendItems = [
-            { score: 5, label: '5 &mdash; Exzellent', color: '#15803d' },
-            { score: 4, label: '4 &mdash; Gut', color: '#22c55e' },
-            { score: 3, label: '3 &mdash; Mittel', color: '#eab308' },
-            { score: 2, label: '2 &mdash; Schlecht', color: '#f97316' },
-            { score: 1, label: '1 &mdash; Kritisch', color: '#dc2626' },
+            { score: 5, label: '5 — Exzellent', color: '#15803d' },
+            { score: 4, label: '4 — Gut', color: '#22c55e' },
+            { score: 3, label: '3 — Mittel', color: '#eab308' },
+            { score: 2, label: '2 — Schlecht', color: '#f97316' },
+            { score: 1, label: '1 — Kritisch', color: '#dc2626' },
             { score: 0, label: 'Keine Daten', color: '#9ca3af' }
         ];
         legendEl.innerHTML = legendItems.map(item =>
@@ -1877,7 +1877,7 @@ async function loadMap() {
                     dam:           { emoji: '\uD83C\uDF0A', label: 'Daemme',      color: '#06b6d4' },
                     windmill:      { emoji: '\uD83D\uDD04', label: 'Windmuehlen', color: '#f97316' },
                     trough:        { emoji: '\uD83D\uDEB0', label: 'Traenken',    color: '#14b8a6' },
-                    house:         { emoji: '\uD83C\uDFE0', label: 'Gebaeude',    color: '#6b7280' },
+                    house:         { emoji: '\uD83C\uDFE0', label: 'Gebäude',    color: '#6b7280' },
                     hunting_blind: { emoji: '\uD83C\uDFAF', label: 'Ansitze',     color: '#92400e' }
                 };
 
@@ -1901,7 +1901,7 @@ async function loadMap() {
                     const marker = L.marker([a.lat, a.lng], { icon: icon });
                     const typeLabel = {
                         borehole: 'Bohrloch', dam: 'Damm', windmill: 'Windmuehle',
-                        trough: 'Traenke', house: 'Gebaeude', hunting_blind: 'Ansitz'
+                        trough: 'Traenke', house: 'Gebäude', hunting_blind: 'Ansitz'
                     };
                     marker.bindPopup(
                         '<strong>' + escHtml(a.name) + '</strong><br>' +
@@ -2143,7 +2143,7 @@ async function loadK4() {
 
         // Show max temperature
         const maxTemp = Math.max(...data.map(d => d.temperature_max_c || 0));
-        subEl.textContent = 'Open-Meteo Prognose — Naechste 14 Tage, max. ' + Math.round(maxTemp * 10) / 10 + ' \u00B0C';
+        subEl.textContent = 'Open-Meteo Prognose — Nächste 14 Tage, max. ' + Math.round(maxTemp * 10) / 10 + ' \u00B0C';
     } catch (err) {
         console.error('K4 error:', err);
         valueEl.textContent = '\u2014';
@@ -2205,7 +2205,7 @@ async function loadW1Detail() {
 
         labelEl.textContent = Math.round(totalLSU) + ' LSU / ' + Math.round(totalCapacity) + ' Kapazitaet';
         subEl.textContent = Math.round(totalArea) + ' ha Gesamtflaeche, '
-            + (utilizationPct <= 80 ? 'Nachhaltig' : utilizationPct <= 100 ? 'Grenzbereich' : 'Ueberbesetzt');
+            + (utilizationPct <= 80 ? 'Nachhaltig' : utilizationPct <= 100 ? 'Grenzbereich' : 'Überbesetzt');
 
         // Per-camp assignments
         const { data: assignments } = await sb
@@ -2221,8 +2221,8 @@ async function loadW1Detail() {
         // Get latest assignment per camp
         const latestPerCamp = {};
         assignments.forEach(a => {
-            if (!latestPerKamp[a.camp_id]) {
-                latestPerKamp[a.camp_id] = a;
+            if (!latestPerCamp[a.camp_id]) {
+                latestPerCamp[a.camp_id] = a;
             }
         });
 
@@ -2230,8 +2230,8 @@ async function loadW1Detail() {
         const campMap = {};
         (camps || []).forEach(c => { campMap[c.id] = c; });
 
-        const rows = Object.values(latestPerKamp).map(a => {
-            const kamp = campMap[a.camp_id];
+        const rows = Object.values(latestPerCamp).map(a => {
+            const camp = campMap[a.camp_id];
             if (!camp) return null;
 
             const campCapacity = (camp.area_ha || 0) * defaultLsuPerHa;
@@ -2246,7 +2246,7 @@ async function loadW1Detail() {
             } else if (campUtil <= 100) {
                 statusBadge = '<span class="outlook-badge badge-yellow">Grenzbereich</span>';
             } else {
-                statusBadge = '<span class="outlook-badge badge-red">Ueberbesetzt</span>';
+                statusBadge = '<span class="outlook-badge badge-red">Überbesetzt</span>';
             }
 
             return `<tr>
@@ -2314,7 +2314,7 @@ async function loadAll() {
     if (thead) {
         thead.addEventListener('click', function(e) {
             const th = e.target.closest('th[data-sort]');
-            if (th) sortKampTable(th.dataset.sort);
+            if (th) sortCampTable(th.dataset.sort);
         });
     }
 

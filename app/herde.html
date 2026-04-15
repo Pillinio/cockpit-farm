@@ -440,7 +440,7 @@
         <div class="section">
             <div class="section-header">
                 <span class="section-icon">&#x1F404;</span>
-                <span class="section-title">H1 &mdash; Herdengr&ouml;&szlig;e in LSU</span>
+                <span class="section-title">H1 — Herdengröße in LSU</span>
                 <span class="section-badge badge-gray" id="badge-h1"><span class="loading-spinner"></span></span>
             </div>
             <div class="section-body">
@@ -454,7 +454,7 @@
                 </div>
                 <div class="placeholder" id="placeholder-h1" style="display:none;">
                     <span class="placeholder-icon">&#x1F4C9;</span>
-                    <span class="placeholder-text">Keine LSU-Daten fuer dieses Jahr</span>
+                    <span class="placeholder-text">Keine LSU-Daten für dieses Jahr</span>
                 </div>
             </div>
         </div>
@@ -465,7 +465,7 @@
             <div class="section">
                 <div class="section-header">
                     <span class="section-icon">&#x1F42E;</span>
-                    <span class="section-title">H2 &mdash; Abkalberate (12 Mon.)</span>
+                    <span class="section-title">H2 — Abkalberate (12 Mon.)</span>
                     <span class="section-badge badge-gray" id="badge-h2"><span class="loading-spinner"></span></span>
                 </div>
                 <div class="section-body">
@@ -483,7 +483,7 @@
             <div class="section">
                 <div class="section-header">
                     <span class="section-icon">&#x2620;&#xFE0F;</span>
-                    <span class="section-title">H3 &mdash; Mortalit&auml;tsrate</span>
+                    <span class="section-title">H3 — Mortalitätsrate</span>
                     <span class="section-badge badge-gray" id="badge-h3"><span class="loading-spinner"></span></span>
                 </div>
                 <div class="section-body">
@@ -492,7 +492,7 @@
                     </div>
                     <div class="placeholder" id="placeholder-h3" style="display:none;">
                         <span class="placeholder-icon">&#x1F4C9;</span>
-                        <span class="placeholder-text">Keine Mortalit&auml;tsdaten vorhanden</span>
+                        <span class="placeholder-text">Keine Mortalitätsdaten vorhanden</span>
                     </div>
                 </div>
             </div>
@@ -503,7 +503,7 @@
         <div class="section">
             <div class="section-header">
                 <span class="section-icon">&#x1F4C8;</span>
-                <span class="section-title">H4 &mdash; Netto-Herdenwachstum</span>
+                <span class="section-title">H4 — Netto-Herdenwachstum</span>
                 <span class="section-badge badge-gray" id="badge-h4"><span class="loading-spinner"></span></span>
             </div>
             <div class="section-body">
@@ -521,7 +521,7 @@
         <div class="section">
             <div class="section-header">
                 <span class="section-icon">&#x1F4CA;</span>
-                <span class="section-title">H5 &mdash; Geschlechts- und Altersstruktur</span>
+                <span class="section-title">H5 — Geschlechts- und Altersstruktur</span>
                 <span class="section-badge badge-gray" id="badge-h5"><span class="loading-spinner"></span></span>
             </div>
             <div class="section-body">
@@ -539,7 +539,7 @@
         <div class="section" id="section-herdenwert">
             <div class="section-header">
                 <span class="section-icon">&#x1F4B0;</span>
-                <span class="section-title">H6 &mdash; Herdenwert (gesch&auml;tzt)</span>
+                <span class="section-title">H6 — Herdenwert (geschätzt)</span>
                 <span class="section-badge badge-gray" id="badge-h6"><span class="loading-spinner"></span></span>
             </div>
             <div class="section-body" id="herdenwert-body">
@@ -565,7 +565,7 @@
                     Monatsmeldung erfassen
                 </a>
                 <div class="entry-button-hint">
-                    Neue Herdendaten f&uuml;r den aktuellen Monat eingeben
+                    Neue Herdendaten für den aktuellen Monat eingeben
                 </div>
             </div>
         </div>
@@ -1230,7 +1230,7 @@ async function loadH6() {
             ? new Date(priceDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
             : '';
         html += '<div class="note-text">';
-        html += 'Letzte Wiegung: ' + weighDateStr + ' &mdash; Hochrechnung basierend auf Tageszunahme-Annahmen. ';
+        html += 'Letzte Wiegung: ' + weighDateStr + ' — Hochrechnung basierend auf Tageszunahme-Annahmen. ';
         html += 'Preisbasis: ' + beefPricePerKgCarcass.toFixed(2) + ' NAD/kg Schlachtgewicht (' + priceSource;
         if (priceDateStr) html += ', ' + priceDateStr;
         html += '), umgerechnet ' + beefPricePerKgLive.toFixed(2) + ' NAD/kg Lebendgewicht bei ' + (dressingPct * 100).toFixed(0) + '% Ausschlachtung.';

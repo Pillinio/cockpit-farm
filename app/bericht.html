@@ -564,10 +564,10 @@
                         <div class="form-group">
                             <label for="mv-category">Tierkategorie</label>
                             <select id="mv-category">
-                                <option value="cows">Kuehe</option>
+                                <option value="cows">Kühe</option>
                                 <option value="bulls">Bullen</option>
-                                <option value="heifers">Faersen</option>
-                                <option value="calves">Kaelber</option>
+                                <option value="heifers">Färsen</option>
+                                <option value="calves">Kälber</option>
                                 <option value="oxen">Ochsen</option>
                                 <option value="mixed">Gemischt</option>
                             </select>
@@ -734,10 +734,10 @@ function fmtDate(d) {
 }
 
 const CATEGORY_LABELS = {
-    cows: 'Kuehe',
+    cows: 'Kühe',
     bulls: 'Bullen',
-    heifers: 'Faersen',
-    calves: 'Kaelber',
+    heifers: 'Färsen',
+    calves: 'Kälber',
     oxen: 'Ochsen',
     mixed: 'Gemischt'
 };
@@ -861,7 +861,7 @@ async function loadMovements() {
     const { start, end } = getMonthRange();
 
     if (!start) {
-        wrap.innerHTML = '<p style="color:#9ca3af;">Kein Monat ausgewaehlt.</p>';
+        wrap.innerHTML = '<p style="color:#9ca3af;">Kein Monat ausgewählt.</p>';
         return;
     }
 
@@ -973,10 +973,10 @@ async function loadHerd() {
     const total = (s.cows || 0) + (s.bulls || 0) + (s.heifers || 0) + (s.calves || 0) + (s.oxen || 0);
 
     const items = [
-        { label: 'Kuehe', value: s.cows || 0 },
+        { label: 'Kühe', value: s.cows || 0 },
         { label: 'Bullen', value: s.bulls || 0 },
-        { label: 'Faersen', value: s.heifers || 0 },
-        { label: 'Kaelber', value: s.calves || 0 },
+        { label: 'Färsen', value: s.heifers || 0 },
+        { label: 'Kälber', value: s.calves || 0 },
         { label: 'Ochsen', value: s.oxen || 0 },
         { label: 'Gesamt', value: total },
         { label: 'LSU', value: s.total_lsu != null ? Math.round(s.total_lsu * 10) / 10 : '--' }
@@ -1003,7 +1003,7 @@ async function loadCashflow() {
     const { start, end } = getMonthRange();
 
     if (!start) {
-        summaryWrap.innerHTML = '<p style="color:#9ca3af;">Kein Monat ausgewaehlt.</p>';
+        summaryWrap.innerHTML = '<p style="color:#9ca3af;">Kein Monat ausgewählt.</p>';
         top5Wrap.innerHTML = '';
         return;
     }
@@ -1136,7 +1136,7 @@ async function loadWeather() {
     const { start, end } = getMonthRange();
 
     if (!start) {
-        wrap.innerHTML = '<p style="color:#9ca3af;">Kein Monat ausgewaehlt.</p>';
+        wrap.innerHTML = '<p style="color:#9ca3af;">Kein Monat ausgewählt.</p>';
         return;
     }
 
@@ -1155,7 +1155,7 @@ async function loadWeather() {
     }
 
     if (data.length === 0) {
-        wrap.innerHTML = '<p style="color:#9ca3af;">Keine Wetterdaten fuer diesen Monat.</p>';
+        wrap.innerHTML = '<p style="color:#9ca3af;">Keine Wetterdaten für diesen Monat.</p>';
         return;
     }
 

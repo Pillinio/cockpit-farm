@@ -1199,12 +1199,12 @@ function renderPendingApprovals(pending, todayStr) {
         div.innerHTML =
             '<span class="pending-info">' +
                 warningHtml +
-                '<strong>' + entry.person_name + '</strong> &mdash; ' +
+                '<strong>' + entry.person_name + '</strong> — ' +
                 typeLabel + ' (' +
                 calendarDateFmt(entry.start_date) + ' – ' + calendarDateFmt(entry.end_date) + ')' +
                 (entry.reason ? ' — ' + entry.reason : '') +
             '</span>' +
-            '<button class="btn-approve" onclick="approveCalendarEntry(\'' + entry.id + '\')">Bestaetigen</button>' +
+            '<button class="btn-approve" onclick="approveCalendarEntry(\'' + entry.id + '\')">Bestätigen</button>' +
             '<button class="btn-reject" onclick="rejectCalendarEntry(\'' + entry.id + '\')">Ablehnen</button>';
 
         list.appendChild(div);
@@ -1215,7 +1215,7 @@ function renderUpcoming(entries) {
     const tbody = document.getElementById('upcoming-tbody');
 
     if (!entries.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="calendar-empty">Keine Eintraege in den naechsten 30 Tagen.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="calendar-empty">Keine Eintraege in den nächsten 30 Tagen.</td></tr>';
         return;
     }
 
@@ -1266,7 +1266,7 @@ async function approveCalendarEntry(entryId) {
         await loadCalendar();
     } catch (err) {
         console.error('Approve error:', err);
-        alert('Fehler beim Bestaetigen: ' + (err.message || err));
+        alert('Fehler beim Bestätigen: ' + (err.message || err));
     }
 }
 

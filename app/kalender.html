@@ -530,7 +530,7 @@
         <div class="month-nav">
             <button class="month-nav-btn" id="prev-month-btn">&larr; Vormonat</button>
             <div class="month-nav-title" id="month-title">—</div>
-            <button class="month-nav-btn" id="next-month-btn">Naechster Monat &rarr;</button>
+            <button class="month-nav-btn" id="next-month-btn">Nächster Monat &rarr;</button>
         </div>
 
         <div class="cal-grid" id="cal-grid">
@@ -687,7 +687,7 @@ const CAL_PERSON_ROLES = {
 };
 
 const MONTH_NAMES = [
-    'Januar', 'Februar', 'Maerz', 'April', 'Mai', 'Juni',
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
     'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
 ];
 
@@ -918,13 +918,13 @@ function renderEntriesTable(monthStart, monthEnd) {
 
         if (_userRole === 'owner' && e.status === 'requested') {
             actionHtml +=
-                '<button class="btn-approve" onclick="approveCalendarEntry(\'' + e.id + '\')">Bestaetigen</button>' +
+                '<button class="btn-approve" onclick="approveCalendarEntry(\'' + e.id + '\')">Bestätigen</button>' +
                 '<button class="btn-reject" onclick="rejectCalendarEntry(\'' + e.id + '\')">Ablehnen</button>';
         }
         if (canEditOrDelete) {
             actionHtml +=
                 '<button class="btn-edit" onclick="editCalendarEntry(\'' + e.id + '\')" style="background:#6b7280; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; margin-left:4px;">Bearbeiten</button>' +
-                '<button class="btn-delete" onclick="deleteCalendarEntry(\'' + e.id + '\')" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; margin-left:4px;">Loeschen</button>';
+                '<button class="btn-delete" onclick="deleteCalendarEntry(\'' + e.id + '\')" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; margin-left:4px;">Löschen</button>';
         }
         if (!actionHtml) actionHtml = '—';
 
@@ -957,12 +957,12 @@ async function approveCalendarEntry(entryId) {
         await loadMonthData();
     } catch (err) {
         console.error('Approve error:', err);
-        alert('Fehler beim Bestaetigen: ' + (err.message || err));
+        alert('Fehler beim Bestätigen: ' + (err.message || err));
     }
 }
 
 async function deleteCalendarEntry(entryId) {
-    if (!confirm('Eintrag wirklich loeschen?')) return;
+    if (!confirm('Eintrag wirklich löschen?')) return;
     try {
         // If entry was synced to Google Calendar, try to remove it there too
         const entry = _monthEntries.find(e => e.id === entryId);
@@ -975,7 +975,7 @@ async function deleteCalendarEntry(entryId) {
         await loadMonthData();
     } catch (err) {
         console.error('Delete error:', err);
-        alert('Fehler beim Loeschen: ' + (err.message || err));
+        alert('Fehler beim Löschen: ' + (err.message || err));
     }
 }
 
@@ -1004,7 +1004,7 @@ function editCalendarEntry(entryId) {
 
     // Set edit mode
     _editingEntryId = entryId;
-    document.getElementById('cal-submit-btn').textContent = 'Aenderungen speichern';
+    document.getElementById('cal-submit-btn').textContent = 'Änderungen speichern';
     document.getElementById('cal-cancel-edit-btn').style.display = 'inline-block';
 
     // Scroll to form
@@ -1117,7 +1117,7 @@ async function submitCalendarEntry() {
             if (error) throw error;
             entryId = _editingEntryId;
             msgEl.className = 'form-message success';
-            msgEl.textContent = 'Aenderungen gespeichert.';
+            msgEl.textContent = 'Änderungen gespeichert.';
         } else {
             // INSERT mode
             const insertData = {
@@ -1155,7 +1155,7 @@ async function submitCalendarEntry() {
         msgEl.textContent = 'Fehler: ' + (err.message || err);
     } finally {
         btn.disabled = false;
-        btn.textContent = _editingEntryId ? 'Aenderungen speichern' : 'Speichern';
+        btn.textContent = _editingEntryId ? 'Änderungen speichern' : 'Speichern';
     }
 }
 

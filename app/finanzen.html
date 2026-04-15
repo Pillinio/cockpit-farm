@@ -449,7 +449,7 @@
         <div class="section" id="sec-f1">
             <div class="section-header">
                 <span class="section-icon">&#x1F4B0;</span>
-                <span class="section-title">F1 &mdash; Liquiditätsreichweite (Cash Runway)</span>
+                <span class="section-title">F1 — Liquiditätsreichweite (Cash Runway)</span>
                 <span class="section-badge badge-gray" id="badge-f1">...</span>
             </div>
             <div class="section-body" id="body-f1">
@@ -461,7 +461,7 @@
         <div class="section" id="sec-f1b">
             <div class="section-header">
                 <span class="section-icon">&#x1F3E6;</span>
-                <span class="section-title">F2 &mdash; Kontostände</span>
+                <span class="section-title">F2 — Kontostände</span>
                 <span class="section-badge badge-gray" id="badge-f1b">...</span>
             </div>
             <div class="section-body" id="body-f1b">
@@ -473,7 +473,7 @@
         <div class="section" id="sec-cf">
             <div class="section-header">
                 <span class="section-icon">&#x1F4B8;</span>
-                <span class="section-title">F3 &mdash; Cashflow Monatlich</span>
+                <span class="section-title">F3 — Cashflow Monatlich</span>
                 <span class="section-badge badge-gray" id="badge-cf">...</span>
             </div>
             <div class="section-body" id="body-cf">
@@ -488,7 +488,7 @@
         <div class="section" id="sec-f3">
             <div class="section-header">
                 <span class="section-icon">&#x1F4B5;</span>
-                <span class="section-title">F4 &mdash; Umsatz YTD (nach Kategorie)</span>
+                <span class="section-title">F4 — Umsatz YTD (nach Kategorie)</span>
                 <span class="section-badge badge-gray" id="badge-f3">...</span>
             </div>
             <div class="section-body" id="body-f3">
@@ -503,7 +503,7 @@
         <div class="section" id="sec-f2">
             <div class="section-header">
                 <span class="section-icon">&#x1F4CA;</span>
-                <span class="section-title">F5 &mdash; Budget &amp; Ausgaben nach Kategorie</span>
+                <span class="section-title">F5 — Budget &amp; Ausgaben nach Kategorie</span>
                 <span class="section-badge badge-gray" id="badge-f2">...</span>
             </div>
             <div class="section-body" id="body-f2">
@@ -515,7 +515,7 @@
         <div class="section" id="sec-f6">
             <div class="section-header">
                 <span class="section-icon">&#x1F4C5;</span>
-                <span class="section-title">F6 &mdash; Monatsvergleich Ist vs. Plan</span>
+                <span class="section-title">F6 — Monatsvergleich Ist vs. Plan</span>
                 <span class="section-badge badge-gray" id="badge-f6">...</span>
             </div>
             <div class="section-body" id="body-f6">
@@ -527,7 +527,7 @@
         <div class="section" id="sec-f4">
             <div class="section-header">
                 <span class="section-icon">&#x1F4C8;</span>
-                <span class="section-title">F7 &mdash; Kosten pro kg verkauft</span>
+                <span class="section-title">F7 — Kosten pro kg verkauft</span>
                 <span class="section-badge badge-gray" id="badge-f4">...</span>
             </div>
             <div class="section-body" id="body-f4">
@@ -539,7 +539,7 @@
         <div class="section" id="sec-f8">
             <div class="section-header">
                 <span class="section-icon">&#x1F4A1;</span>
-                <span class="section-title">F8 &mdash; Kosten pro LSU / Monat</span>
+                <span class="section-title">F8 — Kosten pro LSU / Monat</span>
                 <span class="section-badge badge-gray" id="badge-f8">...</span>
             </div>
             <div class="section-body" id="body-f8">
@@ -551,7 +551,7 @@
         <div class="section" id="sec-f5">
             <div class="section-header">
                 <span class="section-icon">&#x1F4B9;</span>
-                <span class="section-title">F9 &mdash; EBIT-Marge (Ergebnis)</span>
+                <span class="section-title">F9 — EBIT-Marge (Ergebnis)</span>
                 <span class="section-badge badge-gray" id="badge-f5">...</span>
             </div>
             <div class="section-body" id="body-f5">
@@ -562,7 +562,7 @@
     </div>
 
     <div class="footer">
-        Farm Controlling &copy; 2026 &middot; <a href="cockpit.html" style="color:#6b7280;">Zurueck zum Cockpit</a>
+        Farm Controlling &copy; 2026 &middot; <a href="cockpit.html" style="color:#6b7280;">Zurück zum Cockpit</a>
     </div>
 </div>
 
@@ -1354,7 +1354,7 @@ async function loadF8() {
             </div>
             <div class="kpi-detail">Aktuelle LSU: ${fmt(lsu)} (Stand: ${snap[0].snapshot_date || '—'})</div>
             <div class="kpi-detail">Durchschn. Monatskosten: N$ ${fmt(avgMonthlyCost)} (${monthsSet.size} Monate erfasst)</div>
-            <div class="kpi-detail" style="margin-top:8px; font-style:italic; color:#9ca3af;">Leitindikator fuer Kosteneffizienz</div>`;
+            <div class="kpi-detail" style="margin-top:8px; font-style:italic; color:#9ca3af;">Leitindikator für Kosteneffizienz</div>`;
     } catch (e) {
         console.error('F8:', e);
         showNoData('f8');
