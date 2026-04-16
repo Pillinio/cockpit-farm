@@ -546,7 +546,7 @@
 
     <!-- Entries Table -->
     <div class="card">
-        <h2><span>&#x1F4CB;</span> Eintraege im Monat</h2>
+        <h2><span>&#x1F4CB;</span> <span id="entries-heading">Einträge</span></h2>
         <div class="entries-table-wrap">
             <table class="entries-table" id="entries-table">
                 <thead>
@@ -743,25 +743,15 @@ document.getElementById('next-month-btn').addEventListener('click', () => {
 // ── Load Data For Current Month ─────────────────────────────────
 async function loadMonthData() {
     try {
-        // Range: include prev-month tail & next-month head so overlapping entries show up
-        const firstOfMonth = ymd(_currentYear, _currentMonth, 1);
-        const daysInMonth = new Date(_currentYear, _currentMonth + 1, 0).getDate();
-        const lastOfMonth = ymd(_currentYear, _currentMonth, daysInMonth);
+        // Fetch entries overlapping the navigated year and the next year,
+        // so the list below the grid can show two years of entries.
+        const yearStart = ymd(_currentYear, 0, 1);
+        const yearEnd = ymd(_currentYear + 1, 11, 31);
 
-        // widen slightly for visual grid fill
-        const gridStart = new Date(_currentYear, _currentMonth, 1);
-        gridStart.setDate(gridStart.getDate() - 7);
-        const gridEnd = new Date(_currentYear, _currentMonth, daysInMonth);
-        gridEnd.setDate(gridEnd.getDate() + 7);
-
-        const gridStartStr = gridStart.toISOString().split('T')[0];
-        const gridEndStr = gridEnd.toISOString().split('T')[0];
-
-        // Fetch entries overlapping the widened grid window
         const { data, error } = await sb.from('farm_calendar')
             .select('*')
-            .lte('start_date', gridEndStr)
-            .gte('end_date', gridStartStr)
+            .lte('start_date', yearEnd)
+            .gte('end_date', yearStart)
             .order('start_date', { ascending: true });
 
         if (error) throw error;
@@ -769,7 +759,7 @@ async function loadMonthData() {
         _monthEntries = data || [];
 
         renderGrid();
-        renderEntriesTable(firstOfMonth, lastOfMonth);
+        renderEntriesTable(yearStart, yearEnd);
 
         const now = new Date();
         document.getElementById('last-update').textContent =
@@ -881,18 +871,21 @@ function showEntryDetails(e) {
     alert(details);
 }
 
-// ── Render Entries Table (month scope) ──────────────────────────
-function renderEntriesTable(monthStart, monthEnd) {
+// ── Render Entries Table (two-year scope) ───────────────────────
+function renderEntriesTable(rangeStart, rangeEnd) {
     const tbody = document.getElementById('entries-tbody');
 
-    // Filter entries that overlap with the current month
+    // Filter entries that overlap with the two-year window
     const entries = _monthEntries
-        .filter(e => e.start_date <= monthEnd && e.end_date >= monthStart)
+        .filter(e => e.start_date <= rangeEnd && e.end_date >= rangeStart)
         .slice()
         .sort((a, b) => a.start_date.localeCompare(b.start_date));
 
+    const heading = document.getElementById('entries-heading');
+    if (heading) heading.textContent = 'Einträge ' + _currentYear + '–' + (_currentYear + 1);
+
     if (!entries.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="entries-empty">Keine Eintraege in diesem Monat.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="entries-empty">Keine Einträge für ' + _currentYear + '–' + (_currentYear + 1) + '.</td></tr>';
         return;
     }
 
