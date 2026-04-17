@@ -299,12 +299,31 @@ function shellQuote(s) {
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+function buildJsonReport(data, filename) {
+  const h = data.header;
+  return {
+    source_file: filename,
+    statement_number: h.statement_number,
+    report_date: h.report_date,
+    line_items: data.line_items,
+    totals: {
+      total_animals: data.line_items.length,
+      total_cold_mass_kg: data.line_items.reduce((s, li) => s + li.cold_mass_kg, 0),
+      total_gross_nad: data.sub_total,
+      total_deductions_nad: data.deductions_total,
+      total_net_nad: data.payment_amount,
+    },
+  };
+}
+
 function main() {
   const args = process.argv.slice(2);
+  const jsonMode = args.includes('--json');
+  const fileArgs = args.filter(a => !a.startsWith('--'));
   let pdfPaths;
 
-  if (args.length > 0) {
-    pdfPaths = args.map(a => path.resolve(a));
+  if (fileArgs.length > 0) {
+    pdfPaths = fileArgs.map(a => path.resolve(a));
   } else {
     pdfPaths = PDF_FILES.map(f => path.join(DATA_DIR, f));
   }
@@ -318,13 +337,16 @@ function main() {
   }
 
   let allSQL = [];
-  allSQL.push('-- ==========================================================================');
-  allSQL.push('-- Meatco Slaughter Statement Import');
-  allSQL.push(`-- Generated: ${new Date().toISOString()}`);
-  allSQL.push('-- ==========================================================================');
-  allSQL.push('');
-  allSQL.push('BEGIN;');
-  allSQL.push('');
+  const allJson = [];
+  if (!jsonMode) {
+    allSQL.push('-- ==========================================================================');
+    allSQL.push('-- Meatco Slaughter Statement Import');
+    allSQL.push(`-- Generated: ${new Date().toISOString()}`);
+    allSQL.push('-- ==========================================================================');
+    allSQL.push('');
+    allSQL.push('BEGIN;');
+    allSQL.push('');
+  }
 
   let totalFiles = 0;
   let totalAnimals = 0;
@@ -372,8 +394,12 @@ function main() {
       console.error(`  Deductions: ${data.deductions_total.toFixed(2)} NAD`);
       console.error(`  Net payment: ${data.payment_amount.toFixed(2)} NAD`);
 
-      allSQL.push(generateSQL(data, filename));
-      allSQL.push('');
+      if (jsonMode) {
+        allJson.push(buildJsonReport(data, filename));
+      } else {
+        allSQL.push(generateSQL(data, filename));
+        allSQL.push('');
+      }
 
       totalFiles++;
       totalAnimals += itemCount;
@@ -386,19 +412,21 @@ function main() {
     }
   }
 
-  allSQL.push('COMMIT;');
-  allSQL.push('');
-  allSQL.push(`-- Summary: ${totalFiles} files, ${totalAnimals} animals, ${totalGross.toFixed(2)} NAD gross`);
-
-  if (errors.length > 0) {
-    allSQL.push('-- WARNINGS/ERRORS:');
-    for (const e of errors) {
-      allSQL.push(`--   ${e}`);
+  if (jsonMode) {
+    console.log(JSON.stringify(
+      allJson.length === 1 ? allJson[0] : { files: allJson },
+      null, 2
+    ));
+  } else {
+    allSQL.push('COMMIT;');
+    allSQL.push('');
+    allSQL.push(`-- Summary: ${totalFiles} files, ${totalAnimals} animals, ${totalGross.toFixed(2)} NAD gross`);
+    if (errors.length > 0) {
+      allSQL.push('-- WARNINGS/ERRORS:');
+      for (const e of errors) allSQL.push(`--   ${e}`);
     }
+    console.log(allSQL.join('\n'));
   }
-
-  // Output SQL to stdout
-  console.log(allSQL.join('\n'));
 
   // Summary to stderr
   console.error('');

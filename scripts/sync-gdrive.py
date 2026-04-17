@@ -32,15 +32,30 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 DATA_DIR = PROJECT_DIR / "Data_Input"
 
-DEFAULT_KEY_FILE = str(Path.home() / "Downloads" / "farm-controlling-1a5d580c9d89.json")
-DEFAULT_FOLDER_ID = "15SwpYlcFORVgsztDOE9a4lq0dLL2EgTo"
+# Service-account JSON key (must be shared with the GDrive folder).
+# Can be overridden via GDRIVE_KEY_FILE env var.
+DEFAULT_KEY_FILE = str(PROJECT_DIR / "scripts" / "secrets" / "gdrive-service-account.json")
+LEGACY_KEY_FILE  = str(Path.home() / "Downloads" / "farm-controlling-1a5d580c9d89.json")
+
+# Root GDrive folder that holds 6 named subfolders (see FOLDER_MAP).
+# Override via GDRIVE_FOLDER_ID env var.
+DEFAULT_FOLDER_ID = "1k7LAb2KqNUcvuZOLHcmdtdZr527MH3wN"
 
 # Folder name → local subdirectory mapping
+# Keep legacy names for backward compatibility while migrating content.
 FOLDER_MAP = {
-    "NED Bank Statements": "Kontoauszüge/Nedbank",
-    "Pointbreak Statements": "Kontoauszüge/Pointbreak",
+    # new structure (as of 2026-04-17)
+    "LPO-Weekly":            "LPO-Weekly",
+    "Meatco-Slaughter":      "Meatco-Slaughter",
+    "Slaughterhouses-Other": "Slaughterhouses-Other",
+    "Bank-Nedbank":          "Bank-Nedbank",
+    "Bank-Pointbreak":       "Bank-Pointbreak",
+    "Accounting":            "Accounting",
+    # legacy folder names (will be removed once migration is complete)
+    "NED Bank Statements":          "Kontoauszüge/Nedbank",
+    "Pointbreak Statements":        "Kontoauszüge/Pointbreak",
     "Buchhaltung Income Statements": "Income_Statements",
-    "Bank_Import": "Bank_Import",
+    "Bank_Import":                   "Bank_Import",
 }
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
@@ -130,8 +145,15 @@ def main():
     args = parser.parse_args()
 
     if not Path(args.key).exists():
-        print(f"ERROR: Key file not found: {args.key}")
-        sys.exit(1)
+        # fall back to legacy location
+        if Path(LEGACY_KEY_FILE).exists():
+            print(f"NOTE: using legacy key file at {LEGACY_KEY_FILE}", file=sys.stderr)
+            args.key = LEGACY_KEY_FILE
+        else:
+            print(f"ERROR: Key file not found: {args.key}")
+            print(f"       Also tried: {LEGACY_KEY_FILE}")
+            print(f"       Place your Google service-account JSON at that path, or set GDRIVE_KEY_FILE.")
+            sys.exit(1)
 
     service = get_service(args.key)
     state = load_state()

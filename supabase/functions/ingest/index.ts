@@ -199,20 +199,41 @@ async function handleMarketPrices(
   supabase: ReturnType<typeof createClient>,
   data: Record<string, unknown>,
 ): Promise<number> {
-  const { price_date, prices } = data as {
-    price_date: string;
-    prices: Array<{ commodity: string; price_nad: number; unit: string }>;
+  // Accept two payload shapes for backward compatibility:
+  // (a) { price_date, prices: [{commodity, price_nad, unit}] } — legacy flat
+  // (b) { price_date?, prices: [{price_date, commodity, price_nad, unit,
+  //       provider?, grade?, weight_basis?, source?}] } — structured
+  const { price_date: fallbackDate, prices } = data as {
+    price_date?: string;
+    prices: Array<{
+      price_date?: string;
+      commodity: string;
+      price_nad: number;
+      unit: string;
+      provider?: string | null;
+      grade?: string | null;
+      weight_basis?: string | null;
+      source?: string;
+    }>;
   };
 
-  const rows = prices.map((p) => ({
-    price_date,
-    commodity: p.commodity,
-    price_nad: p.price_nad,
-    unit: p.unit,
-    source: "openclaw",
-  }));
+  if (!Array.isArray(prices) || prices.length === 0) return 0;
 
-  // Upsert to handle duplicates gracefully
+  const rows = prices.map((p) => {
+    const rowDate = p.price_date || fallbackDate;
+    if (!rowDate) throw new Error(`missing price_date for commodity ${p.commodity}`);
+    return {
+      price_date: rowDate,
+      commodity: p.commodity,
+      price_nad: p.price_nad,
+      unit: p.unit,
+      source: p.source || "openclaw",
+      provider: p.provider ?? null,
+      grade: p.grade ?? null,
+      weight_basis: p.weight_basis ?? null,
+    };
+  });
+
   const { error } = await supabase
     .from("market_prices")
     .upsert(rows, { onConflict: "price_date,commodity" });

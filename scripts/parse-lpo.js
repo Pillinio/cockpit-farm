@@ -420,14 +420,68 @@ function shellQuote(s) {
 }
 
 // ---------------------------------------------------------------------------
+// JSON output — builds ingest-ready array of price rows
+// ---------------------------------------------------------------------------
+function buildPriceRows(data) {
+  const rows = [];
+  const priceDate = data.price_date;
+  if (!priceDate) return rows;
+
+  for (const p of data.cattle_prices) {
+    const grade = p.grade;
+    const push = (commodity, price, provider) => rows.push({
+      price_date: priceDate,
+      commodity, price_nad: price, unit: 'per_kg',
+      provider, grade, weight_basis: 'carcass',
+      source: 'lpo-weekly',
+    });
+    if (p.meatco_180_239      !== undefined) push(`beef_meatco_${grade}`,       p.meatco_180_239,      'meatco');
+    if (p.meatco_fixed_240plus!== undefined) push(`beef_meatco_fixed_${grade}`, p.meatco_fixed_240plus,'meatco_fixed');
+    if (p.savanna             !== undefined) push(`beef_savanna_${grade}`,     p.savanna,             'savanna');
+    if (p.beefcor_oxen        !== undefined) push(`beef_beefcor_${grade}`,     p.beefcor_oxen,        'beefcor');
+    if (p.rmaa                !== undefined) push(`beef_rmaa_${grade}`,        p.rmaa,                'rmaa');
+  }
+
+  for (const a of data.auction_prices) {
+    const typeDef = LABTA_CATTLE_TYPES[a.label];
+    if (!typeDef) continue;
+    const commodity = `auction_labta_${typeDef.suffix}`;
+    const unit = typeDef.basis === 'per_head' ? 'per_head' : 'per_kg';
+    rows.push({
+      price_date: priceDate,
+      commodity, price_nad: a.price_avg, unit,
+      provider: 'labta', grade: null, weight_basis: typeDef.basis,
+      source: 'lpo-weekly-labta',
+    });
+  }
+
+  // Deduplicate by (price_date, commodity) — some LABTA labels appear twice
+  // (multiple auction regions sharing a suffix). Keep the average price.
+  const bucket = new Map();
+  for (const r of rows) {
+    const key = `${r.price_date}|${r.commodity}`;
+    const prev = bucket.get(key);
+    if (prev) {
+      prev.price_nad = (prev.price_nad + r.price_nad) / 2;
+      prev._dupCount = (prev._dupCount || 1) + 1;
+    } else {
+      bucket.set(key, { ...r });
+    }
+  }
+  return Array.from(bucket.values()).map(({ _dupCount, ...rest }) => rest);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 function main() {
   const args = process.argv.slice(2);
+  const jsonMode = args.includes('--json');
+  const fileArgs = args.filter(a => !a.startsWith('--'));
   let pdfPaths;
 
-  if (args.length > 0) {
-    pdfPaths = args.map(a => path.resolve(a));
+  if (fileArgs.length > 0) {
+    pdfPaths = fileArgs.map(a => path.resolve(a));
   } else {
     pdfPaths = PDF_FILES.map(f => path.join(DATA_DIR, f));
   }
@@ -443,13 +497,16 @@ function main() {
   }
 
   const allSQL = [];
-  allSQL.push('-- ==========================================================================');
-  allSQL.push('-- LPO Weekly Market Information — Cattle + LABTA Auction Import');
-  allSQL.push(`-- Generated: ${new Date().toISOString()}`);
-  allSQL.push('-- ==========================================================================');
-  allSQL.push('');
-  allSQL.push('BEGIN;');
-  allSQL.push('');
+  const allJson = [];
+  if (!jsonMode) {
+    allSQL.push('-- ==========================================================================');
+    allSQL.push('-- LPO Weekly Market Information — Cattle + LABTA Auction Import');
+    allSQL.push(`-- Generated: ${new Date().toISOString()}`);
+    allSQL.push('-- ==========================================================================');
+    allSQL.push('');
+    allSQL.push('BEGIN;');
+    allSQL.push('');
+  }
 
   let totalFiles = 0;
   let totalPrices = 0;
@@ -493,8 +550,19 @@ function main() {
 
       console.error(`  LABTA auction rows: ${data.auction_prices.length}`);
 
-      allSQL.push(generateSQL(data, filename));
-      allSQL.push('');
+      if (jsonMode) {
+        allJson.push({
+          source_file: filename,
+          price_date: data.price_date,
+          week_number: data.week_number,
+          week_range: data.week_range,
+          cattle_format: data.cattle_format,
+          prices: buildPriceRows(data),
+        });
+      } else {
+        allSQL.push(generateSQL(data, filename));
+        allSQL.push('');
+      }
 
       let priceRows = 0;
       for (const p of data.cattle_prices) {
@@ -518,16 +586,21 @@ function main() {
     }
   }
 
-  allSQL.push('COMMIT;');
-  allSQL.push('');
-  allSQL.push(`-- Summary: ${totalFiles} files, ${totalPrices} price rows`);
-
-  if (errors.length > 0) {
-    allSQL.push('-- WARNINGS/ERRORS:');
-    for (const e of errors) allSQL.push(`--   ${e}`);
+  if (jsonMode) {
+    console.log(JSON.stringify(
+      allJson.length === 1 ? allJson[0] : { files: allJson },
+      null, 2
+    ));
+  } else {
+    allSQL.push('COMMIT;');
+    allSQL.push('');
+    allSQL.push(`-- Summary: ${totalFiles} files, ${totalPrices} price rows`);
+    if (errors.length > 0) {
+      allSQL.push('-- WARNINGS/ERRORS:');
+      for (const e of errors) allSQL.push(`--   ${e}`);
+    }
+    console.log(allSQL.join('\n'));
   }
-
-  console.log(allSQL.join('\n'));
 
   console.error('');
   console.error('=== Summary ===');
