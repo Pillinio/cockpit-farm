@@ -306,12 +306,13 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // Mark reminders as sent
-      for (const e of pending) {
+      // Mark reminders as sent — single UPDATE so partial crashes can't
+      // leave some entries flagged and others unflagged.
+      if (pending.length > 0) {
         await sb
           .from("farm_calendar")
           .update({ reminder_sent: true })
-          .eq("id", e.id);
+          .in("id", pending.map((e) => e.id));
       }
 
       await logger.info("Calendar reminders sent", {

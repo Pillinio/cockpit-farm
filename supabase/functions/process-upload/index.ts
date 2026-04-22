@@ -51,9 +51,12 @@ function toBase64(buf: ArrayBuffer): string {
   return btoa(bin);
 }
 
-async function callClaude(pdfBase64: string) {
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+const CLAUDE_TIMEOUT_MS = 90_000;
+
+async function callClaudeOnce(pdfBase64: string, signal: AbortSignal): Promise<Response> {
+  return await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
+    signal,
     headers: {
       "x-api-key": ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
@@ -70,22 +73,41 @@ async function callClaude(pdfBase64: string) {
       messages: [{
         role: "user",
         content: [
-          {
-            type: "document",
-            source: { type: "base64", media_type: "application/pdf", data: pdfBase64 },
-          },
-          {
-            type: "text",
-            text: "Extrahiere strikt nach dem Schema und gib NUR JSON zurück.",
-          },
+          { type: "document",
+            source: { type: "base64", media_type: "application/pdf", data: pdfBase64 } },
+          { type: "text",
+            text: "Extrahiere strikt nach dem Schema und gib NUR JSON zurück." },
         ],
       }],
     }),
   });
+}
+
+async function callClaude(pdfBase64: string) {
+  // Timeout + 1 retry on 5xx/timeout. Client sees a sanitized error regardless.
+  let resp: Response | null = null;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), CLAUDE_TIMEOUT_MS);
+    try {
+      resp = await callClaudeOnce(pdfBase64, ctrl.signal);
+      clearTimeout(timer);
+      if (resp.ok) break;
+      if (resp.status >= 500 && attempt === 0) { continue; }
+      break;
+    } catch (err) {
+      clearTimeout(timer);
+      lastErr = err;
+      if (attempt === 0) continue;
+      throw err;
+    }
+  }
+  if (!resp) throw lastErr ?? new Error("Claude API: no response");
 
   if (!resp.ok) {
-    const errText = await resp.text();
-    throw new Error(`Claude API ${resp.status}: ${errText.slice(0, 500)}`);
+    // Don't echo upstream body — it can contain the api key on 401 or sensitive diagnostics.
+    throw new Error(`Claude API upstream ${resp.status}`);
   }
 
   const body = await resp.json();
@@ -100,7 +122,7 @@ async function callClaude(pdfBase64: string) {
       stop_reason: body.stop_reason,
     };
   } catch (e) {
-    throw new Error(`Claude returned non-JSON: ${(e as Error).message}. First 400 chars: ${cleaned.slice(0, 400)}`);
+    throw new Error(`Claude returned non-JSON: ${(e as Error).message}`);
   }
 }
 

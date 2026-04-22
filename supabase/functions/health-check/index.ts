@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createLogger } from "../_shared/logger.ts";
 import { verifyAuth } from "../_shared/auth.ts";
+import { tryAudit } from "../_shared/errors.ts";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data, null, 2), {
@@ -165,16 +166,14 @@ Deno.serve(async (req: Request) => {
   // --- Insert alerts for stale/empty checks ---
   const failures = results.filter((r) => r.status === "stale" || r.status === "empty");
   for (const failure of failures) {
-    try {
-      await supabase.from("alert_history").insert({
+    await tryAudit(logger, `alert_history insert SYS:${failure.table}`,
+      supabase.from("alert_history").insert({
         kpi_id: "SYS",
         severity: "red",
         message: `Health check: ${failure.table} — ${failure.message}`,
         value_current: failure.actual_age_hours != null ? String(failure.actual_age_hours) : null,
-      });
-    } catch {
-      // Best effort
-    }
+      })
+    );
   }
 
   // Log results

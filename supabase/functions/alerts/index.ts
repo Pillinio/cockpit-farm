@@ -8,6 +8,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createLogger } from "../_shared/logger.ts";
 import { verifyAuth } from "../_shared/auth.ts";
+import { tryAudit } from "../_shared/errors.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -536,14 +537,16 @@ Deno.serve(async (req: Request) => {
         );
 
         if (!duplicate) {
-          await supabase.from("alert_history").insert({
-            farm_id: rule.farm_id,
-            rule_id: rule.id,
-            kpi_id: rule.kpi_id,
-            severity: result.severity,
-            message: result.message,
-            value_current: result.value != null ? String(result.value) : null,
-          });
+          await tryAudit(logger, `alert_history insert ${rule.kpi_id}`,
+            supabase.from("alert_history").insert({
+              farm_id: rule.farm_id,
+              rule_id: rule.id,
+              kpi_id: rule.kpi_id,
+              severity: result.severity,
+              message: result.message,
+              value_current: result.value != null ? String(result.value) : null,
+            })
+          );
         } else {
           result.message += " (dedupliziert, bereits in den letzten 24h gemeldet)";
         }
