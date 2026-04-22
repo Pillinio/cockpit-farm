@@ -35,10 +35,10 @@ interface VerifyOpts {
   requireRole?: string[];
 }
 
-/** Decode a JWT payload (unverified). We only use it to read the `role` claim —
- *  Supabase itself has already verified the signature when `getUser()` succeeds
- *  for user tokens. For service-role tokens we then round-trip via a privileged
- *  call to confirm the key is actually valid. */
+/** Decode a JWT payload WITHOUT verifying the signature. The payload is only
+ *  used to pick an auth path (user vs. service) — the actual verification
+ *  happens afterward by delegating to Supabase's auth server. Never trust
+ *  anything here as authenticated. */
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
@@ -66,35 +66,44 @@ export async function verifyAuth(
 
   const claimedRole = typeof payload.role === "string" ? payload.role : null;
 
-  // ── Service role: verify the token actually works against auth.admin ──────
+  // ── Service role ──────────────────────────────────────────────────────────
+  // Naive mistake (don't do this): run a privileged op on the SERVER'S
+  // admin client — that always succeeds and ignores the incoming token.
+  //
+  // Correct: constant-time-compare the incoming token with the server's own
+  // SERVICE_ROLE env var. The service-role key is a long opaque JWT; only the
+  // holder can know it. Attackers with forged JWTs (unsigned role=service_role
+  // claim) will fail this comparison.
   if (claimedRole === "service_role") {
     if (!opts.allow.includes("service")) return null;
-    // Round-trip: listUsers with limit=1 is cheap and only works with a valid
-    // service_role key. Rejects forged tokens with role=service_role but wrong sig.
-    const { error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1 });
-    if (error) return null;
+    const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    if (!expected || !constantTimeEq(token, expected)) return null;
     return { mode: "service", token };
   }
 
-  // ── User token: validate via getUser ──────────────────────────────────────
+  // ── User token: Supabase's getUser verifies signature server-side ─────────
   if (!opts.allow.includes("user")) return null;
 
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data?.user) return null;
 
-  // Optional role gate
-  let role: string | null = null;
-  if (opts.requireRole || true) {
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .maybeSingle();
-    role = (profile?.role as string | null) ?? null;
-    if (opts.requireRole && (!role || !opts.requireRole.includes(role))) {
-      return null;
-    }
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
+  const role = (profile?.role as string | null) ?? null;
+  if (opts.requireRole && (!role || !opts.requireRole.includes(role))) {
+    return null;
   }
 
   return { mode: "user", userId: data.user.id, role, token };
+}
+
+/** Constant-time string equality — avoids timing-oracle on the service key. */
+function constantTimeEq(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
