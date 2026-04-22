@@ -679,8 +679,36 @@ const HOLIDAYS_2027 = {
     '2027-12-25': 'Weihnachten',
     '2027-12-26': 'Familientag',
 };
+// Ostern 2028-2030 per Gauß-Algorithmus: 2028-04-16, 2029-04-01, 2030-04-21
+const HOLIDAYS_2028 = {
+    '2028-01-01': 'Neujahr', '2028-03-21': 'Unabhängigkeitstag',
+    '2028-04-14': 'Karfreitag', '2028-04-17': 'Ostermontag',
+    '2028-05-01': 'Tag der Arbeit', '2028-05-04': 'Cassinga Day',
+    '2028-05-25': 'Afrika-Tag', '2028-05-25': 'Christi Himmelfahrt',
+    '2028-08-26': 'Heldentag', '2028-12-10': 'Menschenrechtstag',
+    '2028-12-25': 'Weihnachten', '2028-12-26': 'Familientag',
+};
+const HOLIDAYS_2029 = {
+    '2029-01-01': 'Neujahr', '2029-03-21': 'Unabhängigkeitstag',
+    '2029-03-30': 'Karfreitag', '2029-04-02': 'Ostermontag',
+    '2029-05-01': 'Tag der Arbeit', '2029-05-04': 'Cassinga Day',
+    '2029-05-10': 'Christi Himmelfahrt', '2029-05-25': 'Afrika-Tag',
+    '2029-08-26': 'Heldentag', '2029-12-10': 'Menschenrechtstag',
+    '2029-12-25': 'Weihnachten', '2029-12-26': 'Familientag',
+};
+const HOLIDAYS_2030 = {
+    '2030-01-01': 'Neujahr', '2030-03-21': 'Unabhängigkeitstag',
+    '2030-04-19': 'Karfreitag', '2030-04-22': 'Ostermontag',
+    '2030-05-01': 'Tag der Arbeit', '2030-05-04': 'Cassinga Day',
+    '2030-05-25': 'Afrika-Tag', '2030-05-30': 'Christi Himmelfahrt',
+    '2030-08-26': 'Heldentag', '2030-12-10': 'Menschenrechtstag',
+    '2030-12-25': 'Weihnachten', '2030-12-26': 'Familientag',
+};
 
-const ALL_HOLIDAYS = { ...HOLIDAYS_2025, ...HOLIDAYS_2026, ...HOLIDAYS_2027 };
+const ALL_HOLIDAYS = {
+    ...HOLIDAYS_2025, ...HOLIDAYS_2026, ...HOLIDAYS_2027,
+    ...HOLIDAYS_2028, ...HOLIDAYS_2029, ...HOLIDAYS_2030
+};
 
 // ── Labels & Constants ──────────────────────────────────────────
 const CAL_TYPE_LABELS = {
