@@ -33,9 +33,12 @@ $$;
 --
 -- Step 3: Create cron jobs (paste into SQL Editor):
 --
+--   Replace <PROJECT_URL> below with the actual Supabase project URL
+--   (e.g. https://xxxx.supabase.co). Keep it out of version control.
+--
 --   select cron.schedule('alerts-hourly', '0 * * * *', $$
 --     select net.http_post(
---       url := 'https://vhwlcnfxslkftswksqrw.supabase.co/functions/v1/alerts',
+--       url := '<PROJECT_URL>/functions/v1/alerts',
 --       headers := internal.edge_function_headers(),
 --       body := '{}'::jsonb
 --     );
@@ -43,7 +46,7 @@ $$;
 --
 --   select cron.schedule('health-check-6h', '0 */6 * * *', $$
 --     select net.http_post(
---       url := 'https://vhwlcnfxslkftswksqrw.supabase.co/functions/v1/health-check',
+--       url := '<PROJECT_URL>/functions/v1/health-check',
 --       headers := internal.edge_function_headers(),
 --       body := '{}'::jsonb
 --     );
@@ -51,7 +54,7 @@ $$;
 --
 --   select cron.schedule('reminder-monthly', '0 8 1 * *', $$
 --     select net.http_post(
---       url := 'https://vhwlcnfxslkftswksqrw.supabase.co/functions/v1/reminder',
+--       url := '<PROJECT_URL>/functions/v1/reminder',
 --       headers := internal.edge_function_headers(),
 --       body := '{}'::jsonb
 --     );
