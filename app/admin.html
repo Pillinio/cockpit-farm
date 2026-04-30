@@ -713,7 +713,13 @@ async function checkAdminAuth() {
         return null;
     }
     const userId = session.user.id;
-    const { data: profile } = await sb.from('profiles').select('role').eq('id', userId).single();
+    const { data: profile, error: profileErr } = await sb.from('profiles').select('role').eq('id', userId).single();
+    if (profileErr) {
+        console.error('Admin profile lookup failed', profileErr);
+        alert('Profil konnte nicht geladen werden. Bitte später erneut versuchen.');
+        window.location.href = 'cockpit.html';
+        return null;
+    }
     if (!profile || profile.role !== 'owner') {
         alert('Zugriff verweigert. Nur Eigentümer (Owner) können auf die Administration zugreifen.');
         window.location.href = 'cockpit.html';

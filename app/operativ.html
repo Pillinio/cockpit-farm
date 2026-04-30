@@ -1117,7 +1117,7 @@ async function loadTrades() {
         `;
     } catch (err) {
         console.error('loadTrades error', err);
-        container.innerHTML = '<div class="no-data" style="color:#ef4444;">Fehler beim Laden: ' + escHtml(err.message || '') + '</div>';
+        container.innerHTML = '<div class="no-data" style="color:#ef4444;">Daten konnten nicht geladen werden. Bitte erneut versuchen.</div>';
     }
 }
 

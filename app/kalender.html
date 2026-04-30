@@ -806,6 +806,10 @@ async function loadMonthData() {
     } catch (err) {
         console.error('loadMonthData error:', err);
         document.getElementById('last-update').textContent = 'Fehler beim Laden';
+        const tbody = document.getElementById('entries-tbody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="5" class="entries-empty">Daten konnten nicht geladen werden.</td></tr>';
+        }
     }
 }
 

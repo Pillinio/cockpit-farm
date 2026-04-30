@@ -1850,7 +1850,8 @@ const Monat = {
             .order('movement_date', { ascending: false });
 
         if (error || !data) {
-            wrap.innerHTML = '<p style="color:#991b1b;">Fehler beim Laden: ' + ((error && error.message) || '') + '</p>';
+            console.error('Bewegungen load error', error);
+            wrap.innerHTML = '<p style="color:#991b1b;">Daten konnten nicht geladen werden.</p>';
             if (badge) { badge.textContent = 'Fehler'; badge.className = 'section-badge badge-red'; }
             return;
         }
@@ -1975,7 +1976,8 @@ const Monat = {
             .order('transaction_date', { ascending: true });
 
         if (error || !data) {
-            summaryWrap.innerHTML = '<p style="color:#991b1b;">Fehler: ' + ((error && error.message) || '') + '</p>';
+            console.error('Cashflow load error', error);
+            summaryWrap.innerHTML = '<p style="color:#991b1b;">Daten konnten nicht geladen werden.</p>';
             return;
         }
 
@@ -2041,7 +2043,8 @@ const Monat = {
             .order('observation_date', { ascending: false });
 
         if (error || !data) {
-            wrap.innerHTML = '<p style="color:#991b1b;">Fehler: ' + ((error && error.message) || '') + '</p>';
+            console.error('Weide load error', error);
+            wrap.innerHTML = '<p style="color:#991b1b;">Daten konnten nicht geladen werden.</p>';
             return;
         }
 
@@ -2107,7 +2110,8 @@ const Monat = {
             .order('observation_date');
 
         if (error || !data) {
-            wrap.innerHTML = '<p style="color:#991b1b;">Fehler: ' + ((error && error.message) || '') + '</p>';
+            console.error('Wetter load error', error);
+            wrap.innerHTML = '<p style="color:#991b1b;">Daten konnten nicht geladen werden.</p>';
             return;
         }
 
@@ -2294,7 +2298,8 @@ Monat.meldung = {
             .limit(24);
 
         if (error) {
-            wrap.innerHTML = '<div class="mm-text-muted" style="color:#ef4444;">Fehler: ' + this.esc(error.message) + '</div>';
+            console.error('Meldungen-Liste load error', error);
+            wrap.innerHTML = '<div class="mm-text-muted" style="color:#ef4444;">Daten konnten nicht geladen werden.</div>';
             return;
         }
         if (!data || !data.length) {
