@@ -5,6 +5,7 @@
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createLogger } from "../_shared/logger.ts";
+import { verifyAuth } from "../_shared/auth.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -663,24 +664,18 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Method not allowed. Use GET or POST." }, 405);
   }
 
-  // Auth
-  const authHeader = req.headers.get("Authorization");
-  const apiKey = req.headers.get("X-API-Key");
+  // Auth — service-role only (cron / manual curl with service key).
+  // No frontend caller exists; RLS is bypassed intentionally so the report
+  // sees all farm data the service-role client can read.
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  let clientKey: string;
-  if (authHeader?.startsWith("Bearer ")) {
-    clientKey = authHeader.replace("Bearer ", "");
-  } else if (apiKey) {
-    clientKey = apiKey;
-  } else {
-    return json({ error: "Missing authentication. Provide Authorization: Bearer <key> or X-API-Key header." }, 401);
-  }
-
-  const supabase = createClient(supabaseUrl, clientKey, {
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const auth = await verifyAuth(req, supabase, { allow: ["service"] });
+  if (!auth) return json({ error: "unauthorized" }, 401);
 
   const logger = createLogger(supabase, "edge:report");
 

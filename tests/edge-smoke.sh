@@ -2,15 +2,13 @@
 # Edge function smoke tests. Requires:
 #   SUPABASE_URL      — project URL, e.g. https://xxx.supabase.co
 #   SUPABASE_ANON_KEY — anon key
-#   SUPABASE_USER_JWT — a valid user JWT (get from browser devtools or a CLI login)
 #
 # Optional:
-#   FUNCTION_SECRET_CRON — shared secret for cron-invoked endpoints (Phase 2)
+#   SUPABASE_USER_JWT — a valid user JWT (not used by current checks, reserved)
 #
 # Each endpoint must:
 #   a) return 401 without Authorization
 #   b) return 401 with a bogus token
-#   c) return 2xx with the proper token
 #
 # Exit non-zero on any unexpected response.
 
@@ -18,7 +16,6 @@ set -euo pipefail
 
 : "${SUPABASE_URL:?SUPABASE_URL not set}"
 : "${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY not set}"
-: "${SUPABASE_USER_JWT:?SUPABASE_USER_JWT not set}"
 
 PASS=0; FAIL=0
 
@@ -43,18 +40,25 @@ call() {
     -d "$body"
 }
 
-# ── user-auth endpoints (must 401 without JWT) ────────────────────────────
-for fn in commit-import rollback-import process-upload bonus-defaults report; do
+# ── user-auth endpoints (reject empty + bogus Bearer) ─────────────────────
+for fn in commit-import rollback-import process-upload; do
   check "$fn :: no-auth 401"    401 "$(call "$fn" '')"
   check "$fn :: bad-auth 401"   401 "$(call "$fn" 'garbage')"
 done
 
-# ── endpoints that should also 401 after Phase 2 (currently open) ─────────
-# Comment these back in after C5 lands.
-# for fn in notify-calendar reminder ingest alerts health-check; do
-#   check "$fn :: no-auth 401"    401 "$(call "$fn" '')"
-#   check "$fn :: bad-auth 401"   401 "$(call "$fn" 'garbage')"
-# done
+# ── service-role endpoints (reject empty + bogus Bearer) ──────────────────
+# verifyAuth constant-time-compares the Bearer token against
+# SUPABASE_SERVICE_ROLE_KEY; anything else 401s.
+for fn in ingest alerts health-check reminder report notify-calendar; do
+  check "$fn :: no-auth 401"    401 "$(call "$fn" '')"
+  check "$fn :: bad-auth 401"   401 "$(call "$fn" 'garbage')"
+done
+
+# ── Intentionally open: bonus-defaults ────────────────────────────────────
+# Called by the public bonus calculator with the anon key as Bearer. It
+# always returns 200 and falls back to hardcoded defaults if queries fail.
+# If/when the frontend switches to a user session token, add this to the
+# service-role list above.
 
 echo
 echo "Result: $PASS passed, $FAIL failed"
