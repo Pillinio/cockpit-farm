@@ -1,8 +1,10 @@
 // Shared auth helpers for Edge Functions.
 //
 // Two auth modes are accepted, both via `Authorization: Bearer <token>`:
-//   1. User JWT   — issued by Supabase Auth for signed-in users.
-//   2. Service-role JWT — used by GitHub Actions / backend scripts / pg_cron.
+//   1. User JWT — issued by Supabase Auth for signed-in users.
+//   2. Service-role secret — used by GitHub Actions / backend scripts / pg_cron.
+//      Accepts both legacy JWT (eyJ…) and new opaque (sb_secret_…) formats;
+//      the token is constant-time-compared to SUPABASE_SERVICE_ROLE_KEY.
 //
 // Callers choose which modes they accept via the `allow` option.
 //
@@ -61,28 +63,23 @@ export async function verifyAuth(
   const token = header.slice("Bearer ".length).trim();
   if (!token) return null;
 
-  const payload = decodeJwtPayload(token);
-  if (!payload) return null;
-
-  const claimedRole = typeof payload.role === "string" ? payload.role : null;
-
   // ── Service role ──────────────────────────────────────────────────────────
-  // Naive mistake (don't do this): run a privileged op on the SERVER'S
-  // admin client — that always succeeds and ignores the incoming token.
-  //
-  // Correct: constant-time-compare the incoming token with the server's own
-  // SERVICE_ROLE env var. The service-role key is a long opaque JWT; only the
-  // holder can know it. Attackers with forged JWTs (unsigned role=service_role
-  // claim) will fail this comparison.
-  if (claimedRole === "service_role") {
-    if (!opts.allow.includes("service")) return null;
+  // Constant-time-compare the incoming token with the server's own
+  // SERVICE_ROLE env var. The token may be a legacy JWT (eyJ…) or a new-format
+  // opaque secret key (sb_secret_…); both are long random strings only the
+  // rightful holder can know. Forged JWTs with unsigned role=service_role
+  // claims fail this comparison.
+  if (opts.allow.includes("service")) {
     const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    if (!expected || !constantTimeEq(token, expected)) return null;
-    return { mode: "service", token };
+    if (expected && constantTimeEq(token, expected)) {
+      return { mode: "service", token };
+    }
   }
 
   // ── User token: Supabase's getUser verifies signature server-side ─────────
   if (!opts.allow.includes("user")) return null;
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
 
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data?.user) return null;
