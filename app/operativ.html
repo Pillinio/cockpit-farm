@@ -447,11 +447,11 @@
         <button onclick="loadAll()">Aktualisieren</button>
     </div>
 
-    <!-- O3: Incident Log -->
+    <!-- O1: Incident Log -->
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x26A0;&#xFE0F;</span>
-            Vorfallprotokoll (O3)
+            O1 — Vorfallprotokoll
         </div>
         <div class="table-wrap">
             <table class="data-table" id="incident-table">
@@ -470,11 +470,11 @@
         </div>
     </div>
 
-    <!-- Jahresziele -->
+    <!-- O2: Jahresziele -->
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x1F3AF;</span>
-            Jahresziele 2026
+            O2 — Jahresziele 2026
             <button onclick="addGoal()" style="margin-left:auto; background:#2E75B6; color:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:0.85em;">+ Neues Ziel</button>
         </div>
         <div id="goals-list">
@@ -482,11 +482,11 @@
         </div>
     </div>
 
-    <!-- O4: Kauf- & Verkaufsplanung -->
+    <!-- O3: Kauf- & Verkaufsplanung -->
     <div class="section">
         <div class="section-title">
             <span class="section-icon">&#x1F404;</span>
-            O4 — Kauf- &amp; Verkaufsplanung
+            O3 — Kauf- &amp; Verkaufsplanung
             <button onclick="toggleTradeForm()" style="margin-left:auto; background:#2E75B6; color:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:0.85em;">+ Neue Planung</button>
         </div>
 
@@ -580,7 +580,7 @@
     </div>
 
     <div class="footer">
-        Farm Controlling &copy; 2026 &middot; Operativ
+        Farm Controlling &copy; 2026 &middot; Operativ &middot; <a href="cockpit.html" style="color:#6b7280;">Zurück zum Cockpit</a>
     </div>
 </div>
 
@@ -618,7 +618,7 @@ function formatDate(dateStr) {
     return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// ── O3: Incident Log ─────────────────────────────────────────────
+// ── O1: Incident Log ─────────────────────────────────────────────
 async function loadIncidents() {
     const tbody = document.getElementById('incident-tbody');
 
@@ -829,7 +829,7 @@ async function updateGoalStatus(id, status) {
     loadGoals();
 }
 
-// ── O4: Kauf- & Verkaufsplanung ──────────────────────────────────
+// ── O3: Kauf- & Verkaufsplanung ──────────────────────────────────
 let _tradesCache = [];
 let _editingTradeId = null;
 
