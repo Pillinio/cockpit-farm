@@ -567,6 +567,21 @@
             </div>
         </div>
 
+        <!-- H7: Geschlachtete Tiere (vorher unter Markt als M7 „Shortages") -->
+        <div class="section" id="section-h7">
+            <div class="section-header">
+                <span class="section-icon">&#x1F4E6;</span>
+                <span class="section-title">H7 &mdash; Geschlachtete Tiere (YTD)</span>
+                <span class="section-badge badge-gray" id="badge-h7"><span class="loading-spinner"></span></span>
+            </div>
+            <div class="section-body" id="h7-body">
+                <div class="placeholder">
+                    <span class="placeholder-icon">&#x1F50D;</span>
+                    <span class="placeholder-text">Lade Schlachtdaten…</span>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div class="footer">
@@ -1117,7 +1132,7 @@ async function loadSnapshotsAndRender() {
 // ── H5: Gender/Age Structure ────────────────────────────────────
 async function loadH5() {
     try {
-        // Use herd_animals as single source of truth (same as H6)
+        // Use herd_animals as single source of truth, mit identischer Kategorisierung wie H6
         const { data: animals, error } = await sb
             .from('herd_animals')
             .select('sex, animal_id, birth_date, calvings')
@@ -1126,35 +1141,32 @@ async function loadH5() {
         if (error) throw error;
         if (!animals || animals.length === 0) return showPlaceholder('h5');
 
-        // Categorize animals using same logic as H6
+        // Identische Kategorien wie H6 — verhindert Drift zwischen den beiden Sichten.
         const today = new Date();
-        const catCounts = { cows: 0, bulls: 0, heifers: 0, oxen: 0, calves: 0 };
+        const buckets = {
+            calves:      { label: 'Kälber (<6 Mon)',  color: '#bfdbfe', count: 0 },
+            weaners:     { label: 'Absetzer (6-12)',  color: '#a5b4fc', count: 0 },
+            youngs:      { label: 'Jungrinder (12-18)', color: '#818cf8', count: 0 },
+            cows:        { label: 'Kühe',              color: '#2E75B6', count: 0 },
+            heifers:     { label: 'Färsen',            color: '#60a5fa', count: 0 },
+            bullsYoung:  { label: 'Jungbullen',        color: '#1F4E78', count: 0 },
+            oxBull:      { label: 'Ochsen/Bullen',     color: '#93c5fd', count: 0 },
+        };
 
         animals.forEach(a => {
-            const birthDate = a.birth_date ? new Date(a.birth_date) : null;
-            const ageMonths = birthDate ? ((today - birthDate) / (1000 * 60 * 60 * 24 * 30.44)) : null;
-            const isBull = a.sex === 'M' && (a.animal_id && !/^\d/.test(a.animal_id));
-
-            if (ageMonths !== null && ageMonths < 6) {
-                catCounts.calves++;
-            } else if (a.sex === 'F' && (a.calvings || 0) > 0) {
-                catCounts.cows++;
-            } else if (a.sex === 'F') {
-                catCounts.heifers++;
-            } else if (isBull) {
-                catCounts.bulls++;
-            } else {
-                catCounts.oxen++;
-            }
+            const cat = categorizeAnimal(a, today);
+            if (cat.key === 'calf')        buckets.calves.count++;
+            else if (cat.key === 'weaner') buckets.weaners.count++;
+            else if (cat.key === 'young')  buckets.youngs.count++;
+            else if (cat.key === 'cow')    buckets.cows.count++;
+            else if (cat.key === 'heifer') buckets.heifers.count++;
+            else if (cat.key === 'bull_young') buckets.bullsYoung.count++;
+            else if (cat.key === 'ox_bull') buckets.oxBull.count++;
         });
 
-        const categories = [
-            { label: 'Kühe', value: catCounts.cows, color: '#2E75B6' },
-            { label: 'Bullen', value: catCounts.bulls, color: '#1F4E78' },
-            { label: 'Färsen', value: catCounts.heifers, color: '#60a5fa' },
-            { label: 'Ochsen', value: catCounts.oxen, color: '#93c5fd' },
-            { label: 'Kälber', value: catCounts.calves, color: '#bfdbfe' },
-        ];
+        const categories = Object.values(buckets)
+            .filter(b => b.count > 0)
+            .map(b => ({ label: b.label, value: b.count, color: b.color }));
 
         const total = animals.length;
         if (total === 0) return showPlaceholder('h5');
@@ -1260,16 +1272,30 @@ async function loadH6() {
     const body = document.getElementById('herdenwert-body');
     const ph = document.getElementById('placeholder-h6');
     try {
-        // Load animals, gain config, and beef price in parallel
-        const [animalsRes, gainRes, priceRes] = await Promise.all([
+        // Load animals, gain config, and beef price in parallel.
+        // Preisbasis: aktuellster Meatco-Carcass-Preis. Wir suchen über das
+        // strukturierte provider-Feld (neues Schema), fallen bei Bedarf auf das
+        // Legacy-Format „Meatco Grade …" zurück.
+        const [animalsRes, gainRes, priceResStructured, priceResLegacy] = await Promise.all([
             sb.from('herd_animals').select('*').eq('active', true),
             sb.from('weight_gain_config').select('*'),
+            sb.from('market_prices')
+              .select('price_nad, commodity, price_date, grade')
+              .eq('provider', 'meatco')
+              .eq('weight_basis', 'carcass')
+              .order('price_date', { ascending: false })
+              .limit(1),
             sb.from('market_prices')
               .select('price_nad, commodity, price_date')
               .like('commodity', 'Meatco%')
               .order('price_date', { ascending: false })
               .limit(1)
         ]);
+        // Kombiniert: das jüngere von beiden gewinnt
+        const candidates = [priceResStructured?.data?.[0], priceResLegacy?.data?.[0]]
+            .filter(Boolean)
+            .sort((a, b) => (b.price_date || '').localeCompare(a.price_date || ''));
+        const priceRes = { data: candidates.slice(0, 1), error: priceResStructured.error && priceResLegacy.error ? priceResStructured.error : null };
 
         if (animalsRes.error) throw animalsRes.error;
         if (gainRes.error) throw gainRes.error;
@@ -1339,7 +1365,11 @@ async function loadH6() {
         const totalValue = valueCarcass;
 
         const fmtNAD = v => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'NAD', maximumFractionDigits: 0 }).format(v);
-        const fmtKG = v => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(v) + ' kg';
+        // Eine Nachkommastelle, damit das Schlachtgewicht (Lebendgewicht × 52%)
+        // im Display reproduzierbar mit dem angezeigten Wert übereinstimmt — sonst
+        // entsteht ein scheinbarer Rundungsfehler beim Nachrechnen (z.B. 113.101,56
+        // wird gerundet zu 113.101, was × 51 NAD/kg ≈ 28 NAD/Tier verschluckt).
+        const fmtKG = v => new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v) + ' kg';
 
         setBadge('h6', fmtNAD(totalValue));
 
@@ -1535,12 +1565,59 @@ function setupCSVUpload() {
     });
 }
 
+// ── H7 — Geschlachtete Tiere YTD (verschoben aus Markt M7) ──────
+async function loadH7() {
+    const body = document.getElementById('h7-body');
+    const badge = document.getElementById('badge-h7');
+    try {
+        const YEAR = new Date().getFullYear();
+        const { data, error } = await sb
+            .from('slaughter_reports')
+            .select('report_date, total_animals, total_cold_mass_kg')
+            .gte('report_date', YEAR + '-01-01')
+            .order('report_date', { ascending: false });
+
+        if (error) throw error;
+        if (!data?.length) {
+            body.innerHTML = '<div class="placeholder"><span class="placeholder-icon">&#x1F4ED;</span><span class="placeholder-text">Keine Schlachtberichte für ' + YEAR + '</span></div>';
+            badge.textContent = '0';
+            return;
+        }
+
+        const totalAnimals = data.reduce((s, r) => s + (r.total_animals || 0), 0);
+        const totalKg = data.reduce((s, r) => s + (r.total_cold_mass_kg || 0), 0);
+        badge.textContent = totalAnimals + ' Tiere';
+        badge.className = 'section-badge badge-gray';
+
+        const fmtN = n => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(n);
+        let html = '<div class="summary-cards">';
+        html += '<div class="summary-card"><div class="card-value">' + fmtN(totalAnimals) + '</div><div class="card-label">Tiere geschlachtet ' + YEAR + '</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + fmtN(totalKg) + ' kg</div><div class="card-label">Schlachtgewicht gesamt</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + data.length + '</div><div class="card-label">Schlachtberichte</div></div>';
+        html += '</div>';
+        html += '<table class="data-table" style="margin-top:16px;"><thead><tr><th>Datum</th><th class="num">Tiere</th><th class="num">Schlachtgewicht (kg)</th></tr></thead><tbody>';
+        data.slice(0, 12).forEach(r => {
+            html += '<tr><td>' + new Date(r.report_date).toLocaleDateString('de-DE') + '</td>';
+            html += '<td class="num">' + fmtN(r.total_animals || 0) + '</td>';
+            html += '<td class="num">' + fmtN(r.total_cold_mass_kg || 0) + '</td></tr>';
+        });
+        if (data.length > 12) html += '<tr><td colspan="3" style="color:#9ca3af;font-style:italic;">… und ' + (data.length - 12) + ' weitere Berichte</td></tr>';
+        html += '</tbody></table>';
+        body.innerHTML = html;
+    } catch (e) {
+        console.error('H7:', e);
+        body.innerHTML = '<div class="placeholder"><span class="placeholder-icon">&#x26A0;&#xFE0F;</span><span class="placeholder-text">Fehler: ' + (e.message || e) + '</span></div>';
+        badge.textContent = 'Fehler';
+        badge.className = 'section-badge badge-red';
+    }
+}
+
 // ── Load All ─────────────────────────────────────────────────────
 async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
     await Promise.allSettled([
-        loadSnapshotsAndRender(), loadH5(), loadH6()
+        loadSnapshotsAndRender(), loadH5(), loadH6(), loadH7()
     ]);
 
     const now = new Date();

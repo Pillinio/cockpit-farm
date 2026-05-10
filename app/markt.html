@@ -611,19 +611,7 @@
             </div>
         </div>
 
-        <!-- M7 — Shortages -->
-        <div class="card" id="card-m7">
-            <div class="card-status-bar status-gray"></div>
-            <div class="card-body">
-                <div class="card-top">
-                    <span class="card-icon">&#x1F4E6;</span>
-                    <span class="card-title">M7 — Shortages</span>
-                    <span class="card-status-dot status-gray"></span>
-                </div>
-                <div class="card-value" data-kpi="m7"><span class="loading-spinner"></span></div>
-                <div class="card-subtitle">Angekündigt vs. tatsächlich geliefert</div>
-            </div>
-        </div>
+        <!-- M7 — entfernt: „Geschlachtete Tiere" sitzt jetzt unter Herde (H7) -->
 
         <!-- M8 — LPO Benchmark -->
         <div class="card" id="card-m8">
@@ -1030,7 +1018,17 @@ function prettyAuctionLabel(commodity) {
         auction_toll_ox:       'Toll Ox (Auktion)',
         auction_old_cow:       'Altkuh (Auktion)',
     };
-    return map[commodity] || commodity.replace(/^auction_/, '').replace(/_/g, ' ');
+    if (map[commodity]) return map[commodity];
+    // Fallback: legacy/raw labels wie "Labta cow with calf" konsolidieren wir
+    // in die nächstbeste Standard-Kategorie.
+    const lc = commodity.toLowerCase();
+    if (/cow.*calf|cow.*with.*calf|kuh.*kalb/.test(lc)) return 'Kuh+Kalb (Auktion)';
+    if (/weaner.*bull|absetzer.*bull/.test(lc)) return 'Weaner Bull (Auktion)';
+    if (/weaner.*heifer|absetzer.*färse/.test(lc)) return 'Weaner Heifer (Auktion)';
+    if (/toll.*ox/.test(lc)) return 'Toll Ox (Auktion)';
+    if (/old.*cow|altkuh/.test(lc)) return 'Altkuh (Auktion)';
+    // Unbekannt: Roh-String aufhübschen (ohne auction_-Präfix, Unterstriche → Leerzeichen)
+    return commodity.replace(/^auction_/i, '').replace(/_/g, ' ');
 }
 
 function escHtml(str) {
@@ -1041,56 +1039,66 @@ function escHtml(str) {
 
 // ── M2 — Marge pro kg ───────────────────────────────────────────
 async function loadM2() {
+    const YEAR = new Date().getFullYear();
     try {
-        // Latest beef price
-        const { data: priceData } = await sb
-            .from('market_prices')
-            .select('price_nad')
-            .like('commodity', 'beef_%')
-            .order('price_date', { ascending: false })
-            .limit(1);
+        // Aktueller Meatco-Schlachtpreis (carcass), gleicher Pfad wie H6
+        const [priceStruct, priceLegacy] = await Promise.all([
+            sb.from('market_prices')
+              .select('price_nad, price_date')
+              .eq('provider', 'meatco')
+              .eq('weight_basis', 'carcass')
+              .order('price_date', { ascending: false })
+              .limit(1),
+            sb.from('market_prices')
+              .select('price_nad, price_date')
+              .like('commodity', 'Meatco%')
+              .order('price_date', { ascending: false })
+              .limit(1),
+        ]);
+        const priceCands = [priceStruct?.data?.[0], priceLegacy?.data?.[0]]
+            .filter(Boolean)
+            .sort((a, b) => (b.price_date || '').localeCompare(a.price_date || ''));
+        if (!priceCands.length) return noData('m2', 'Kein Marktpreis');
+        const pricePerKg = Number(priceCands[0].price_nad);
 
-        // Costs from budgets
-        const { data: costs } = await sb
-            .from('budgets')
-            .select('actual_nad')
-            .eq('fiscal_year', new Date().getFullYear());
+        // Kosten aus bank_transactions (echte Ist-Kosten, gleiche Quelle wie F7)
+        const [costsRes, slaughterRes] = await Promise.all([
+            sb.from('bank_transactions')
+              .select('debit_nad')
+              .eq('active', true)
+              .gte('transaction_date', YEAR + '-01-01')
+              .not('debit_nad', 'is', null),
+            sb.from('slaughter_reports')
+              .select('total_cold_mass_kg')
+              .gte('report_date', YEAR + '-01-01'),
+        ]);
 
-        // Total kg sold (from slaughter_reports)
-        const { data: slaughterData } = await sb
-            .from('slaughter_reports')
-            .select('total_cold_mass_kg')
-            .gte('report_date', new Date().getFullYear() + '-01-01');
+        const totalKg = (slaughterRes.data || []).reduce((s, r) => s + (r.total_cold_mass_kg || 0), 0);
+        const totalCost = (costsRes.data || []).reduce((s, r) => s + Number(r.debit_nad || 0), 0);
 
-        if (!priceData?.length) return noData('m2', 'Kein Marktpreis');
+        if (totalKg > 0 && totalCost > 0) {
+            const costPerKg = totalCost / totalKg;
+            const margin = pricePerKg - costPerKg;
+            const status = margin > 10 ? 'green' : margin > 0 ? 'yellow' : 'red';
 
-        const pricePerKg = priceData[0].price_nad;
-
-        // Calculate cost per kg if possible
-        if (slaughterData?.length && costs?.length) {
-            const totalKg = slaughterData.reduce((s, r) => s + (r.total_cold_mass_kg || 0), 0);
-            const totalCost = costs.reduce((s, r) => s + (r.actual_nad || 0), 0);
-
-            if (totalKg > 0) {
-                const costPerKg = totalCost / totalKg;
-                const margin = pricePerKg - costPerKg;
-                const status = margin > 10 ? 'green' : margin > 0 ? 'yellow' : 'red';
-
-                return setCard('m2', {
-                    value: 'N$ ' + margin.toFixed(2),
-                    subtitle: 'Preis ' + pricePerKg.toFixed(2) + ' - Kosten ' + costPerKg.toFixed(2),
-                    status
-                });
-            }
+            return setCard('m2', {
+                value: 'N$ ' + margin.toFixed(2),
+                subtitle: 'Preis ' + pricePerKg.toFixed(2) + ' − Kosten ' + costPerKg.toFixed(2) + ' / kg',
+                status
+            });
         }
 
-        // Fallback: show price only
+        // Fallback: zeige Preis und benenne fehlende Komponente konkret
+        const missing = totalKg <= 0 ? 'kein Schlachtgewicht ' + YEAR : 'keine Kosten ' + YEAR;
         setCard('m2', {
             value: 'N$ ' + pricePerKg.toFixed(2),
-            subtitle: 'Nur Preis (Kosten fehlen)',
+            subtitle: 'Nur Preis (' + missing + ')',
             status: 'gray'
         });
-    } catch { noData('m2'); }
+    } catch (e) {
+        console.error('M2:', e);
+        noData('m2');
+    }
 }
 
 // ── M3 — Futter-/Input-Kosten-Index ─────────────────────────────
@@ -1272,29 +1280,7 @@ async function loadM6() {
     } catch { noData('m6'); }
 }
 
-// ── M7 — Shortages (Placeholder) ────────────────────────────────
-async function loadM7() {
-    try {
-        // Show total animals from slaughter_reports
-        const { data } = await sb
-            .from('slaughter_reports')
-            .select('total_animals')
-            .order('report_date', { ascending: false })
-            .limit(20);
-
-        if (!data?.length || !data[0].total_animals) {
-            return noData('m7', 'Daten nicht verfügbar');
-        }
-
-        const totalAnimals = data.reduce((s, r) => s + (r.total_animals || 0), 0);
-
-        setCard('m7', {
-            value: totalAnimals + ' Tiere',
-            subtitle: 'Letzte ' + data.length + ' Berichte',
-            status: 'green'
-        });
-    } catch { noData('m7', 'Daten nicht verfügbar'); }
-}
+// M7 entfernt: "Geschlachtete Tiere YTD" ist jetzt H7 in herde.html.
 
 // ── M8 — LPO Benchmark (Placeholder) ────────────────────────────
 async function loadM8() {
@@ -1309,7 +1295,7 @@ async function loadAll() {
         loadCarcassPrices(),
         loadLiveAuctionPrices(),
         loadM2(), loadM3(),
-        loadM5(), loadM6(), loadM7(), loadM8()
+        loadM5(), loadM6(), loadM8()
     ]);
 
     const now = new Date();

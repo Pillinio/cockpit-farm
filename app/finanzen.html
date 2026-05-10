@@ -619,9 +619,9 @@ function setBadge(id, text, color) {
     el.className = 'section-badge badge-' + color;
 }
 
-function showNoData(id) {
+function showNoData(id, customMsg) {
     document.getElementById('body-' + id).innerHTML =
-        '<div class="no-data">Noch keine Daten</div>';
+        '<div class="no-data">' + (customMsg || 'Noch keine Daten') + '</div>';
     setBadge(id, 'Keine Daten', 'gray');
 }
 
@@ -1000,15 +1000,30 @@ async function loadF3() {
 
         if (!data?.length) return showNoData('f3');
 
-        // Revenue category mapping (normalize raw categories → display buckets)
+        // Revenue category mapping (normalize raw categories → display buckets).
+        // Wenn ein Cat-String zu keinem Pattern passt, landet er in 'Sonstiges'.
+        // Fehlten Treffer reihenweise (Reviewer-Befund), Pattern-Liste erweitern.
         function bucketFor(cat) {
-            const c = (cat || '').toLowerCase();
-            if (c.includes('meatco') || c.includes('rinder') || c.includes('cattle') || c.includes('livestock') || c.includes('verkauf rinder')) return 'Rinderverkauf';
-            if (c.includes('jagd') || c.includes('hunt') || c.includes('trophy')) return 'Jagd';
-            if (c.includes('pacht') || c.includes('lease') || c.includes('miete')) return 'Pacht';
-            if (c.includes('gras') || c.includes('grazing') || c.includes('gras-verkauf')) return 'Gras-Verkauf';
-            if (c.includes('einnahme') || c.includes('transfer')) return 'Sonstiges';
+            const c = (cat || '').toLowerCase().trim();
+            // Rinderverkauf / Schlachthof
+            if (/meatco|beefcor|rmaa|savanna|rinder|cattle|livestock|schlacht|kuh|kühe|ochse|bull|kalb|kälber|färse|färsen|verkauf.*rind/.test(c)) return 'Rinderverkauf';
+            // Jagd
+            if (/jagd|hunt|trophy|wild|safari/.test(c)) return 'Jagd';
+            // Pacht / Miete / Lease
+            if (/pacht|lease|miete|rent/.test(c)) return 'Pacht';
+            // Gras / Weide / Grazing
+            if (/gras|grazing|weide|hay|heu|silage/.test(c)) return 'Gras-Verkauf';
             return 'Sonstiges';
+        }
+        // Diagnose: welche Roh-Kategorien konnten nicht zugeordnet werden?
+        const unmatched = new Set();
+        data.forEach(r => {
+            if (bucketFor(r.category) === 'Sonstiges' && r.category) {
+                unmatched.add(r.category);
+            }
+        });
+        if (unmatched.size > 0) {
+            console.warn('F3 (Umsatz): nicht zuordenbare Kategorien →', [...unmatched].sort());
         }
 
         const CAT_COLORS = {
@@ -1239,12 +1254,18 @@ let _f6SortDir = 'asc';
 
 async function loadF6() {
     try {
-        const { data } = await sb
+        const { data, error } = await sb
             .from('budgets')
             .select('category, month, planned_nad, actual_nad')
             .eq('fiscal_year', YEAR);
 
-        if (!data?.length) return showNoData('f6');
+        if (error) {
+            console.error('F6 query error:', error);
+            return showNoData('f6', 'Fehler beim Laden: ' + error.message);
+        }
+        if (!data?.length) {
+            return showNoData('f6', 'Noch keine Budget-Daten für ' + YEAR + ' angelegt. Plan + Ist werden in der Tabelle „budgets" gepflegt.');
+        }
 
         // Build rows: { category, plan, m1, m2, ..., m12, ytdSum }
         const planByCategory = {};

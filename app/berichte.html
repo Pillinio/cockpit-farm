@@ -1919,43 +1919,77 @@ const Monat = {
     },
 
     // ── 2. Herdenstruktur ──
+    // Nutzt herd_animals (Live-Zählung) statt herd_snapshots (Monats-Snapshot),
+    // damit die Zahlen konsistent zu Herde-Tab H5/H6 sind. Vorher konnte ein
+    // Snapshot stale sein, sodass berichte.html und herde.html unterschiedliche
+    // Tierzahlen anzeigten.
     async loadHerd() {
         const wrap = document.getElementById('herd-kpis');
 
-        const { data, error } = await sb
-            .from('herd_snapshots')
-            .select('snapshot_date, cows, bulls, heifers, calves, oxen, total_lsu')
-            .order('snapshot_date', { ascending: false })
-            .limit(1);
+        const { data: animals, error } = await sb
+            .from('herd_animals')
+            .select('sex, animal_id, birth_date, calvings')
+            .eq('active', true);
 
-        if (error || !data || data.length === 0) {
-            wrap.innerHTML = '<p style="color:#9ca3af;">Keine Herdendaten vorhanden.</p>';
+        if (error || !animals || animals.length === 0) {
+            wrap.innerHTML = '<p style="color:#9ca3af;">Keine aktiven Tiere in herd_animals.</p>';
             return;
         }
 
-        const s = data[0];
-        const total = (s.cows || 0) + (s.bulls || 0) + (s.heifers || 0) + (s.calves || 0) + (s.oxen || 0);
+        // Identische Kategorien-Zählung wie H5/H6
+        const today = new Date();
+        const buckets = { calf: 0, weaner: 0, young: 0, cow: 0, heifer: 0, bull_young: 0, ox_bull: 0 };
+        animals.forEach(a => {
+            const sex = a.sex;
+            const calvings = a.calvings || 0;
+            const birthDate = a.birth_date ? new Date(a.birth_date) : null;
+            const ageMonths = birthDate ? Math.floor((today - birthDate) / (1000 * 60 * 60 * 24 * 30.44)) : null;
+            let key;
+            if (ageMonths === null) {
+                key = (sex === 'F' && calvings > 0) ? 'cow' : (sex === 'M' ? 'bull_young' : 'heifer');
+            } else if (ageMonths < 6) key = 'calf';
+            else if (ageMonths < 12) key = 'weaner';
+            else if (ageMonths < 18) key = 'young';
+            else if (sex === 'F') key = (calvings > 0) ? 'cow' : 'heifer';
+            else if (ageMonths < 24) key = 'bull_young';
+            else key = 'ox_bull';
+            buckets[key]++;
+        });
 
+        // Optional: LSU aus jüngstem Snapshot (lebt nur dort)
+        const { data: snap } = await sb
+            .from('herd_snapshots')
+            .select('snapshot_date, total_lsu')
+            .order('snapshot_date', { ascending: false })
+            .limit(1);
+        const lsu = snap?.[0]?.total_lsu;
+        const snapDate = snap?.[0]?.snapshot_date;
+
+        const total = animals.length;
         const items = [
-            { label: 'Kühe', value: s.cows || 0 },
-            { label: 'Bullen', value: s.bulls || 0 },
-            { label: 'Färsen', value: s.heifers || 0 },
-            { label: 'Kälber', value: s.calves || 0 },
-            { label: 'Ochsen', value: s.oxen || 0 },
+            { label: 'Kühe', value: buckets.cow },
+            { label: 'Färsen', value: buckets.heifer },
+            { label: 'Jungbullen', value: buckets.bull_young },
+            { label: 'Bullen/Ochsen', value: buckets.ox_bull },
+            { label: 'Jungrinder (12-18)', value: buckets.young },
+            { label: 'Absetzer (6-12)', value: buckets.weaner },
+            { label: 'Kälber (<6)', value: buckets.calf },
             { label: 'Gesamt', value: total },
-            { label: 'LSU', value: s.total_lsu != null ? Math.round(s.total_lsu * 10) / 10 : '--' }
+            { label: 'LSU', value: lsu != null ? Math.round(lsu * 10) / 10 : '--' }
         ];
 
         const self = this;
         let html = '<div class="kpi-row">';
         items.forEach(item => {
+            if (item.value === 0 && item.label !== 'LSU' && item.label !== 'Gesamt') return;
             html += '<div class="kpi-card">';
             html += '<div class="kpi-value">' + self.fmt(item.value) + '</div>';
             html += '<div class="kpi-label">' + item.label + '</div>';
             html += '</div>';
         });
         html += '</div>';
-        html += '<p style="font-size:0.8em;color:#9ca3af;">Stand: ' + this.fmtDate(s.snapshot_date) + '</p>';
+        html += '<p style="font-size:0.8em;color:#9ca3af;">Live-Zählung aus herd_animals' +
+                (snapDate ? ' · LSU-Stand: ' + this.fmtDate(snapDate) : '') + '</p>';
 
         wrap.innerHTML = html;
     },
@@ -1991,7 +2025,18 @@ const Monat = {
         }
 
         if (data.length === 0) {
-            summaryWrap.innerHTML = '<p style="color:#9ca3af;">Keine Transaktionen in diesem Monat.</p>';
+            // Beim leeren Monat zeigen wir auch den Stand der jüngsten Buchung,
+            // damit klar ist ob die Bank-Synchronisation hinterherhinkt.
+            const { data: latest } = await sb
+                .from('bank_transactions')
+                .select('transaction_date')
+                .eq('active', true)
+                .order('transaction_date', { ascending: false })
+                .limit(1);
+            const latestStr = latest?.[0]?.transaction_date
+                ? new Date(latest[0].transaction_date).toLocaleDateString('de-DE')
+                : '—';
+            summaryWrap.innerHTML = '<p style="color:#9ca3af;">Keine Transaktionen in diesem Monat. <span style="color:#6b7280;">Letzte Buchung im System: ' + latestStr + '</span></p>';
             top5Wrap.innerHTML = '';
             badge.textContent = '--';
             badge.className = 'section-badge badge-gray';
