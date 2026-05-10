@@ -798,7 +798,7 @@ async function loadCashflow() {
                 <div class="bsc-label">Netto Cashflow</div>
             </div>
             <div class="budget-summary-card">
-                <div class="bsc-value">${fmt(Math.round(totalDebit / monthKeys.length))}</div>
+                <div class="bsc-value">${fmt(totalDebit / monthKeys.length)}</div>
                 <div class="bsc-label">Durchschn. Ausgaben/Monat</div>
             </div>
         </div>`;
@@ -1107,86 +1107,88 @@ async function loadF3() {
     }
 }
 
-// ── F4: Cost per kg sold ─────────────────────────────────────────
+// ── F4 (Display: F7) — Cost per kg sold, monatlicher Trend ──────
 async function loadF4() {
     try {
         const { data: items } = await sb
             .from('slaughter_line_items')
-            .select('cold_mass_kg, slaughter_reports!inner(report_date)');
+            .select('cold_mass_kg, slaughter_reports!inner(report_date)')
+            .gte('slaughter_reports.report_date', YEAR + '-01-01')
+            .lte('slaughter_reports.report_date', YEAR + '-12-31');
 
-        const { data: costs } = await sb
-            .from('budgets')
-            .select('actual_nad, fiscal_year')
-            .eq('fiscal_year', YEAR);
+        // Tatsächliche Monatskosten kommen aus bank_transactions (debit_nad).
+        const { data: txns } = await sb
+            .from('bank_transactions')
+            .select('debit_nad, transaction_date')
+            .eq('active', true)
+            .gte('transaction_date', YEAR + '-01-01')
+            .not('debit_nad', 'is', null);
 
-        if (!items?.length || !costs?.length) return showNoData('f4');
+        if (!items?.length || !txns?.length) return showNoData('f4');
 
         const totalKg = items.reduce((s, r) => s + (r.cold_mass_kg || 0), 0);
-        const totalCost = costs.reduce((s, r) => s + (r.actual_nad || 0), 0);
-
+        const totalCost = txns.reduce((s, t) => s + Number(t.debit_nad || 0), 0);
         if (totalKg <= 0) return showNoData('f4');
 
         const costPerKg = totalCost / totalKg;
         setBadge('f4', 'N$ ' + costPerKg.toFixed(2) + ' / kg', 'gray');
 
-        // Try to build trend by year
-        const { data: allCosts } = await sb
-            .from('budgets')
-            .select('actual_nad, fiscal_year')
-            .order('fiscal_year');
-
-        const yearCosts = {};
-        (allCosts || []).forEach(r => {
-            if (!yearCosts[r.fiscal_year]) yearCosts[r.fiscal_year] = 0;
-            yearCosts[r.fiscal_year] += r.actual_nad || 0;
+        // Monatlich: kumulierte Kosten / kumulierte kg → glättet Monate ohne Schlachtung
+        const monthlyKg = new Array(12).fill(0);
+        const monthlyCost = new Array(12).fill(0);
+        items.forEach(r => {
+            const d = r.slaughter_reports?.report_date;
+            if (!d) return;
+            const m = new Date(d).getMonth();
+            monthlyKg[m] += r.cold_mass_kg || 0;
+        });
+        txns.forEach(t => {
+            const m = new Date(t.transaction_date).getMonth();
+            monthlyCost[m] += Number(t.debit_nad || 0);
         });
 
-        const years = Object.keys(yearCosts).sort();
-        const hasMultipleYears = years.length > 1;
+        let cumKg = 0, cumCost = 0;
+        const cumPerKg = monthlyKg.map((kg, i) => {
+            cumKg += kg;
+            cumCost += monthlyCost[i];
+            return cumKg > 0 ? cumCost / cumKg : null;
+        });
 
-        let html = `
+        document.getElementById('body-f4').innerHTML = `
             <div class="kpi-big">
                 <span class="value">N$ ${costPerKg.toFixed(2)}</span>
-                <span class="unit">pro kg Kaltmasse</span>
+                <span class="unit">pro kg Kaltmasse (YTD)</span>
             </div>
-            <div class="kpi-detail">Gesamtkosten: N$ ${fmt(totalCost)} | Gesamtgewicht: ${fmt(totalKg)} kg</div>`;
+            <div class="kpi-detail">Gesamtkosten: N$ ${fmt(totalCost)} | Gesamtgewicht: ${fmt(totalKg)} kg</div>
+            <div class="chart-container" style="margin-top:16px;"><canvas id="chart-f4"></canvas></div>`;
 
-        if (hasMultipleYears) {
-            html += `<div class="chart-container" style="margin-top:16px;"><canvas id="chart-f4"></canvas></div>`;
-        }
-
-        document.getElementById('body-f4').innerHTML = html;
-
-        if (hasMultipleYears) {
-            // Approximate cost/kg per year (use same total kg as proxy)
-            const perKgByYear = years.map(y => yearCosts[y] / totalKg);
-            destroyChart('f4');
-            charts['f4'] = new Chart(document.getElementById('chart-f4'), {
-                type: 'line',
-                data: {
-                    labels: years,
-                    datasets: [{
-                        label: 'Kosten/kg (N$)',
-                        data: perKgByYear,
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102,126,234,0.1)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { callback: v => 'N$ ' + v.toFixed(2) }
-                        }
+        destroyChart('f4');
+        charts['f4'] = new Chart(document.getElementById('chart-f4'), {
+            type: 'line',
+            data: {
+                labels: MONTH_NAMES,
+                datasets: [{
+                    label: 'Kosten/kg kumuliert (N$)',
+                    data: cumPerKg,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102,126,234,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    spanGaps: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => 'N$ ' + v.toFixed(2) }
                     }
                 }
-            });
-        }
+            }
+        });
     } catch (e) {
         console.error('F4:', e);
         showNoData('f4');
@@ -1353,14 +1355,58 @@ async function loadF8() {
 
         setBadge('f8', 'N$ ' + costPerLSU.toFixed(2) + ' / LSU', 'gray');
 
+        // Monatlicher Trend: debit_nad pro Monat / aktuelle LSU.
+        // LSU ist nicht historisch gepflegt → Divisor ist Snapshot-Stand,
+        // d.h. die Reihe zeigt die Kostendynamik, nicht die LSU-Dynamik.
+        const monthlyCost = new Array(12).fill(0);
+        const monthsWithData = new Set();
+        txns.forEach(t => {
+            const d = new Date(t.transaction_date);
+            const m = d.getMonth();
+            monthlyCost[m] += Number(t.debit_nad || 0);
+            monthsWithData.add(m);
+        });
+        const monthlyPerLSU = monthlyCost.map((c, i) =>
+            monthsWithData.has(i) ? c / lsu : null
+        );
+
         document.getElementById('body-f8').innerHTML = `
             <div class="kpi-big">
                 <span class="value">N$ ${costPerLSU.toFixed(2)}</span>
-                <span class="unit">pro LSU / Monat</span>
+                <span class="unit">pro LSU / Monat (Ø)</span>
             </div>
             <div class="kpi-detail">Aktuelle LSU: ${fmt(lsu)} (Stand: ${snap[0].snapshot_date || '—'})</div>
             <div class="kpi-detail">Durchschn. Monatskosten: N$ ${fmt(avgMonthlyCost)} (${monthsSet.size} Monate erfasst)</div>
+            <div class="chart-container" style="margin-top:16px;"><canvas id="chart-f8"></canvas></div>
             <div class="kpi-detail" style="margin-top:8px; font-style:italic; color:#9ca3af;">Leitindikator für Kosteneffizienz</div>`;
+
+        destroyChart('f8');
+        charts['f8'] = new Chart(document.getElementById('chart-f8'), {
+            type: 'line',
+            data: {
+                labels: MONTH_NAMES,
+                datasets: [{
+                    label: 'Kosten/LSU (N$)',
+                    data: monthlyPerLSU,
+                    borderColor: '#0891b2',
+                    backgroundColor: 'rgba(8,145,178,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    spanGaps: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => 'N$ ' + Math.round(v) }
+                    }
+                }
+            }
+        });
     } catch (e) {
         console.error('F8:', e);
         showNoData('f8');

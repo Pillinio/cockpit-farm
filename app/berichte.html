@@ -1824,8 +1824,17 @@ const Monat = {
             msg.className = 'form-msg success';
             document.getElementById('mv-notes').value = '';
             document.getElementById('mv-count').value = '1';
+            // Wenn das Bewegungsdatum nicht im aktuell sichtbaren Monat liegt,
+            // den Monats-Picker auf den Bewegungs-Monat umstellen — sonst sähe
+            // der User die soeben gespeicherte Zeile nicht in der Tabelle.
+            const ymOfMovement = (dateVal || '').slice(0, 7);
+            const picker = document.getElementById('month-picker');
+            if (picker && ymOfMovement && picker.value !== ymOfMovement) {
+                picker.value = ymOfMovement;
+                msg.textContent = 'Bewegung gespeichert. Monat auf ' + ymOfMovement + ' umgestellt.';
+            }
             await Promise.allSettled([this.loadMovements(), this.loadOccupancy()]);
-            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+            setTimeout(() => { msg.style.display = 'none'; }, 3500);
         }
     },
 
@@ -2341,9 +2350,17 @@ Monat.meldung = {
         const dStr = new Date(snapshotDate).toLocaleDateString('de-DE');
         if (!confirm('Monatsmeldung vom ' + dStr + ' komplett löschen?\n\nKamp-Zustand und Vorfälle für diesen Stichtag werden entfernt.\nHerdenbewegungen bleiben erhalten (eigene Historie).\n\nHinweis: Nur Owner dürfen löschen.')) return;
 
+        // Owner-Check vorab — vermeidet stille RLS-Fehler beim eigentlichen Delete
+        const { data: prof } = await sb.from('profiles').select('role').eq('id', this.currentUser?.id || '').maybeSingle();
+        if (prof && prof.role !== 'owner') {
+            alert('Löschen nicht möglich: Nur Nutzer mit Rolle „owner" dürfen Monatsmeldungen entfernen. Deine Rolle: ' + (prof.role || 'unbekannt') + '.');
+            return;
+        }
+
         const childResults = await Promise.allSettled([
-            sb.from('camp_vegetation').delete().eq('observation_date', snapshotDate),
-            sb.from('incidents').delete().eq('snapshot_date', snapshotDate),
+            sb.from('camp_vegetation').delete().eq('observation_date', snapshotDate).select('id'),
+            sb.from('incidents').delete().eq('snapshot_date', snapshotDate).select('id'),
+            sb.from('pasture_observations').delete().eq('snapshot_date', snapshotDate).select('id'),
         ]);
         for (const r of childResults) {
             if (r.status === 'rejected' || (r.value && r.value.error)) {
@@ -2360,7 +2377,7 @@ Monat.meldung = {
             .select('id');
         if (error) { alert('Fehler: ' + error.message); return; }
         if (!deleted || deleted.length === 0) {
-            alert('Löschen wurde nicht durchgeführt — vermutlich fehlt die Berechtigung (nur Owner dürfen Monatsmeldungen löschen).');
+            alert('Löschen wurde nicht durchgeführt. Mögliche Ursachen:\n• RLS-Policy blockiert (Rolle nicht Owner oder andere Farm)\n• Snapshot wurde bereits anderweitig entfernt\n\nBitte Browser-Konsole prüfen.');
             return;
         }
 
@@ -2700,9 +2717,15 @@ Monat.meldung = {
 
     toggleAllCamps() {
         const details = document.querySelectorAll('#mm-campAccordion details');
+        const btn = document.getElementById('mm-expand-all');
+        if (!details.length) {
+            // Button wurde geklickt bevor Kamps geladen sind
+            if (btn) btn.textContent = 'Kamps werden noch geladen…';
+            setTimeout(() => { if (btn) btn.textContent = 'Alle ausklappen'; }, 1500);
+            return;
+        }
         const allOpen = [...details].every(d => d.open);
         details.forEach(d => { d.open = !allOpen; });
-        const btn = document.getElementById('mm-expand-all');
         if (btn) btn.textContent = allOpen ? 'Alle ausklappen' : 'Alle einklappen';
     },
 

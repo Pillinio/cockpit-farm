@@ -479,23 +479,7 @@
         <div class="price-section-header">
             <h2><span>&#x1F4B5;</span> M1 &mdash; Rindfleischpreise</h2>
             <div class="price-controls">
-                <label for="grade-filter">Grade:</label>
-                <select id="grade-filter">
-                    <option value="A0">A0</option>
-                    <option value="A1">A1</option>
-                    <option value="A2" selected>A2</option>
-                    <option value="A3">A3</option>
-                    <option value="A4">A4</option>
-                    <option value="A5">A5</option>
-                    <option value="A6">A6</option>
-                    <option value="AB0">AB0</option>
-                    <option value="AB2">AB2</option>
-                    <option value="B0">B0</option>
-                    <option value="B2">B2</option>
-                    <option value="C0">C0</option>
-                    <option value="C2">C2</option>
-                </select>
-                <label for="days-filter" style="margin-left:8px;">Zeitraum:</label>
+                <label for="days-filter">Zeitraum:</label>
                 <select id="days-filter">
                     <option value="30">30 Tage</option>
                     <option value="90">90 Tage</option>
@@ -504,6 +488,22 @@
                 </select>
             </div>
         </div>
+        <fieldset class="provider-toggles" id="grade-toggles" style="margin: 6px 0 4px;">
+            <span style="font-weight:600; color:#374151; margin-right:8px;">Grade:</span>
+            <label><input type="checkbox" value="A0"> A0</label>
+            <label><input type="checkbox" value="A1"> A1</label>
+            <label><input type="checkbox" value="A2" checked> A2</label>
+            <label><input type="checkbox" value="A3"> A3</label>
+            <label><input type="checkbox" value="A4"> A4</label>
+            <label><input type="checkbox" value="A5"> A5</label>
+            <label><input type="checkbox" value="A6"> A6</label>
+            <label><input type="checkbox" value="AB0"> AB0</label>
+            <label><input type="checkbox" value="AB2"> AB2</label>
+            <label><input type="checkbox" value="B0"> B0</label>
+            <label><input type="checkbox" value="B2"> B2</label>
+            <label><input type="checkbox" value="C0"> C0</label>
+            <label><input type="checkbox" value="C2"> C2</label>
+        </fieldset>
 
         <div class="price-grid-2col">
             <!-- LINKS: Schlachtgewicht -->
@@ -532,6 +532,9 @@
             <!-- RECHTS: Lebendgewicht / Auktion -->
             <div class="price-panel" id="panel-live">
                 <h3>&#x1F402; Lebendgewicht &amp; Auktion <span class="price-panel-sub">(NAD/kg live bzw. NAD/Tier)</span></h3>
+                <fieldset class="provider-toggles" id="live-toggles" style="margin-bottom:8px;">
+                    <span style="color:#9ca3af;font-size:0.85em;">Kategorien werden geladen…</span>
+                </fieldset>
                 <div class="price-chart-wrap">
                     <canvas id="chart-live"></canvas>
                 </div>
@@ -776,34 +779,53 @@ async function loadCarcassPrices() {
 }
 
 function renderCarcassPanel() {
-    const grade = document.getElementById('grade-filter').value;
-    const enabled = [...document.querySelectorAll('#carcass-toggles input[type=checkbox]:checked')]
+    const enabledProviders = [...document.querySelectorAll('#carcass-toggles input[type=checkbox]:checked')]
+        .map(c => c.value);
+    const enabledGrades = [...document.querySelectorAll('#grade-toggles input[type=checkbox]:checked')]
         .map(c => c.value);
 
-    // Filter nach Grade
-    const filtered = carcassData.filter(r => r.grade === grade);
+    // Filter nach gewählten Grades
+    const filtered = carcassData.filter(r => enabledGrades.includes(r.grade));
 
-    // Gruppieren nach Provider
-    const byProvider = {};
+    // Gruppieren nach (Provider, Grade) → eine Linie pro Kombination
+    const byKey = {};
     filtered.forEach(r => {
-        if (!byProvider[r.provider]) byProvider[r.provider] = [];
-        byProvider[r.provider].push({ x: r.price_date, y: r.price_nad });
+        const key = r.provider + '|' + r.grade;
+        if (!byKey[key]) byKey[key] = [];
+        byKey[key].push({ x: r.price_date, y: r.price_nad });
     });
+
+    // Linienstile pro Grade (verschiedene Strichelung), Farbe pro Provider
+    const GRADE_DASH = {
+        A0: [], A1: [4, 2], A2: [], A3: [6, 3],
+        A4: [2, 2], A5: [8, 4, 2, 4], A6: [10, 4],
+        AB0: [3, 3], AB2: [3, 6],
+        B0: [5, 5], B2: [5, 5, 1, 5],
+        C0: [1, 3], C2: [2, 2, 6, 2],
+    };
 
     const ctx = document.getElementById('chart-carcass').getContext('2d');
     if (chartCarcass) chartCarcass.destroy();
 
-    const datasets = Object.keys(PROVIDER_COLORS).map(p => ({
-        label: PROVIDER_LABELS[p],
-        data: (byProvider[p] || []).sort((a, b) => a.x.localeCompare(b.x)),
-        borderColor: PROVIDER_COLORS[p],
-        backgroundColor: PROVIDER_COLORS[p] + '20',
-        tension: 0.25,
-        pointRadius: 2,
-        borderWidth: 2,
-        fill: false,
-        hidden: !enabled.includes(p),
-    }));
+    const datasets = [];
+    Object.keys(PROVIDER_COLORS).forEach(p => {
+        if (!enabledProviders.includes(p)) return;
+        enabledGrades.forEach(g => {
+            const data = byKey[p + '|' + g];
+            if (!data || !data.length) return;
+            datasets.push({
+                label: (PROVIDER_LABELS[p] || p) + ' · ' + g,
+                data: data.sort((a, b) => a.x.localeCompare(b.x)),
+                borderColor: PROVIDER_COLORS[p],
+                backgroundColor: PROVIDER_COLORS[p] + '20',
+                borderDash: GRADE_DASH[g] || [],
+                tension: 0.25,
+                pointRadius: 2,
+                borderWidth: 2,
+                fill: false,
+            });
+        });
+    });
 
     chartCarcass = new Chart(ctx, {
         type: 'line',
@@ -811,7 +833,9 @@ function renderCarcassPanel() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: {
+                legend: { display: datasets.length <= 8, position: 'top', labels: { font: { size: 10 }, boxWidth: 18 } },
+            },
             scales: {
                 x: { type: 'category', ticks: { maxTicksLimit: 8, font: { size: 10 } } },
                 y: {
@@ -822,24 +846,29 @@ function renderCarcassPanel() {
         },
     });
 
-    // Latest-Preise-Tabelle (letzter Wert pro Provider, über alle Grades hinweg)
+    // Letzter Wert pro (Provider, Grade) — nur für gewählte Grades+Provider
     const tbody = document.querySelector('#carcass-latest-table tbody');
-    const latestByProvider = {};
+    const latestByKey = {};
     carcassData.forEach(r => {
         const key = r.provider + '|' + r.grade;
-        if (!latestByProvider[key] || r.price_date > latestByProvider[key].price_date) {
-            latestByProvider[key] = r;
+        if (!latestByKey[key] || r.price_date > latestByKey[key].price_date) {
+            latestByKey[key] = r;
         }
     });
-    const gradeRows = Object.values(latestByProvider).filter(r => r.grade === grade);
-    if (!gradeRows.length) {
-        tbody.innerHTML = '<tr><td colspan="3" class="no-data">Keine Preise für Grade ' + escHtml(grade) + '</td></tr>';
+    const tableRows = Object.values(latestByKey)
+        .filter(r => enabledGrades.includes(r.grade) && enabledProviders.includes(r.provider))
+        .sort((a, b) => {
+            const cmp = (PROVIDER_LABELS[a.provider] || a.provider).localeCompare(PROVIDER_LABELS[b.provider] || b.provider);
+            return cmp !== 0 ? cmp : a.grade.localeCompare(b.grade);
+        });
+
+    if (!tableRows.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="no-data">Keine Preise für gewählte Grades/Anbieter</td></tr>';
         return;
     }
-    gradeRows.sort((a, b) => (PROVIDER_LABELS[a.provider] || a.provider).localeCompare(PROVIDER_LABELS[b.provider] || b.provider));
-    tbody.innerHTML = gradeRows.map(r => `
+    tbody.innerHTML = tableRows.map(r => `
         <tr>
-            <td><span class="swatch" style="background:${PROVIDER_COLORS[r.provider] || '#9ca3af'};display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;"></span>${escHtml(PROVIDER_LABELS[r.provider] || r.provider)}</td>
+            <td><span class="swatch" style="background:${PROVIDER_COLORS[r.provider] || '#9ca3af'};display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;"></span>${escHtml(PROVIDER_LABELS[r.provider] || r.provider)} <span style="color:#6b7280;font-size:0.85em;">· ${escHtml(r.grade)}</span></td>
             <td class="num">N$ ${Number(r.price_nad).toFixed(2)}</td>
             <td>${new Date(r.price_date).toLocaleDateString('de-DE')}</td>
         </tr>
@@ -888,22 +917,47 @@ function renderLivePanel() {
         r.weight_basis === 'live' || (r.unit && r.unit.startsWith('per_kg') && r.commodity?.includes('live'))
     );
 
+    // Häkchen-Toggles dynamisch aus den vorhandenen Kategorien aufbauen
+    const allCommodities = [...new Set([
+        ...liveKgRows.map(r => r.commodity),
+        ...liveData.filter(r => r.weight_basis === 'per_head' || r.unit === 'per_head').map(r => r.commodity)
+    ])].filter(Boolean).sort();
+
+    const palette = ['#f39c12', '#8e44ad', '#16a085', '#d35400', '#2980b9'];
+    const colorFor = (cmd) => palette[allCommodities.indexOf(cmd) % palette.length];
+
+    const togglesEl = document.getElementById('live-toggles');
+    if (togglesEl) {
+        // Bestehenden Auswahlzustand erhalten — nur Kategorien neu, die wir noch nicht hatten
+        const prevState = {};
+        togglesEl.querySelectorAll('input[type=checkbox]').forEach(cb => {
+            prevState[cb.value] = cb.checked;
+        });
+        togglesEl.innerHTML = '<span style="font-weight:600; color:#374151; margin-right:8px;">Kategorie:</span>' +
+            allCommodities.map(c => {
+                const checked = prevState[c] !== undefined ? prevState[c] : true;
+                return `<label><span class="swatch" style="background:${colorFor(c)}"></span>` +
+                    `<input type="checkbox" value="${escHtml(c)}" ${checked ? 'checked' : ''}> ${escHtml(prettyAuctionLabel(c))}</label>`;
+            }).join('');
+    }
+    const enabledCommodities = [...document.querySelectorAll('#live-toggles input[type=checkbox]:checked')]
+        .map(c => c.value);
+
     const ctx = document.getElementById('chart-live').getContext('2d');
     if (chartLive) chartLive.destroy();
 
-    if (liveKgRows.length) {
-        // Group by commodity
+    const liveKgFiltered = liveKgRows.filter(r => enabledCommodities.includes(r.commodity));
+    if (liveKgFiltered.length) {
         const byCommodity = {};
-        liveKgRows.forEach(r => {
+        liveKgFiltered.forEach(r => {
             if (!byCommodity[r.commodity]) byCommodity[r.commodity] = [];
             byCommodity[r.commodity].push({ x: r.price_date, y: r.price_nad });
         });
 
-        const palette = ['#f39c12', '#8e44ad', '#16a085', '#d35400', '#2980b9'];
-        const datasets = Object.entries(byCommodity).map(([cmd, pts], i) => ({
+        const datasets = Object.entries(byCommodity).map(([cmd, pts]) => ({
             label: prettyAuctionLabel(cmd),
             data: pts.sort((a, b) => a.x.localeCompare(b.x)),
-            borderColor: palette[i % palette.length],
+            borderColor: colorFor(cmd),
             tension: 0.25,
             pointRadius: 2,
             borderWidth: 2,
@@ -937,11 +991,14 @@ function renderLivePanel() {
         c.fillText('Keine NAD/kg-Lebendgewicht-Daten (' + days + ' Tage)', canvas.width / 2, canvas.height / 2);
     }
 
-    // Tabelle: Auktionspreise (per_head) — letzter Preis pro Kategorie
-    const perHeadRows = liveData.filter(r => r.weight_basis === 'per_head' || r.unit === 'per_head');
+    // Tabelle: Auktionspreise (per_head) — letzter Preis pro Kategorie, nur aktive Häkchen
+    const perHeadRows = liveData.filter(r =>
+        (r.weight_basis === 'per_head' || r.unit === 'per_head') &&
+        enabledCommodities.includes(r.commodity)
+    );
     const tbody = document.querySelector('#auction-latest-table tbody');
     if (!perHeadRows.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="no-data">Keine Auktionspreise im gewählten Zeitraum</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="no-data">Keine Auktionspreise im gewählten Zeitraum / mit aktiven Häkchen</td></tr>';
         return;
     }
 
@@ -1268,15 +1325,19 @@ async function loadAll() {
     const user = await checkAuth();
     if (!user) return;
 
-    // Grade/Zeitraum-Filter: bei Änderung neu rendern (Zeitraum braucht Refetch)
-    document.getElementById('grade-filter').addEventListener('change', renderCarcassPanel);
+    // Zeitraum-Filter: braucht Refetch
     document.getElementById('days-filter').addEventListener('change', async () => {
         await Promise.all([loadCarcassPrices(), loadLiveAuctionPrices()]);
     });
 
-    // Provider-Toggles: Client-seitiges Re-Render (kein Query)
-    document.querySelectorAll('#carcass-toggles input[type=checkbox]')
+    // Grade- + Provider-Toggles: client-seitiges Re-Render (kein Query)
+    document.querySelectorAll('#grade-toggles input[type=checkbox], #carcass-toggles input[type=checkbox]')
         .forEach(cb => cb.addEventListener('change', renderCarcassPanel));
+
+    // Lebendgewicht-Toggles: ebenfalls client-seitiges Re-Render
+    document.addEventListener('change', e => {
+        if (e.target.matches('#live-toggles input[type=checkbox]')) renderLivePanel();
+    });
 
     loadAll();
     setInterval(loadAll, 5 * 60 * 1000);
