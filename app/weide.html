@@ -1341,11 +1341,26 @@ let rainfallChart = null;
 
 async function loadRainfall() {
     try {
-        const { data } = await sb
-            .from('weather_observations')
-            .select('station_name, observation_date, rainfall_mm, source')
-            .not('rainfall_mm', 'is', null)
-            .order('observation_date', { ascending: true });
+        const [obsRes, campsRes] = await Promise.all([
+            sb.from('weather_observations')
+                .select('station_name, observation_date, rainfall_mm, source')
+                .not('rainfall_mm', 'is', null)
+                .order('observation_date', { ascending: true }),
+            sb.from('farm_camps')
+                .select('name')
+                .eq('has_rain_station', true)
+                .eq('active', true),
+        ]);
+        const data = obsRes.data;
+        // Set normalisierter Camp-Namen mit Regenstation für Cross-Reference
+        const stationCamps = new Set((campsRes.data || []).map(c => (c.name || '').toLowerCase().trim()));
+        const stationLabel = (raw) => {
+            const s = (raw || 'Unbekannt').trim();
+            if (!s) return 'Unbekannt';
+            // Wenn Station-Name = Kamp-Name → als Kamp ausweisen
+            if (stationCamps.has(s.toLowerCase())) return s + ' (Kamp)';
+            return s;
+        };
 
         const noDataEl = document.getElementById('rainfall-nodata');
         const canvas = document.getElementById('rainfall-chart');
@@ -1366,7 +1381,7 @@ async function loadRainfall() {
         data.forEach(r => {
             const month = r.observation_date.substring(0, 7); // YYYY-MM
             allMonths.add(month);
-            const key = r.station_name || 'Unbekannt';
+            const key = stationLabel(r.station_name);
             if (!stationMonths[key]) stationMonths[key] = {};
             if (!stationMonths[key][month]) stationMonths[key][month] = 0;
             stationMonths[key][month] += r.rainfall_mm;
@@ -1792,8 +1807,37 @@ async function loadMap() {
                 popupContent += '</div>';
 
                 layer.bindPopup(popupContent);
+                // Hover-Tooltip mit Kampnamen + Belegung (ohne Klick).
+                const tipParts = [escHtml(p.name)];
+                if (herdCount > 0) tipParts.push(herdCount + ' Tiere');
+                if (score) tipParts.push((conditionLabels[score] || '') + ' (' + score + '/5)');
+                layer.bindTooltip(tipParts.join(' · '), { sticky: true, direction: 'top' });
             }
         }).addTo(farmMap);
+
+        // Karten-Hinweis: welche Kamps fehlen in der GeoJSON-Quelle?
+        // (z.B. Schlangenkamp ohne Polygon → wird in der Karte nicht gerendert)
+        try {
+            const polygonNames = new Set(geojsonData.features.map(f => f.properties?.name).filter(Boolean));
+            const { data: allCamps } = await sb
+                .from('farm_camps')
+                .select('name')
+                .eq('active', true);
+            const missing = (allCamps || [])
+                .map(c => c.name)
+                .filter(n => n && !polygonNames.has(n))
+                .sort();
+            if (missing.length) {
+                const legendEl = document.getElementById('map-legend');
+                const note = document.createElement('div');
+                note.style.cssText = 'margin-top:8px; padding:8px 12px; background:#fef3c7; border-left:3px solid #f59e0b; border-radius:4px; font-size:0.85em; color:#92400e;';
+                note.innerHTML = '<strong>Ohne Karten-Polygon (' + missing.length + '):</strong> ' + missing.map(escHtml).join(', ') +
+                    ' — über Admin/Polygon-Editor ergänzen.';
+                if (legendEl) legendEl.appendChild(note);
+            }
+        } catch (e) {
+            console.warn('Map: missing-polygons check failed', e);
+        }
 
         // ── Herde + Bullen Badges ──
         const herdLayer = L.layerGroup();

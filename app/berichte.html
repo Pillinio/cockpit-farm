@@ -1285,7 +1285,22 @@
                 </div>
             </div>
 
-            <!-- 0. Monatsmeldung erfassen (data entry, collapsed by default) -->
+            <!-- 0a. Bisherige Monatsmeldungen (eigene Sektion, oben sichtbar) -->
+            <div class="section" id="sec-existing-meldungen">
+                <div class="section-header" onclick="Monat.toggleSection('existing-meldungen')">
+                    <span class="section-icon">&#x1F4CB;</span>
+                    <span class="section-title">Bisherige Monatsmeldungen</span>
+                    <span class="section-badge badge-gray" id="badge-existing-meldungen">--</span>
+                    <span class="section-collapse-toggle" id="toggle-existing-meldungen">&#x25BC;</span>
+                </div>
+                <div class="section-body" id="body-existing-meldungen">
+                    <div id="mm-existing-wrap">
+                        <div class="mm-text-muted">Lade Meldungen...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 0b. Monatsmeldung erfassen (data entry, collapsed by default) -->
             <div class="section" id="sec-meldung">
                 <div class="section-header" onclick="Monat.toggleSection('meldung')">
                     <span class="section-icon">&#x1F4DD;</span>
@@ -1296,11 +1311,6 @@
                 <div class="section-body hidden" id="body-meldung">
                     <div class="mm-form-container" id="mm-form-screen">
 
-                        <!-- Subsection: Bisherige Meldungen -->
-                        <h3 class="mm-subsection-title">&#x1F4CB; Bisherige Monatsmeldungen</h3>
-                        <div id="mm-existing-wrap" style="margin-bottom:18px;">
-                            <div class="mm-text-muted">Lade Meldungen...</div>
-                        </div>
                         <div id="mm-edit-banner" style="display:none; padding:10px 14px; background:#fef3c7; border:1px solid #fbbf24; border-radius:8px; margin-bottom:14px; color:#92400e; font-weight:500;">
                             <span id="mm-edit-banner-text">Bearbeitung der Meldung vom …</span>
                             <button type="button" class="mm-btn mm-btn-outline" onclick="Monat.meldung.cancelEdit()" style="margin-left:12px; padding:4px 12px; font-size:0.8em;">Abbrechen</button>
@@ -2351,15 +2361,19 @@ Monat.meldung = {
             .order('snapshot_date', { ascending: false })
             .limit(24);
 
+        const badge = document.getElementById('badge-existing-meldungen');
         if (error) {
             console.error('Meldungen-Liste load error', error);
             wrap.innerHTML = '<div class="mm-text-muted" style="color:#ef4444;">Daten konnten nicht geladen werden.</div>';
+            if (badge) { badge.textContent = 'Fehler'; badge.className = 'section-badge badge-red'; }
             return;
         }
         if (!data || !data.length) {
             wrap.innerHTML = '<div class="mm-text-muted">Noch keine Meldungen erfasst.</div>';
+            if (badge) { badge.textContent = '0'; badge.className = 'section-badge badge-gray'; }
             return;
         }
+        if (badge) { badge.textContent = data.length + ' Meldungen'; badge.className = 'section-badge badge-gray'; }
 
         const self = this;
         let html = '<table class="data-table" style="font-size:0.88em;"><thead><tr>'
