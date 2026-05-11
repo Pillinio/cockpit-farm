@@ -436,6 +436,71 @@
 
     <div class="content">
 
+        <!-- Quick-Entry: Herdenbewegung erfassen (auch außerhalb Monatsbericht) -->
+        <details class="section" id="quick-movement-section" style="margin-bottom:16px;">
+            <summary style="cursor:pointer; padding:14px 20px; font-weight:600; color:#1f4e78; list-style:none;">
+                <span style="font-size:1.2em;">&#x2795;</span>
+                <span style="margin-left:8px;">Schnell-Eingabe: Herdenbewegung erfassen</span>
+                <span style="float:right; color:#6b7280; font-size:0.85em; font-weight:normal;">Klick zum Öffnen</span>
+            </summary>
+            <div style="padding: 0 20px 20px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:10px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Datum</label>
+                        <input type="date" id="qm-date" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Von Kamp</label>
+                        <select id="qm-from" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                            <option value="">-- Zugang / Geburt --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Nach Kamp</label>
+                        <select id="qm-to" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                            <option value="">-- Abgang / Verkauf / Tod --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Anzahl</label>
+                        <input type="number" id="qm-count" min="1" value="1" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Tierkategorie</label>
+                        <select id="qm-category" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                            <option value="cows">Kühe</option>
+                            <option value="bulls">Bullen</option>
+                            <option value="heifers">Färsen</option>
+                            <option value="calves">Kälber</option>
+                            <option value="oxen">Ochsen</option>
+                            <option value="mixed">Gemischt</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Grund</label>
+                        <select id="qm-reason" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                            <option value="rotation">Rotation</option>
+                            <option value="birth">Geburt</option>
+                            <option value="purchase">Zukauf</option>
+                            <option value="sale">Verkauf</option>
+                            <option value="death">Tod</option>
+                            <option value="separation">Separation</option>
+                            <option value="other">Sonstiges</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Notizen (optional)</label>
+                    <textarea id="qm-notes" rows="2" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;" placeholder="Optional…"></textarea>
+                </div>
+                <div style="margin-top:12px; display:flex; align-items:center; gap:12px;">
+                    <button id="qm-save-btn" onclick="saveQuickMovement()" style="background:#16a34a; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer;">Speichern</button>
+                    <span id="qm-msg" style="color:#6b7280; font-size:0.9em;"></span>
+                    <a href="berichte.html" style="margin-left:auto; color:#6b7280; font-size:0.85em;">Mehrere Bewegungen verwalten →</a>
+                </div>
+            </div>
+        </details>
+
         <!-- Global Year Selector (applies to H1-H4) -->
         <div class="section" id="year-nav-section">
             <div class="section-body" style="padding:14px 20px;">
@@ -1565,6 +1630,68 @@ function setupCSVUpload() {
     });
 }
 
+// ── Quick-Entry: Herdenbewegung ─────────────────────────────────
+async function loadQuickMovementCamps() {
+    const { data } = await sb.from('farm_camps').select('name').eq('active', true).order('name');
+    if (!data) return;
+    const fromSel = document.getElementById('qm-from');
+    const toSel = document.getElementById('qm-to');
+    if (!fromSel || !toSel) return;
+    data.forEach(c => {
+        const o1 = document.createElement('option'); o1.value = c.name; o1.textContent = c.name; fromSel.appendChild(o1);
+        const o2 = document.createElement('option'); o2.value = c.name; o2.textContent = c.name; toSel.appendChild(o2);
+    });
+    // Default-Datum heute
+    const dateInput = document.getElementById('qm-date');
+    if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+}
+
+async function saveQuickMovement() {
+    const btn = document.getElementById('qm-save-btn');
+    const msg = document.getElementById('qm-msg');
+    const dateVal = document.getElementById('qm-date').value;
+    const fromVal = document.getElementById('qm-from').value || null;
+    const toVal = document.getElementById('qm-to').value || null;
+    const countVal = parseInt(document.getElementById('qm-count').value, 10) || 0;
+    const catVal = document.getElementById('qm-category').value;
+    const reasonVal = document.getElementById('qm-reason').value;
+    const notesVal = document.getElementById('qm-notes').value || null;
+
+    msg.textContent = '';
+    msg.style.color = '#6b7280';
+
+    if (!dateVal) { msg.textContent = 'Datum fehlt.'; msg.style.color = '#dc2626'; return; }
+    if (!fromVal && !toVal) { msg.textContent = 'Mindestens Von- oder Nach-Kamp angeben.'; msg.style.color = '#dc2626'; return; }
+    if (countVal <= 0) { msg.textContent = 'Anzahl muss > 0 sein.'; msg.style.color = '#dc2626'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Speichern…';
+    const { data: { user } } = await sb.auth.getUser();
+    const { error } = await sb.from('herd_movements').insert({
+        movement_date: dateVal,
+        from_camp: fromVal,
+        to_camp: toVal,
+        head_count: countVal,
+        animal_category: catVal,
+        reason: reasonVal,
+        notes: notesVal,
+        recorded_by: user?.id || null
+    });
+    btn.disabled = false;
+    btn.textContent = 'Speichern';
+
+    if (error) {
+        msg.textContent = 'Fehler: ' + error.message;
+        msg.style.color = '#dc2626';
+    } else {
+        msg.textContent = '✓ Bewegung gespeichert.';
+        msg.style.color = '#16a34a';
+        document.getElementById('qm-notes').value = '';
+        document.getElementById('qm-count').value = '1';
+        setTimeout(() => { msg.textContent = ''; }, 4000);
+    }
+}
+
 // ── H7 — Geschlachtete Tiere YTD (verschoben aus Markt M7) ──────
 async function loadH7() {
     const body = document.getElementById('h7-body');
@@ -1633,6 +1760,7 @@ async function loadAll() {
     const user = await checkAuth();
     if (!user) return; // redirect in progress
     setupCSVUpload();
+    loadQuickMovementCamps();
     loadAll();
 })();
 </script>

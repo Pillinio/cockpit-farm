@@ -755,6 +755,53 @@
         <button onclick="loadAll()">Aktualisieren</button>
     </div>
 
+    <!-- Quick-Entry: Kamp-Zustand (auch außerhalb Monatsbericht) -->
+    <details class="section" id="quick-camp-section" style="margin-bottom:16px;">
+        <summary style="cursor:pointer; padding:14px 20px; font-weight:600; color:#1f4e78; list-style:none;">
+            <span style="font-size:1.2em;">&#x270F;&#xFE0F;</span>
+            <span style="margin-left:8px;">Schnell-Eingabe: Kamp-Zustand erfassen</span>
+            <span style="float:right; color:#6b7280; font-size:0.85em; font-weight:normal;">Klick zum Öffnen</span>
+        </summary>
+        <div style="padding: 0 20px 20px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:10px; margin-bottom:12px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Datum</label>
+                    <input type="date" id="qc-date" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Kamp</label>
+                    <select id="qc-camp" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                        <option value="">— Bitte Kamp wählen —</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Qualität (1–5)</label>
+                    <select id="qc-condition" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                        <option value="">—</option>
+                        <option value="1">1 — Kritisch</option>
+                        <option value="2">2 — Schlecht</option>
+                        <option value="3">3 — Mittel</option>
+                        <option value="4">4 — Gut</option>
+                        <option value="5">5 — Exzellent</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Regen (mm)</label>
+                    <input type="number" id="qc-rain" min="0" step="0.1" inputmode="decimal" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;" placeholder="optional">
+                </div>
+            </div>
+            <div>
+                <label style="display:block; font-weight:600; font-size:0.85em; color:#374151; margin-bottom:4px;">Notizen (optional)</label>
+                <textarea id="qc-notes" rows="2" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;" placeholder="z.B. Zaunschäden, Wasserstand, Auffälligkeiten…"></textarea>
+            </div>
+            <div style="margin-top:12px; display:flex; align-items:center; gap:12px;">
+                <button id="qc-save-btn" onclick="saveQuickCampStatus()" style="background:#16a34a; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer;">Speichern</button>
+                <span id="qc-msg" style="color:#6b7280; font-size:0.9em;"></span>
+                <a href="berichte.html" style="margin-left:auto; color:#6b7280; font-size:0.85em;">Vollständiger Monatsbericht →</a>
+            </div>
+        </div>
+    </details>
+
     <!-- Farm Map -->
     <div class="section">
         <div class="section-title">
@@ -2354,6 +2401,72 @@ function escHtml(str) {
     return d.innerHTML;
 }
 
+// ── Quick-Entry: Kamp-Zustand ────────────────────────────────────
+async function loadQuickCampList() {
+    const { data } = await sb.from('farm_camps').select('name, has_rain_station').eq('active', true).order('name');
+    if (!data) return;
+    const sel = document.getElementById('qc-camp');
+    if (!sel) return;
+    data.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        opt.textContent = c.name + (c.has_rain_station ? ' 🌧️' : '');
+        sel.appendChild(opt);
+    });
+    const dateInput = document.getElementById('qc-date');
+    if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+}
+
+async function saveQuickCampStatus() {
+    const btn = document.getElementById('qc-save-btn');
+    const msg = document.getElementById('qc-msg');
+    const dateVal = document.getElementById('qc-date').value;
+    const campVal = document.getElementById('qc-camp').value;
+    const condVal = document.getElementById('qc-condition').value;
+    const rainVal = document.getElementById('qc-rain').value;
+    const notesVal = document.getElementById('qc-notes').value || null;
+
+    msg.textContent = '';
+    msg.style.color = '#6b7280';
+
+    if (!dateVal) { msg.textContent = 'Datum fehlt.'; msg.style.color = '#dc2626'; return; }
+    if (!campVal) { msg.textContent = 'Kamp wählen.'; msg.style.color = '#dc2626'; return; }
+    if (!condVal && !rainVal && !notesVal) {
+        msg.textContent = 'Mindestens eine Angabe (Qualität / Regen / Notiz).'; msg.style.color = '#dc2626'; return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Speichern…';
+
+    // camp_vegetation ist die kanonische Monats-Kamp-Sicht — gleiche Tabelle wie Monatsbericht
+    const payload = {
+        observation_date: dateVal,
+        camp_name: campVal,
+        notes: notesVal,
+    };
+    if (condVal) payload.condition_score = parseInt(condVal, 10);
+    if (rainVal) payload.rainfall_mm = parseFloat(rainVal);
+
+    const { error } = await sb.from('camp_vegetation').upsert(payload, {
+        onConflict: 'farm_id,observation_date,camp_name',
+        ignoreDuplicates: false,
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'Speichern';
+
+    if (error) {
+        msg.textContent = 'Fehler: ' + error.message;
+        msg.style.color = '#dc2626';
+    } else {
+        msg.textContent = '✓ Kamp-Zustand gespeichert.';
+        msg.style.color = '#16a34a';
+        document.getElementById('qc-notes').value = '';
+        document.getElementById('qc-rain').value = '';
+        setTimeout(() => { msg.textContent = ''; }, 4000);
+    }
+}
+
 // ── Load All ─────────────────────────────────────────────────────
 async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
@@ -2394,6 +2507,7 @@ async function loadAll() {
         });
     }
 
+    loadQuickCampList();
     loadAll();
     setInterval(loadAll, 5 * 60 * 1000);
 })();
