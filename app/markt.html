@@ -611,7 +611,19 @@
             </div>
         </div>
 
-        <!-- M7 — entfernt: „Geschlachtete Tiere" sitzt jetzt unter Herde (H7) -->
+        <!-- M7 — Shortages (Konfiszierte Tiere YTD) — Spiegelung von H8 in Herde -->
+        <div class="card" id="card-m7">
+            <div class="card-status-bar status-gray"></div>
+            <div class="card-body">
+                <div class="card-top">
+                    <span class="card-icon">&#x1F4E6;</span>
+                    <span class="card-title">M7 — Shortages</span>
+                    <span class="card-status-dot status-gray"></span>
+                </div>
+                <div class="card-value" data-kpi="m7"><span class="loading-spinner"></span></div>
+                <div class="card-subtitle">Konfiszierte Tiere &amp; verlorener Erlös (Meatco YTD)</div>
+            </div>
+        </div>
 
         <!-- M8 — LPO Benchmark -->
         <div class="card" id="card-m8">
@@ -1280,7 +1292,39 @@ async function loadM6() {
     } catch { noData('m6'); }
 }
 
-// M7 entfernt: "Geschlachtete Tiere YTD" ist jetzt H7 in herde.html.
+// ── M7 — Shortages (konfiszierte Tiere, Erlös-Verlust YTD) ──────
+// Spiegelung von H8 in herde.html: hier aus Markt-Perspektive (Erlös-
+// Differenz), dort als Herden-Bilanz (verlorene Tiere). Beide Sichten
+// nutzen slaughter_line_items, gefiltert auf condemnation_deduction_nad > 0.
+async function loadM7() {
+    try {
+        const YEAR = new Date().getFullYear();
+        const { data, error } = await sb
+            .from('slaughter_line_items')
+            .select('condemnation_deduction_nad, slaughter_reports!inner(report_date)')
+            .gte('slaughter_reports.report_date', YEAR + '-01-01')
+            .gt('condemnation_deduction_nad', 0);
+        if (error) throw error;
+
+        if (!data?.length) {
+            setCard('m7', { value: '0 Tiere', subtitle: 'Keine Konfiszierungen ' + YEAR, status: 'green' });
+            return;
+        }
+
+        const count = data.length;
+        const totalLoss = data.reduce((s, r) => s + (r.condemnation_deduction_nad || 0), 0);
+        const status = count < 10 ? 'green' : count < 30 ? 'yellow' : 'red';
+
+        setCard('m7', {
+            value: count + ' Tiere',
+            subtitle: 'N$ ' + Math.round(totalLoss).toLocaleString('de-DE') + ' Erlösverlust ' + YEAR,
+            status
+        });
+    } catch (e) {
+        console.error('M7:', e);
+        noData('m7');
+    }
+}
 
 // ── M8 — LPO Benchmark (Placeholder) ────────────────────────────
 async function loadM8() {
@@ -1295,7 +1339,7 @@ async function loadAll() {
         loadCarcassPrices(),
         loadLiveAuctionPrices(),
         loadM2(), loadM3(),
-        loadM5(), loadM6(), loadM8()
+        loadM5(), loadM6(), loadM7(), loadM8()
     ]);
 
     const now = new Date();

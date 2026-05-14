@@ -647,6 +647,21 @@
             </div>
         </div>
 
+        <!-- H8: Verluste durch Konfiszierung (Bilanz-Sicht, gespiegelt mit M7 in Markt) -->
+        <div class="section" id="section-h8">
+            <div class="section-header">
+                <span class="section-icon">&#x274C;</span>
+                <span class="section-title">H8 &mdash; Verluste durch Konfiszierung (YTD)</span>
+                <span class="section-badge badge-gray" id="badge-h8"><span class="loading-spinner"></span></span>
+            </div>
+            <div class="section-body" id="h8-body">
+                <div class="placeholder">
+                    <span class="placeholder-icon">&#x1F50D;</span>
+                    <span class="placeholder-text">Lade Konfiszierungsdaten…</span>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div class="footer">
@@ -1752,12 +1767,69 @@ async function loadH7() {
     }
 }
 
+// ── H8 — Konfiszierungs-Verluste (Bilanz-Sicht, gespiegelt mit M7) ──
+// Markt zeigt dieselben Daten unter M7 als Erlös-Differenz; hier ist
+// die Sicht: wie viele Tiere haben wir durch Meatco-Konfiszierung
+// verloren — Herde-relevant für die Bilanz.
+async function loadH8() {
+    const body = document.getElementById('h8-body');
+    const badge = document.getElementById('badge-h8');
+    try {
+        const YEAR = new Date().getFullYear();
+        const { data, error } = await sb
+            .from('slaughter_line_items')
+            .select('cold_mass_kg, condemnation_deduction_nad, grade, gender, slaughter_reports!inner(report_date)')
+            .gte('slaughter_reports.report_date', YEAR + '-01-01')
+            .gt('condemnation_deduction_nad', 0)
+            .order('condemnation_deduction_nad', { ascending: false });
+        if (error) throw error;
+
+        if (!data?.length) {
+            body.innerHTML = '<div class="placeholder"><span class="placeholder-icon">&#x2705;</span><span class="placeholder-text">Keine Konfiszierungen ' + YEAR + '. Sauber!</span></div>';
+            badge.textContent = '0';
+            badge.className = 'section-badge badge-green';
+            return;
+        }
+
+        const count = data.length;
+        const totalLoss = data.reduce((s, r) => s + (r.condemnation_deduction_nad || 0), 0);
+        const totalMass = data.reduce((s, r) => s + (r.cold_mass_kg || 0), 0);
+        badge.textContent = count + ' Tiere';
+        badge.className = 'section-badge ' + (count < 10 ? 'badge-green' : count < 30 ? 'badge-yellow' : 'badge-red');
+
+        const fmtN = n => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(n);
+        let html = '<div class="summary-cards">';
+        html += '<div class="summary-card"><div class="card-value">' + fmtN(count) + '</div><div class="card-label">Tiere konfisziert ' + YEAR + '</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + fmtN(totalMass) + ' kg</div><div class="card-label">Betroffenes Schlachtgewicht</div></div>';
+        html += '<div class="summary-card"><div class="card-value">N$ ' + fmtN(totalLoss) + '</div><div class="card-label">Erlös-Verlust</div></div>';
+        html += '</div>';
+        html += '<div class="note-text" style="margin-top:8px;">Gleiche Datenquelle wie Markt M7. Diese Sicht zeigt die Bilanz-Perspektive (verlorene Tiere); M7 zeigt die Erlös-Perspektive.</div>';
+        html += '<table class="data-table" style="margin-top:16px;"><thead><tr><th>Datum</th><th>Grade</th><th>Geschlecht</th><th class="num">Gewicht (kg)</th><th class="num">Verlust (NAD)</th></tr></thead><tbody>';
+        data.slice(0, 20).forEach(r => {
+            const date = r.slaughter_reports?.report_date ? new Date(r.slaughter_reports.report_date).toLocaleDateString('de-DE') : '—';
+            html += '<tr><td>' + date + '</td>';
+            html += '<td>' + (r.grade || '—') + '</td>';
+            html += '<td>' + (r.gender || '—') + '</td>';
+            html += '<td class="num">' + fmtN(r.cold_mass_kg || 0) + '</td>';
+            html += '<td class="num">' + fmtN(r.condemnation_deduction_nad || 0) + '</td></tr>';
+        });
+        if (data.length > 20) html += '<tr><td colspan="5" style="color:#9ca3af;font-style:italic;">… und ' + (data.length - 20) + ' weitere Konfiszierungen</td></tr>';
+        html += '</tbody></table>';
+        body.innerHTML = html;
+    } catch (e) {
+        console.error('H8:', e);
+        body.innerHTML = '<div class="placeholder"><span class="placeholder-icon">&#x26A0;&#xFE0F;</span><span class="placeholder-text">Fehler beim Laden (Details in Konsole).</span></div>';
+        badge.textContent = 'Fehler';
+        badge.className = 'section-badge badge-red';
+    }
+}
+
 // ── Load All ─────────────────────────────────────────────────────
 async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
     await Promise.allSettled([
-        loadSnapshotsAndRender(), loadH5(), loadH6(), loadH7()
+        loadSnapshotsAndRender(), loadH5(), loadH6(), loadH7(), loadH8()
     ]);
 
     const now = new Date();
