@@ -626,6 +626,20 @@
         <button onclick="loadAll()">Aktualisieren</button>
     </div>
 
+    <!-- Schnell-Eingabe: Werner-Workflow für tagesaktuelle Erfassung
+         außerhalb des Monatsbericht-Kontexts. Beide Buttons sind Deeplinks
+         auf die jeweilige Quick-Entry-Section von herde.html / weide.html. -->
+    <div id="werner-quick-row" style="display:flex; gap:12px; padding:0 24px 14px; flex-wrap:wrap;">
+        <a href="herde.html#quick-movement-section" style="flex:1 1 220px; min-width:200px; display:flex; align-items:center; gap:10px; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:600;">
+            <span style="font-size:1.4em;">🐄</span>
+            <span>Herdenbewegung erfassen <span style="display:block; font-size:0.78em; font-weight:normal; color:#047857;">Schnell-Eingabe, jederzeit</span></span>
+        </a>
+        <a href="weide.html#quick-camp-section" style="flex:1 1 220px; min-width:200px; display:flex; align-items:center; gap:10px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:600;">
+            <span style="font-size:1.4em;">🏕️</span>
+            <span>Kamp-Zustand erfassen <span style="display:block; font-size:0.78em; font-weight:normal; color:#1d4ed8;">Schnell-Eingabe, jederzeit</span></span>
+        </a>
+    </div>
+
     <!-- 8 Indicator Cards -->
     <div class="grid">
         <!-- Q1 Cash Runway -->

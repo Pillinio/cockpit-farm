@@ -1053,6 +1053,17 @@
 <script type="module">
 import { renderNav } from './shared/nav.js';
 renderNav('weide');
+// Auto-Open für Quick-Entry-<details> bei Anker-Deeplink aus dem Cockpit.
+function openDetailsByHash() {
+  if (!location.hash) return;
+  const el = document.querySelector(location.hash);
+  if (el && el.tagName === 'DETAILS') {
+    el.open = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+window.addEventListener('load', openDetailsByHash);
+window.addEventListener('hashchange', openDetailsByHash);
 </script>
 
 <script>
