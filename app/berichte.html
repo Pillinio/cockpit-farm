@@ -1269,6 +1269,7 @@
         <!-- Sub-tab nav -->
         <div class="report-tabs">
             <button class="active" data-report="monat" onclick="showReport('monat')">Monatsbericht</button>
+            <button data-report="meldungen" onclick="showReport('meldungen')">Monatsmeldungen</button>
             <button data-report="woche" onclick="showReport('woche')">Arbeitsbericht (Wochenbericht)</button>
         </div>
 
@@ -1285,20 +1286,7 @@
                 </div>
             </div>
 
-            <!-- 0a. Bisherige Monatsmeldungen (eigene Sektion, oben sichtbar) -->
-            <div class="section" id="sec-existing-meldungen">
-                <div class="section-header" onclick="Monat.toggleSection('existing-meldungen')">
-                    <span class="section-icon">&#x1F4CB;</span>
-                    <span class="section-title">Bisherige Monatsmeldungen</span>
-                    <span class="section-badge badge-gray" id="badge-existing-meldungen">--</span>
-                    <span class="section-collapse-toggle" id="toggle-existing-meldungen">&#x25BC;</span>
-                </div>
-                <div class="section-body" id="body-existing-meldungen">
-                    <div id="mm-existing-wrap">
-                        <div class="mm-text-muted">Lade Meldungen...</div>
-                    </div>
-                </div>
-            </div>
+            <!-- Bisherige Monatsmeldungen ist jetzt eine eigene Sub-Tab (#meldungen) -->
 
             <!-- 0b. Monatsmeldung erfassen (data entry, collapsed by default) -->
             <div class="section" id="sec-meldung">
@@ -1562,6 +1550,29 @@
             </div>
 
         </div><!-- /report-monat -->
+
+        <!-- ============ MONATSMELDUNGEN PANEL ============ -->
+        <div id="report-meldungen" class="report-panel">
+            <div class="toolbar">
+                <span id="last-update-meldungen">Liste der bisher erfassten Monatsmeldungen.</span>
+                <button onclick="Monat.meldung.loadExistingMeldungen()">Aktualisieren</button>
+            </div>
+            <div class="section" id="sec-existing-meldungen">
+                <div class="section-header">
+                    <span class="section-icon">&#x1F4CB;</span>
+                    <span class="section-title">Bisherige Monatsmeldungen</span>
+                    <span class="section-badge badge-gray" id="badge-existing-meldungen">--</span>
+                </div>
+                <div class="section-body" id="body-existing-meldungen">
+                    <div id="mm-existing-wrap">
+                        <div class="mm-text-muted">Lade Meldungen...</div>
+                    </div>
+                </div>
+            </div>
+            <div style="padding:0 24px 24px;color:#6b7280;font-size:0.9em;">
+                Neue Meldung erfassen oder bestehende bearbeiten? <a href="#monat" onclick="showReport('monat')" style="color:#2E75B6;font-weight:600;">→ Zum Monatsbericht wechseln</a>
+            </div>
+        </div><!-- /report-meldungen -->
 
         <!-- ============ WOCHENBERICHT PANEL ============ -->
         <div id="report-woche" class="report-panel">
@@ -2498,13 +2509,24 @@ Monat.meldung = {
 
     // ── Edit Monatsmeldung: prefill form ──
     async editMeldung(snapshotId, snapshotDate) {
+        // Liste lebt jetzt im "Monatsmeldungen"-Tab, Formular im "Monatsbericht"-Tab.
+        // Vor dem Prefill auf den Monatsbericht-Tab umschalten, sonst scrollIntoView
+        // unten geht ins Leere.
+        if (typeof showReport === 'function') {
+            try { showReport('monat'); } catch (e) { console.warn('editMeldung: tab switch failed', e); }
+        }
+
         const [snapRes, vegRes, incRes] = await Promise.all([
             sb.from('herd_snapshots').select('*').eq('id', snapshotId).single(),
             sb.from('camp_vegetation').select('*').eq('observation_date', snapshotDate),
             sb.from('incidents').select('incident_type, severity, affected_count, description').eq('snapshot_date', snapshotDate),
         ]);
 
-        if (snapRes.error) { alert('Fehler beim Laden: ' + snapRes.error.message); return; }
+        if (snapRes.error) {
+            console.error('editMeldung load error', snapRes.error);
+            alert('Fehler beim Laden der Meldung (Details in Konsole).');
+            return;
+        }
         const s = snapRes.data;
 
         this.editingSnapshotId = snapshotId;
@@ -3639,7 +3661,7 @@ window.Woche = Woche;
 // Sub-tab switching with URL hash persistence
 // ══════════════════════════════════════════════════════════════════
 function showReport(which) {
-    if (which !== 'monat' && which !== 'woche') which = 'monat';
+    if (which !== 'monat' && which !== 'meldungen' && which !== 'woche') which = 'monat';
 
     // Update tab buttons
     document.querySelectorAll('.report-tabs button').forEach(btn => {
@@ -3662,6 +3684,14 @@ function showReport(which) {
     // Lazy-load data for the activated tab
     if (which === 'monat') {
         Monat.init();
+    } else if (which === 'meldungen') {
+        // Stellt sicher dass Monat.meldung initialisiert ist (lädt Kamps etc.
+        // einmalig) — danach refreshen wir nur noch die Liste.
+        Monat.init().then(() => {
+            if (Monat.meldung && Monat.meldung.loadExistingMeldungen) {
+                Monat.meldung.loadExistingMeldungen();
+            }
+        });
     } else if (which === 'woche') {
         Woche.init();
     }
