@@ -1001,29 +1001,38 @@ async function loadF3() {
         if (!data?.length) return showNoData('f3');
 
         // Revenue category mapping (normalize raw categories → display buckets).
-        // Wenn ein Cat-String zu keinem Pattern passt, landet er in 'Sonstiges'.
-        // Fehlten Treffer reihenweise (Reviewer-Befund), Pattern-Liste erweitern.
-        function bucketFor(cat) {
-            const c = (cat || '').toLowerCase().trim();
-            // Rinderverkauf / Schlachthof
-            if (/meatco|beefcor|rmaa|savanna|rinder|cattle|livestock|schlacht|kuh|kühe|ochse|bull|kalb|kälber|färse|färsen|verkauf.*rind/.test(c)) return 'Rinderverkauf';
-            // Jagd
-            if (/jagd|hunt|trophy|wild|safari/.test(c)) return 'Jagd';
-            // Pacht / Miete / Lease
-            if (/pacht|lease|miete|rent/.test(c)) return 'Pacht';
-            // Gras / Weide / Grazing
-            if (/gras|grazing|weide|hay|heu|silage/.test(c)) return 'Gras-Verkauf';
+        // Erst category prüfen, dann description als Fallback — viele Einnahmen
+        // kommen aus bank_transactions ohne befüllte category (income-Patterns
+        // fehlen typischerweise in category_rules) und müssen über den
+        // Beschreibungstext eingeordnet werden.
+        const PATTERNS = [
+            { bucket: 'Rinderverkauf', re: /meatco|beefcor|rmaa|savanna|rinder|cattle|livestock|schlacht|kuh|kühe|kuehe|ochse|bull|kalb|kälber|kaelber|färse|färsen|faerse|verkauf.*rind|sale.*cattle|auction/i },
+            { bucket: 'Jagd',          re: /jagd|hunt|trophy|wild|safari|game/i },
+            { bucket: 'Pacht',         re: /pacht|lease|miete|rent|verpacht/i },
+            { bucket: 'Gras-Verkauf',  re: /gras|grazing|weide|hay|heu|silage|hayfield|grass.sale/i },
+        ];
+        function bucketFor(cat, description) {
+            const c = (cat || '').toString();
+            const d = (description || '').toString();
+            // 1. Wenn category-String ein deutliches Pattern enthält → direkt mappen
+            for (const p of PATTERNS) {
+                if (c && p.re.test(c)) return p.bucket;
+            }
+            // 2. Fallback: description-Text auswerten
+            for (const p of PATTERNS) {
+                if (d && p.re.test(d)) return p.bucket;
+            }
             return 'Sonstiges';
         }
-        // Diagnose: welche Roh-Kategorien konnten nicht zugeordnet werden?
-        const unmatched = new Set();
+        // Diagnose: welche Roh-Kategorien/Descriptions landen unter Sonstiges?
+        const unmatched = [];
         data.forEach(r => {
-            if (bucketFor(r.category) === 'Sonstiges' && r.category) {
-                unmatched.add(r.category);
+            if (bucketFor(r.category, r.description) === 'Sonstiges') {
+                unmatched.push({ category: r.category || '(leer)', description: r.description || '(leer)', amount: r.credit_nad });
             }
         });
-        if (unmatched.size > 0) {
-            console.warn('F3 (Umsatz): nicht zuordenbare Kategorien →', [...unmatched].sort());
+        if (unmatched.length > 0) {
+            console.warn('F3 (Umsatz): nicht zuordenbare Einnahmen →', unmatched.slice(0, 20));
         }
 
         const CAT_COLORS = {
@@ -1041,7 +1050,7 @@ async function loadF3() {
 
         data.forEach(r => {
             const m = new Date(r.transaction_date).getMonth();
-            const bucket = bucketFor(r.category);
+            const bucket = bucketFor(r.category, r.description);
             byMonthCat[bucket][m] += parseFloat(r.credit_nad || 0);
         });
 
@@ -1061,6 +1070,18 @@ async function loadF3() {
             </div>`;
         });
         summaryHtml += '</div>';
+
+        // Warnung wenn "Sonstiges" dominiert — meist heißt das: category_rules
+        // für Einnahmen sind nicht gepflegt oder description-Pattern fehlen.
+        const sonstigesTotal = byMonthCat['Sonstiges'].reduce((a, b) => a + b, 0);
+        if (total > 0 && sonstigesTotal / total > 0.3) {
+            summaryHtml += '<div style="margin:0 0 12px; padding:10px 14px; background:#fef3c7; border:1px solid #fbbf24; border-radius:8px; color:#92400e; font-size:0.88em;">' +
+                '<strong>Hinweis:</strong> ' + (sonstigesTotal / total * 100).toFixed(0) + ' % der Einnahmen sind nicht kategorisiert. ' +
+                'Konsole öffnen (F12) → siehe Warnung „F3 (Umsatz): nicht zuordenbare Einnahmen" — entweder ' +
+                '<a href="admin.html#category-rules" style="color:#92400e; font-weight:600; text-decoration:underline;">category_rules</a> ergänzen ' +
+                'oder Patterns in bucketFor (finanzen.html:loadF3) erweitern.' +
+                '</div>';
+        }
 
         // Top income items table (sorted by amount desc)
         const sortedData = [...data].sort((a, b) => parseFloat(b.credit_nad) - parseFloat(a.credit_nad));

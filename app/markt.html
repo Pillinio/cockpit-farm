@@ -1100,11 +1100,15 @@ async function loadM2() {
             });
         }
 
-        // Fallback: zeige Preis und benenne fehlende Komponente konkret
-        const missing = totalKg <= 0 ? 'kein Schlachtgewicht ' + YEAR : 'keine Kosten ' + YEAR;
+        // Fallback: zeige Preis und benenne fehlende Komponente konkret.
+        // Subtitle weist auf Abhilfe: Schlachtberichte oder Bank-Statements
+        // fehlen für das laufende Jahr → Admin-Import-Pipeline.
+        const missing = totalKg <= 0
+            ? 'kein Schlachtgewicht ' + YEAR + ' — Meatco-Bericht importieren'
+            : 'keine Kosten ' + YEAR + ' — Bankauszug importieren';
         setCard('m2', {
             value: 'N$ ' + pricePerKg.toFixed(2),
-            subtitle: 'Nur Preis (' + missing + ')',
+            subtitle: 'Nur Preis: ' + missing,
             status: 'gray'
         });
     } catch (e) {
