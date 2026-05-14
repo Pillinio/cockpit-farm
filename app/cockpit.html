@@ -1084,6 +1084,15 @@ function calendarDateFmt(dateStr) {
     return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+// HTML-Escape für User-Daten in innerHTML-Templates.
+// farm_calendar-Felder (person_name, reason) sind durch manager/requester
+// schreibbar — ohne escape stored-XSS.
+function escHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
 function countWorkingDays(startDate, endDate) {
     let count = 0;
     const start = new Date(startDate + 'T00:00:00');
@@ -1200,13 +1209,13 @@ function renderPendingApprovals(pending, todayStr) {
         div.innerHTML =
             '<span class="pending-info">' +
                 warningHtml +
-                '<strong>' + entry.person_name + '</strong> — ' +
-                typeLabel + ' (' +
+                '<strong>' + escHtml(entry.person_name) + '</strong> — ' +
+                escHtml(typeLabel) + ' (' +
                 calendarDateFmt(entry.start_date) + ' – ' + calendarDateFmt(entry.end_date) + ')' +
-                (entry.reason ? ' — ' + entry.reason : '') +
+                (entry.reason ? ' — ' + escHtml(entry.reason) : '') +
             '</span>' +
-            '<button class="btn-approve" onclick="approveCalendarEntry(\'' + entry.id + '\')">Bestätigen</button>' +
-            '<button class="btn-reject" onclick="rejectCalendarEntry(\'' + entry.id + '\')">Ablehnen</button>';
+            '<button class="btn-approve" onclick="approveCalendarEntry(\'' + escHtml(entry.id) + '\')">Bestätigen</button>' +
+            '<button class="btn-reject" onclick="rejectCalendarEntry(\'' + escHtml(entry.id) + '\')">Ablehnen</button>';
 
         list.appendChild(div);
     }
@@ -1241,8 +1250,8 @@ function renderUpcoming(entries) {
 
         tr.innerHTML =
             '<td>' + calendarDateFmt(e.start_date) + ' – ' + calendarDateFmt(e.end_date) + '</td>' +
-            '<td>' + starIcon + e.person_name + '</td>' +
-            '<td>' + typeLabel + '</td>' +
+            '<td>' + starIcon + escHtml(e.person_name) + '</td>' +
+            '<td>' + escHtml(typeLabel) + '</td>' +
             '<td>' + statusLabel + '</td>';
 
         tbody.appendChild(tr);

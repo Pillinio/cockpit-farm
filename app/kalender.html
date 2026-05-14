@@ -742,6 +742,13 @@ function ymd(y, m, d) {
     return y + '-' + mm + '-' + dd;
 }
 
+// HTML-Escape für User-Daten in innerHTML-Templates.
+function escHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
 function calendarDateFmt(dateStr) {
     if (!dateStr) return '—';
     const d = new Date(dateStr + 'T00:00:00');
@@ -951,22 +958,23 @@ function renderEntriesTable(rangeStart, rangeEnd) {
         let actionHtml = '';
         const canEditOrDelete = _userRole === 'owner' || (e.requested_by === _userId && e.status === 'requested');
 
+        const safeId = escHtml(e.id);
         if (_userRole === 'owner' && e.status === 'requested') {
             actionHtml +=
-                '<button class="btn-approve" onclick="approveCalendarEntry(\'' + e.id + '\')">Bestätigen</button>' +
-                '<button class="btn-reject" onclick="rejectCalendarEntry(\'' + e.id + '\')">Ablehnen</button>';
+                '<button class="btn-approve" onclick="approveCalendarEntry(\'' + safeId + '\')">Bestätigen</button>' +
+                '<button class="btn-reject" onclick="rejectCalendarEntry(\'' + safeId + '\')">Ablehnen</button>';
         }
         if (canEditOrDelete) {
             actionHtml +=
-                '<button class="btn-edit" onclick="editCalendarEntry(\'' + e.id + '\')" style="background:#6b7280; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; margin-left:4px;">Bearbeiten</button>' +
-                '<button class="btn-delete" onclick="deleteCalendarEntry(\'' + e.id + '\')" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; margin-left:4px;">Löschen</button>';
+                '<button class="btn-edit" onclick="editCalendarEntry(\'' + safeId + '\')" style="background:#6b7280; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; margin-left:4px;">Bearbeiten</button>' +
+                '<button class="btn-delete" onclick="deleteCalendarEntry(\'' + safeId + '\')" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; margin-left:4px;">Löschen</button>';
         }
         if (!actionHtml) actionHtml = '—';
 
         tr.innerHTML =
             '<td>' + calendarDateFmt(e.start_date) + ' – ' + calendarDateFmt(e.end_date) + '</td>' +
-            '<td>' + starIcon + e.person_name + '</td>' +
-            '<td>' + typeLabel + '</td>' +
+            '<td>' + starIcon + escHtml(e.person_name) + '</td>' +
+            '<td>' + escHtml(typeLabel) + '</td>' +
             '<td>' + statusLabel + '</td>' +
             '<td>' + actionHtml + '</td>';
 
