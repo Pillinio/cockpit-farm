@@ -1445,20 +1445,27 @@ async function loadH6() {
         priceInfo += '</div>';
 
         // Build HTML
+        // Hinweis: valueLive und valueCarcass sind mathematisch identisch
+        // (beide = totalWeight × beefPricePerKgCarcass × dressingPct). Zwei
+        // Wert-Karten erweckten den Eindruck zweier verschiedener Beträge —
+        // der User rekonstruierte beim Nachrechnen aus gerundeten kg-Werten
+        // unterschiedliche Summen. Wir zeigen jetzt einen konsolidierten
+        // Gesamt-Wert (entspricht beiden Sichten) und führen die parallele
+        // Berechnung in der Detailtabelle pro Kategorie weiter.
         let html = priceInfo;
         html += '<div class="summary-cards">';
         html += '<div class="summary-card"><div class="card-value">' + totalAnimals + '</div><div class="card-label">Tiere (aktiv)</div></div>';
         html += '<div class="summary-card"><div class="card-value">' + fmtKG(totalWeight) + '</div><div class="card-label">Gesamt-Lebendgewicht</div></div>';
         html += '<div class="summary-card"><div class="card-value">' + fmtKG(totalCarcassWeight) + '</div><div class="card-label">Gesamt-Schlachtgewicht</div></div>';
         html += '<div class="summary-card"><div class="card-value">' + Math.round(avgWeight) + ' kg</div><div class="card-label">ø Lebendgewicht / Tier</div></div>';
-        html += '<div class="summary-card"><div class="card-value">' + fmtNAD(valueLive) + '</div><div class="card-label">Wert Lebendgewicht</div></div>';
-        html += '<div class="summary-card"><div class="card-value">' + fmtNAD(valueCarcass) + '</div><div class="card-label">Wert Schlachtgewicht</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + fmtNAD(valueCarcass) + '</div><div class="card-label">Gesamtwert (Schlachtbasis)</div></div>';
         html += '</div>';
 
-        // Category table
+        // Category table — pro Kategorie zeigen wir die parallele Berechnung;
+        // im Fußzeilen-Total zeigen wir EINEN konsolidierten Wert.
         const catOrder = ['calf', 'weaner', 'young', 'heifer', 'cow', 'bull_young', 'ox_bull'];
         html += '<table class="data-table"><thead><tr>';
-        html += '<th>Kategorie</th><th class="num">Anzahl</th><th class="num">&#x2300; Gewicht</th><th class="num">Lebendgewicht</th><th class="num">Schlachtgewicht</th><th class="num">Wert Lebend</th><th class="num">Wert Schlacht</th>';
+        html += '<th>Kategorie</th><th class="num">Anzahl</th><th class="num">&#x2300; Gewicht</th><th class="num">Lebendgewicht</th><th class="num">Schlachtgewicht</th><th class="num">Wert</th>';
         html += '</tr></thead><tbody>';
 
         catOrder.forEach(key => {
@@ -1466,16 +1473,14 @@ async function loadH6() {
             if (!cat) return;
             const catAvg = cat.totalWeight / cat.count;
             const catCarcassWeight = cat.totalWeight * dressingPct;
-            const catValueLive = cat.totalWeight * beefPricePerKgLive;
-            const catValueCarcass = catCarcassWeight * beefPricePerKgCarcass;
+            const catValue = catCarcassWeight * beefPricePerKgCarcass;
             html += '<tr>';
             html += '<td>' + cat.label + '</td>';
             html += '<td class="num">' + cat.count + '</td>';
             html += '<td class="num">' + Math.round(catAvg) + ' kg</td>';
             html += '<td class="num">' + fmtKG(cat.totalWeight) + '</td>';
             html += '<td class="num">' + fmtKG(catCarcassWeight) + '</td>';
-            html += '<td class="num">' + fmtNAD(catValueLive) + '</td>';
-            html += '<td class="num">' + fmtNAD(catValueCarcass) + '</td>';
+            html += '<td class="num">' + fmtNAD(catValue) + '</td>';
             html += '</tr>';
         });
 
@@ -1486,22 +1491,30 @@ async function loadH6() {
         html += '<td class="num">' + Math.round(avgWeight) + ' kg</td>';
         html += '<td class="num">' + fmtKG(totalWeight) + '</td>';
         html += '<td class="num">' + fmtKG(totalCarcassWeight) + '</td>';
-        html += '<td class="num">' + fmtNAD(valueLive) + '</td>';
         html += '<td class="num">' + fmtNAD(valueCarcass) + '</td>';
         html += '</tr></tfoot></table>';
 
-        // Notes
+        // Notes — inkl. Stale-Warnung wenn Preisbasis älter als 6 Monate
         const weighDateStr = latestWeighDate
             ? latestWeighDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
             : 'unbekannt';
         const priceDateStr = priceDate
             ? new Date(priceDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
             : '';
+        let stalePriceBadge = '';
+        if (priceDate) {
+            const ageDays = (today - new Date(priceDate)) / 86400000;
+            if (ageDays > 180) {
+                stalePriceBadge = ' <span style="color:#b45309;background:#fef3c7;padding:1px 6px;border-radius:4px;font-weight:600;font-size:0.8em;" title="Preis ist älter als 6 Monate — bitte aktuellen Meatco-Preis nachpflegen.">veraltet (' + Math.round(ageDays / 30) + ' Mon.)</span>';
+            }
+        } else if (priceSource === 'Standardpreis') {
+            stalePriceBadge = ' <span style="color:#b45309;background:#fef3c7;padding:1px 6px;border-radius:4px;font-weight:600;font-size:0.8em;" title="Kein Meatco-Preis in market_prices — fester Fallback wird genutzt.">Fallback</span>';
+        }
         html += '<div class="note-text">';
         html += 'Letzte Wiegung: ' + weighDateStr + ' — Hochrechnung basierend auf Tageszunahme-Annahmen. ';
         html += 'Preisbasis: ' + beefPricePerKgCarcass.toFixed(2) + ' NAD/kg Schlachtgewicht (' + priceSource;
         if (priceDateStr) html += ', ' + priceDateStr;
-        html += '), umgerechnet ' + beefPricePerKgLive.toFixed(2) + ' NAD/kg Lebendgewicht bei ' + (dressingPct * 100).toFixed(0) + '% Ausschlachtung.';
+        html += ')' + stalePriceBadge + ', umgerechnet ' + beefPricePerKgLive.toFixed(2) + ' NAD/kg Lebendgewicht bei ' + (dressingPct * 100).toFixed(0) + '% Ausschlachtung.';
         html += '</div>';
 
         ph.style.display = 'none';
@@ -1510,7 +1523,7 @@ async function loadH6() {
     } catch (e) {
         console.error('H6 error:', e);
         ph.innerHTML = '<span class="placeholder-icon">&#x26A0;&#xFE0F;</span>' +
-            '<span class="placeholder-text">Fehler beim Laden: ' + (e.message || e) + '</span>';
+            '<span class="placeholder-text">Fehler beim Laden (Details in Konsole).</span>';
         setBadge('h6', '\u2014');
     }
 }
