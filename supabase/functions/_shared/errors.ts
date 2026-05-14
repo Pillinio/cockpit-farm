@@ -1,15 +1,21 @@
 // Shared error handling: log full context server-side, return sanitized
 // response to the client so we don't leak API keys, JWTs, stack frames, etc.
 
+import { CORS_HEADERS } from "./cors.ts";
+
 type Logger = {
   error: (msg: string, details?: Record<string, unknown>) => Promise<void>;
 };
 
 const SENSITIVE_PATTERNS: RegExp[] = [
-  /sk-ant-[A-Za-z0-9_-]+/g,      // Anthropic API keys
-  /sbp_[A-Za-z0-9]+/g,           // Supabase service role keys
-  /Bearer\s+[A-Za-z0-9._-]+/gi,  // Bearer tokens in error text
-  /eyJ[A-Za-z0-9._-]{20,}/g,     // Anything that looks like a JWT
+  /sk-ant-[A-Za-z0-9_-]+/g,            // Anthropic API keys
+  /sbp_[A-Za-z0-9]+/g,                 // Supabase service role keys (legacy)
+  /sb_secret_[A-Za-z0-9_]+/g,          // Supabase service role keys (new format)
+  /sb_publishable_[A-Za-z0-9_]+/g,     // Supabase anon/publishable keys
+  /re_[A-Za-z0-9_]{8,}/g,              // Resend API keys
+  /\d{8,12}:[A-Za-z0-9_-]{30,}/g,      // Telegram bot tokens (e.g. 1234567890:AA…)
+  /Bearer\s+[A-Za-z0-9._-]+/gi,        // Bearer tokens in error text
+  /eyJ[A-Za-z0-9._-]{20,}/g,           // Anything that looks like a JWT
 ];
 
 function redact(text: string): string {
@@ -46,7 +52,7 @@ export async function logAndReply(
   }
   return new Response(
     JSON.stringify({ error: publicMessage }),
-    { status, headers: { "Content-Type": "application/json" } },
+    { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
   );
 }
 

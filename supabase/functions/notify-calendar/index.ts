@@ -14,12 +14,14 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createLogger } from "../_shared/logger.ts";
+import { logAndReply } from "../_shared/errors.ts";
 import { sendEmail } from "../_shared/resend.ts";
 import {
   createCalendarEvent,
   deleteCalendarEvent,
 } from "../_shared/google-calendar.ts";
 import { verifyAuth } from "../_shared/auth.ts";
+import { CORS_HEADERS, handlePreflight } from "../_shared/cors.ts";
 
 // ---------------------------------------------------------------------------
 // Entry type labels (German)
@@ -48,7 +50,7 @@ function formatDate(d: string): string {
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
 }
 
@@ -57,6 +59,8 @@ function json(data: unknown, status = 200): Response {
 // ---------------------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
+  const pre = handlePreflight(req);
+  if (pre) return pre;
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -361,11 +365,9 @@ Deno.serve(async (req: Request) => {
 
     return json({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
-    await logger.error("notify-calendar error", {
+    return await logAndReply(logger, err, "notify-calendar failed", 500, {
       action,
       entryId,
-      error: (err as Error).message,
     });
-    return json({ error: (err as Error).message }, 500);
   }
 });
