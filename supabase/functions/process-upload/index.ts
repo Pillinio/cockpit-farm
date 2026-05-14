@@ -16,6 +16,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { EXTRACTION_SYSTEM_PROMPT, PROMPT_VERSION } from "../_shared/extract-prompt.ts";
 import { CORS_HEADERS, handlePreflight } from "../_shared/cors.ts";
+import { logAndReply } from "../_shared/errors.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -199,6 +201,7 @@ Deno.serve(async (req: Request) => {
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  const logger = createLogger(adminClient, "edge:process-upload");
   const { data: userRes } = await adminClient.auth.getUser(userJwt);
   if (!userRes?.user) return json({ error: "invalid auth" }, 401);
 
@@ -206,7 +209,7 @@ Deno.serve(async (req: Request) => {
     .from("profiles")
     .select("role")
     .eq("id", userRes.user.id)
-    .single();
+    .maybeSingle();
   if (profile?.role !== "owner") return json({ error: "owner role required" }, 403);
 
   // Body parsen
@@ -224,7 +227,11 @@ Deno.serve(async (req: Request) => {
   const { data: blob, error: dlErr } = await adminClient.storage
     .from("incoming-pdfs")
     .download(body.storage_path);
-  if (dlErr || !blob) return json({ error: `download failed: ${dlErr?.message}` }, 404);
+  if (dlErr || !blob) {
+    return await logAndReply(logger, dlErr ?? "blob missing", "download failed", 404, {
+      storage_path: body.storage_path,
+    });
+  }
 
   const buf = await blob.arrayBuffer();
   const fileSize = buf.byteLength;
