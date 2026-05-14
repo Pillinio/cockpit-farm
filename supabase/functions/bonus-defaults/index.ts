@@ -3,6 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createLogger } from "../_shared/logger.ts";
+import { verifyAuth } from "../_shared/auth.ts";
 
 // Allow any origin until production domain is decided — tighten after Cloudflare deploy
 const ALLOWED_ORIGIN = "*";
@@ -53,24 +54,15 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Method not allowed" }, 405);
   }
 
-  // --- Auth ---
-  const authHeader = req.headers.get("Authorization");
-  const apiKey = req.headers.get("X-API-Key");
+  // --- Auth: zentral via verifyAuth, danach Queries als service-role ---
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-  let clientKey: string;
-  if (authHeader?.startsWith("Bearer ")) {
-    clientKey = authHeader.replace("Bearer ", "");
-  } else if (apiKey) {
-    clientKey = apiKey;
-  } else {
-    return json({ error: "Missing authentication. Provide Authorization: Bearer <token> or X-API-Key header." }, 401);
-  }
-
-  const supabase = createClient(supabaseUrl, clientKey, {
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const auth = await verifyAuth(req, supabase, { allow: ["user", "service"] });
+  if (!auth) return json({ error: "unauthorized" }, 401);
 
   const logger = createLogger(supabase, "edge:bonus-defaults");
 
