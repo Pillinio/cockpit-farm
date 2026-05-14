@@ -697,6 +697,14 @@ function showStatus(msg, type = 'success') {
     setTimeout(() => { el.className = 'status-msg'; }, 4000);
 }
 
+// Show a generic error in the UI and log the raw Postgres/Supabase error to
+// console. Avoids leaking internal table/column names, query fragments, etc.
+// into screenshots or over-the-shoulder views.
+function showError(prefix, err) {
+    console.error(prefix, err);
+    showStatus(prefix + ' (Details in Konsole)', 'error');
+}
+
 // ── Section Tabs ─────────────────────────────────────────────────
 function showSection(name) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -739,7 +747,7 @@ async function loadBudgets() {
         .eq('month', 0)
         .order('category');
 
-    if (error) return showStatus('Fehler beim Laden der Budgets: ' + error.message, 'error');
+    if (error) return showError('Fehler beim Laden der Budgets', error);
 
     const tbody = document.getElementById('budget-tbody');
     tbody.innerHTML = '';
@@ -767,7 +775,7 @@ async function deleteBudgetRow(id, category) {
     if (!confirm('Budget-Kategorie "' + category + '" wirklich löschen?')) return;
     const { error } = await sb.from('budgets').delete().eq('id', id);
     if (error) {
-        showStatus('Fehler beim Löschen: ' + error.message, 'error');
+        showError('Fehler beim Löschen', error);
         return;
     }
     showStatus('Budget-Kategorie gelöscht.');
@@ -880,7 +888,7 @@ async function saveBonusParams() {
     };
 
     const { error } = await sb.from('bonus_parameters').insert(params);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Neue Bonus-Parameter Version gespeichert.');
 }
 
@@ -908,7 +916,7 @@ async function saveCarryingCapacity() {
     };
 
     const { error } = await sb.from('carrying_capacity_assumptions').insert(payload);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Tragfähigkeit gespeichert.');
 }
 
@@ -921,7 +929,7 @@ async function loadCategoryRules() {
         .select('*')
         .order('category_name');
 
-    if (error) return showStatus('Fehler beim Laden der Regeln: ' + error.message, 'error');
+    if (error) return showError('Fehler beim Laden der Regeln', error);
 
     // Collect unique categories for dropdowns
     allCategories = [...new Set((data || []).map(r => r.category_name).filter(Boolean))];
@@ -996,7 +1004,7 @@ async function saveRule(btn) {
         ({ error } = await sb.from('category_rules').update(payload).eq('id', id));
     }
 
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Regel gespeichert.');
     loadCategoryRules();
 }
@@ -1009,7 +1017,7 @@ async function deleteRule(btn) {
     if (!confirm('Regel wirklich löschen?')) return;
 
     const { error } = await sb.from('category_rules').delete().eq('id', id);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Regel gelöscht.');
     loadCategoryRules();
 }
@@ -1024,7 +1032,7 @@ async function loadUncategorized() {
         .or('category.is.null,category.eq.uncategorized')
         .order('transaction_date', { ascending: false });
 
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
 
     const tbody = document.getElementById('uncat-tbody');
     tbody.innerHTML = '';
@@ -1106,7 +1114,7 @@ async function loadUsers() {
         .select('id, display_name, role')
         .order('display_name');
 
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
 
     const tbody = document.getElementById('users-tbody');
     tbody.innerHTML = '';
@@ -1129,7 +1137,7 @@ async function loadUsers() {
 
 async function updateRole(userId, newRole) {
     const { error } = await sb.from('profiles').update({ role: newRole }).eq('id', userId);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Rolle aktualisiert.');
 }
 
@@ -1144,7 +1152,7 @@ async function inviteUser() {
         options: { data: { role } }
     });
 
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Einladung (Magic Link) an ' + email + ' gesendet.');
     document.getElementById('invite-email').value = '';
 }
@@ -1268,7 +1276,7 @@ async function saveMarketPrice() {
         }
     }
 
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
 
     showStatus(_editingMarketPriceId ? 'Marktpreis aktualisiert.' : 'Marktpreis gespeichert.');
     cancelEditMarketPrice();
@@ -1350,7 +1358,7 @@ async function loadRecentPrices() {
         .order('price_date', { ascending: false })
         .limit(20);
 
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
 
     _recentPricesCache = data || [];
     const tbody = document.getElementById('market-recent-tbody');
@@ -1372,7 +1380,7 @@ async function loadRecentPrices() {
 async function deleteMarketPrice(id) {
     if (!confirm('Preis wirklich löschen?')) return;
     const { error } = await sb.from('market_prices').delete().eq('id', id);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Preis gelöscht.');
     if (_editingMarketPriceId === id) cancelEditMarketPrice();
     loadRecentPrices();
@@ -1421,7 +1429,7 @@ async function loadBankTransactions() {
     }
 
     const { data, error } = await query.limit(200);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
 
     const total = data?.length || 0;
     const open = (data || []).filter(r => !r.category_confirmed).length;
@@ -1476,14 +1484,14 @@ async function loadBankTransactions() {
 async function deactivateBankTx(id) {
     if (!confirm('Transaktion deaktivieren? Sie wird aus allen Finanz-KPIs ausgeblendet, bleibt aber als Audit-Eintrag erhalten.')) return;
     const { error } = await sb.from('bank_transactions').update({ active: false }).eq('id', id);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Transaktion deaktiviert.');
     loadBankTransactions();
 }
 
 async function reactivateBankTx(id) {
     const { error } = await sb.from('bank_transactions').update({ active: true }).eq('id', id);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Transaktion wiederhergestellt.');
     loadBankTransactions();
 }
@@ -1496,7 +1504,7 @@ async function assignCategory(txId, category) {
         .update({ category: category, category_confirmed: true })
         .eq('id', txId);
 
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
 
     // Get the transaction description for rule creation
     const { data: tx } = await sb.from('bank_transactions')
@@ -1557,7 +1565,7 @@ async function loadEmployees() {
         .select('*')
         .order('sort_order');
 
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
 
     const tbody = document.getElementById('employees-tbody');
     tbody.innerHTML = (data || []).map(emp => {
@@ -1626,7 +1634,7 @@ async function saveEmployee(btn) {
         ({ error } = await sb.from('farm_employees').update(payload).eq('id', id));
     }
 
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Mitarbeiter gespeichert.');
     loadEmployees();
 }
@@ -1639,7 +1647,7 @@ async function deleteEmployee(btn) {
     if (!confirm('Mitarbeiter wirklich löschen? Bestehende Wochenberichte bleiben erhalten.')) return;
 
     const { error } = await sb.from('farm_employees').delete().eq('id', id);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
     showStatus('Mitarbeiter gelöscht.');
     loadEmployees();
 }
@@ -1716,7 +1724,7 @@ async function saveInitialPositions() {
     }));
 
     const { error } = await sb.from('herd_movements').insert(rows);
-    if (error) return showStatus('Fehler: ' + error.message, 'error');
+    if (error) return showError('Fehler', error);
 
     showStatus(initialPositions.length + ' Positionen gespeichert.');
     initialPositions = [];
@@ -1736,7 +1744,8 @@ async function loadSavedInitialPositions() {
         .order('to_camp', { ascending: true });
 
     if (error) {
-        tbody.innerHTML = '<tr><td colspan="5" style="color:#ef4444; text-align:center;">Fehler: ' + escapeHtml(error.message) + '</td></tr>';
+        console.error('herd_movements load failed', error);
+        tbody.innerHTML = '<tr><td colspan="5" style="color:#ef4444; text-align:center;">Fehler beim Laden (Details in Konsole)</td></tr>';
         return;
     }
 
@@ -1761,7 +1770,7 @@ async function loadSavedInitialPositions() {
 async function deleteSavedInitialPosition(id, camp, count) {
     if (!confirm('Initial-Position "' + camp + '" (' + count + ' Tiere) wirklich löschen?')) return;
     const { error } = await sb.from('herd_movements').delete().eq('id', id).eq('reason', 'initial');
-    if (error) return showStatus('Fehler beim Löschen: ' + error.message, 'error');
+    if (error) return showError('Fehler beim Löschen', error);
     showStatus('Initial-Position gelöscht.');
     loadSavedInitialPositions();
 }
@@ -1803,7 +1812,8 @@ async function loadImportHistory() {
     const badge = document.getElementById('import-freshness-badge');
 
     if (error) {
-        tbody.innerHTML = `<tr><td colspan="7" style="color:#b91c1c; padding:20px;">Fehler: ${escapeHtml(error.message)}</td></tr>`;
+        console.error('import-history load failed', error);
+        tbody.innerHTML = `<tr><td colspan="7" style="color:#b91c1c; padding:20px;">Fehler beim Laden (Details in Konsole)</td></tr>`;
         badge.textContent = 'Fehler';
         badge.style.background = '#fee2e2'; badge.style.color = '#b91c1c';
         return;
