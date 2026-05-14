@@ -4,6 +4,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { CORS_HEADERS, handlePreflight } from "../_shared/cors.ts";
+import { logAndReply } from "../_shared/errors.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -27,6 +29,7 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  const logger = createLogger(admin, "edge:rollback-import");
   const { data: userRes } = await admin.auth.getUser(userJwt);
   if (!userRes?.user) return json({ error: "invalid auth" }, 401);
 
@@ -34,7 +37,7 @@ Deno.serve(async (req: Request) => {
     .from("profiles")
     .select("role")
     .eq("id", userRes.user.id)
-    .single();
+    .maybeSingle();
   if (profile?.role !== "owner") return json({ error: "owner role required" }, 403);
 
   let body: { import_id?: string };
@@ -43,7 +46,7 @@ Deno.serve(async (req: Request) => {
   if (!body.import_id) return json({ error: "import_id required" }, 400);
 
   const { data, error } = await admin.rpc("rollback_import", { p_import_id: body.import_id });
-  if (error) return json({ error: `rollback failed: ${error.message}` }, 500);
+  if (error) return await logAndReply(logger, error, "rollback failed", 500, { import_id: body.import_id });
   if (data?.error) return json({ error: data.error }, 404);
 
   return json({ success: true, ...data });
