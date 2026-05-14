@@ -157,6 +157,22 @@ async function handleSlaughterReport(
     totals: Record<string, unknown>;
   };
 
+  // 0. Header-Dedup: gleiches statement_number + report_date → schon importiert.
+  //    Payload-Hash-Dedup (in main handler) greift bei identischen Payloads;
+  //    diese Prüfung schützt zusätzlich gegen Whitespace-Drift, Key-Reorder,
+  //    etc. Konsequent kein Insert + 0 zurückgegeben.
+  if (statement_number && report_date) {
+    const { data: existing } = await supabase
+      .from("slaughter_reports")
+      .select("id")
+      .eq("statement_number", statement_number)
+      .eq("report_date", report_date)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      return 0;
+    }
+  }
+
   // 1. Insert report header
   const { data: report, error: rptErr } = await supabase
     .from("slaughter_reports")
