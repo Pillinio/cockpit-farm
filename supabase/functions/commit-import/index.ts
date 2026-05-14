@@ -6,6 +6,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { CORS_HEADERS, handlePreflight } from "../_shared/cors.ts";
+import { logAndReply } from "../_shared/errors.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -38,6 +40,7 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  const logger = createLogger(admin, "edge:commit-import");
   const { data: userRes } = await admin.auth.getUser(userJwt);
   if (!userRes?.user) return json({ error: "invalid auth" }, 401);
   const userId = userRes.user.id;
@@ -117,7 +120,9 @@ Deno.serve(async (req: Request) => {
     return json({ error: `document_type '${body.document_type}' wird noch nicht unterstützt` }, 400);
 
   } catch (e) {
-    const msg = (e as Error).message || String(e);
-    return json({ error: `commit failed: ${msg}` }, 500);
+    return await logAndReply(logger, e, "commit failed", 500, {
+      document_type: body.document_type,
+      file_hash: body.file_hash,
+    });
   }
 });
