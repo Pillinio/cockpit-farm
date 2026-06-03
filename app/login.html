@@ -203,6 +203,26 @@
                     Stattdessen Magic Link per E-Mail senden
                 </a>
             </div>
+            <div style="text-align:center; margin-top:4px;">
+                <a href="#" id="forgot-toggle" style="color:#6b7280; font-size:0.85em; text-decoration:underline; cursor:pointer;">
+                    Passwort vergessen?
+                </a>
+            </div>
+        </form>
+        <form id="reset-form" style="display:none;">
+            <label class="form-label" for="new-password">Neues Passwort</label>
+            <input
+                type="password"
+                id="new-password"
+                class="form-input"
+                placeholder="Mindestens 6 Zeichen"
+                autocomplete="new-password"
+                minlength="6"
+                required
+            >
+            <button type="submit" class="submit-btn" id="reset-btn" style="margin-top:12px;">
+                Passwort speichern
+            </button>
         </form>
         <div class="message" id="message"></div>
     </div>
@@ -220,15 +240,21 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const params = new URLSearchParams(window.location.search);
 const redirectTo = params.get('redirect') || 'cockpit.html';
 
+// Recovery link? Stay on page to set a new password instead of redirecting.
+const isRecovery = window.location.hash.includes('type=recovery');
+let recoveryMode = isRecovery;
+
 // Already logged in? Redirect.
 (async function() {
+    if (isRecovery) return;
     const { data: { session } } = await sb.auth.getSession();
     if (session) window.location.href = redirectTo;
 })();
 
-// Magic link callback handler
+// Magic link + password-recovery callback handler
 sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session) window.location.href = redirectTo;
+    if (event === 'PASSWORD_RECOVERY') { recoveryMode = true; showResetForm(); return; }
+    if (event === 'SIGNED_IN' && session && !recoveryMode) window.location.href = redirectTo;
 });
 
 const form = document.getElementById('login-form');
@@ -237,6 +263,10 @@ const passwordInput = document.getElementById('password');
 const submitBtn = document.getElementById('submit-btn');
 const messageEl = document.getElementById('message');
 const magicToggle = document.getElementById('magic-link-toggle');
+const forgotToggle = document.getElementById('forgot-toggle');
+const resetForm = document.getElementById('reset-form');
+const newPasswordInput = document.getElementById('new-password');
+const resetBtn = document.getElementById('reset-btn');
 
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -304,6 +334,63 @@ magicToggle.addEventListener('click', (e) => {
     messageEl.style.background = '#f0f9ff';
     messageEl.style.color = '#1e40af';
     messageEl.style.border = '1px solid #bfdbfe';
+});
+
+// ── Passwort vergessen: Reset-Link per E-Mail senden ──
+forgotToggle.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    if (!email) {
+        showError('Bitte zuerst deine E-Mail-Adresse oben eintragen.');
+        emailInput.focus();
+        return;
+    }
+    forgotToggle.style.pointerEvents = 'none';
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/app/login.html',
+    });
+    forgotToggle.style.pointerEvents = '';
+    if (error) {
+        showError(error.message.includes('rate')
+            ? 'Zu viele Versuche. Bitte einige Minuten warten.'
+            : 'Fehler: ' + error.message);
+        return;
+    }
+    messageEl.className = 'message success';
+    messageEl.textContent = 'Link zum Zurücksetzen an ' + email + ' gesendet. Postfach prüfen.';
+    messageEl.style.display = 'block';
+});
+
+// ── Recovery-Link angeklickt: Formular zum Setzen eines neuen Passworts ──
+function showResetForm() {
+    form.style.display = 'none';
+    resetForm.style.display = 'block';
+    messageEl.className = 'message';
+    messageEl.textContent = 'Bitte ein neues Passwort vergeben.';
+    messageEl.style.display = 'block';
+    messageEl.style.background = '#f0f9ff';
+    messageEl.style.color = '#1e40af';
+    messageEl.style.border = '1px solid #bfdbfe';
+    newPasswordInput.focus();
+}
+
+resetForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = newPasswordInput.value;
+    if (password.length < 6) {
+        showError('Passwort muss mindestens 6 Zeichen haben.');
+        return;
+    }
+    resetBtn.disabled = true;
+    resetBtn.innerHTML = '<span class="loading-spinner"></span> Speichern...';
+    const { error } = await sb.auth.updateUser({ password });
+    if (error) {
+        showError('Fehler: ' + error.message);
+        resetBtn.disabled = false;
+        resetBtn.textContent = 'Passwort speichern';
+        return;
+    }
+    window.location.href = redirectTo;
 });
 </script>
 
