@@ -222,7 +222,7 @@ const redirectTo = params.get('redirect') || 'cockpit.html';
     if (session) window.location.href = redirectTo;
 })();
 
-// Magic link callback handler
+// Redirect once signed in
 sb.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) window.location.href = redirectTo;
 });
