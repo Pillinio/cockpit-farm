@@ -193,22 +193,18 @@
                 id="password"
                 class="form-input"
                 placeholder="Passwort eingeben"
+                required
                 autocomplete="current-password"
             >
             <button type="submit" class="submit-btn" id="submit-btn">
                 Anmelden
             </button>
-            <div style="text-align:center; margin-top:8px;">
-                <a href="#" id="magic-link-toggle" style="color:#6b7280; font-size:0.85em; text-decoration:underline; cursor:pointer;">
-                    Stattdessen Magic Link per E-Mail senden
-                </a>
-            </div>
         </form>
         <div class="message" id="message"></div>
     </div>
 
     <div class="footer-note">
-        Passwort oder Magic Link verwenden.
+        Mit E-Mail und Passwort anmelden.
     </div>
 </div>
 
@@ -236,7 +232,6 @@ const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 const submitBtn = document.getElementById('submit-btn');
 const messageEl = document.getElementById('message');
-const magicToggle = document.getElementById('magic-link-toggle');
 
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -244,6 +239,7 @@ form.addEventListener('submit', async (e) => {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     if (!email) return;
+    if (!password) { showError('Bitte E-Mail und Passwort eingeben.'); return; }
 
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="loading-spinner"></span> Anmelden...';
@@ -251,32 +247,14 @@ form.addEventListener('submit', async (e) => {
     messageEl.style.display = 'none';
 
     try {
-        if (password) {
-            // ── Password Login ──
-            const { data, error } = await sb.auth.signInWithPassword({ email, password });
-            if (error) {
-                showError(error.message.includes('Invalid login')
-                    ? 'Falsche E-Mail oder Passwort.'
-                    : 'Fehler: ' + error.message);
-            } else if (data?.session) {
-                window.location.href = redirectTo;
-                return; // don't re-enable button
-            }
-        } else {
-            // ── Magic Link ──
-            const { error } = await sb.auth.signInWithOtp({
-                email,
-                options: { emailRedirectTo: window.location.origin + '/app/' + redirectTo },
-            });
-            if (error) {
-                showError(error.message.includes('rate')
-                    ? 'Zu viele Versuche. Bitte einige Minuten warten.'
-                    : 'Fehler: ' + error.message);
-            } else {
-                messageEl.className = 'message success';
-                messageEl.textContent = 'Login-Link an ' + email + ' gesendet. Postfach prüfen.';
-                messageEl.style.display = 'block';
-            }
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) {
+            showError(error.message.includes('Invalid login')
+                ? 'Falsche E-Mail oder Passwort.'
+                : 'Fehler: ' + error.message);
+        } else if (data?.session) {
+            window.location.href = redirectTo;
+            return; // don't re-enable button
         }
     } catch (err) {
         showError('Verbindungsfehler. Bitte erneut versuchen.');
@@ -291,20 +269,6 @@ function showError(msg) {
     messageEl.textContent = msg;
     messageEl.style.display = 'block';
 }
-
-// Toggle: show magic link hint when clicked
-magicToggle.addEventListener('click', (e) => {
-    e.preventDefault();
-    passwordInput.value = '';
-    passwordInput.placeholder = 'Leer lassen für Magic Link';
-    emailInput.focus();
-    messageEl.className = 'message';
-    messageEl.textContent = 'Passwort leer lassen und Anmelden klicken — ein Login-Link wird per E-Mail gesendet.';
-    messageEl.style.display = 'block';
-    messageEl.style.background = '#f0f9ff';
-    messageEl.style.color = '#1e40af';
-    messageEl.style.border = '1px solid #bfdbfe';
-});
 </script>
 
 </body>
