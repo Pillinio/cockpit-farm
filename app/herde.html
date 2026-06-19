@@ -501,6 +501,28 @@
             </div>
         </details>
 
+        <!-- Quick-Entry: Ochsen markieren (Ochse=kastriert vs. Bulle=intakt) -->
+        <details class="section" id="oxen-tag-section" style="margin-bottom:16px;" ontoggle="if(this.open) loadOxenTagging()">
+            <summary style="cursor:pointer; padding:14px 20px; font-weight:600; color:#1f4e78; list-style:none;">
+                <span style="font-size:1.2em;">&#x1F402;</span>
+                <span style="margin-left:8px;">Ochsen markieren (Ochse vs. Bulle)</span>
+                <span style="float:right; color:#6b7280; font-size:0.85em; font-weight:normal;">Klick zum Öffnen</span>
+            </summary>
+            <div style="padding: 0 20px 20px;">
+                <p style="color:#6b7280; font-size:0.88em; margin:4px 0 12px;">
+                    Der CSV-Import kennt nur das Geschlecht. Markiere hier kastrierte Männchen als <strong>Ochse</strong>;
+                    intakte bleiben <strong>Bulle</strong>. Die Auswertung (H5/H6) trennt beide dann automatisch.
+                </p>
+                <div style="display:flex; gap:12px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+                    <input type="text" id="ox-filter" placeholder="Tier-ID suchen…" oninput="renderOxenTable()" style="flex:1; min-width:160px; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;">
+                    <span id="ox-msg" style="color:#6b7280; font-size:0.9em;"></span>
+                </div>
+                <div id="ox-table-wrap" style="max-height:420px; overflow-y:auto;">
+                    <span style="color:#9ca3af;">Wird geladen…</span>
+                </div>
+            </div>
+        </details>
+
         <!-- Global Year Selector (applies to H1-H4) -->
         <div class="section" id="year-nav-section">
             <div class="section-body" style="padding:14px 20px;">
@@ -1241,7 +1263,8 @@ async function loadH5() {
             cows:        { label: 'Kühe',              color: '#2E75B6', count: 0 },
             heifers:     { label: 'Färsen',            color: '#60a5fa', count: 0 },
             bullsYoung:  { label: 'Jungbullen',        color: '#1F4E78', count: 0 },
-            oxBull:      { label: 'Ochsen/Bullen',     color: '#93c5fd', count: 0 },
+            oxen:        { label: 'Ochsen',            color: '#93c5fd', count: 0 },
+            bulls:       { label: 'Bullen',            color: '#0c4a6e', count: 0 },
         };
 
         animals.forEach(a => {
@@ -1252,7 +1275,8 @@ async function loadH5() {
             else if (cat.key === 'cow')    buckets.cows.count++;
             else if (cat.key === 'heifer') buckets.heifers.count++;
             else if (cat.key === 'bull_young') buckets.bullsYoung.count++;
-            else if (cat.key === 'ox_bull') buckets.oxBull.count++;
+            else if (cat.key === 'ox')     buckets.oxen.count++;
+            else if (cat.key === 'bull')   buckets.bulls.count++;
         });
 
         const categories = Object.values(buckets)
@@ -1309,13 +1333,18 @@ async function loadH5() {
 function categorizeAnimal(animal, today) {
     const sex = animal.sex;
     const calvings = animal.calvings || 0;
+    // Ochse (kastriert) vs. Bulle (intakt). Ungetaggt (null) => als Bulle/intakt
+    // behandelt; der User markiert die Ochsen auf der Herde-Seite.
+    const isCastrated = animal.is_castrated === true;
+    const OX   = { key: 'ox',   label: 'Ochsen', gainKey: 'ox_fattening', maxKg: 900 };
+    const BULL = { key: 'bull', label: 'Bullen', gainKey: 'bull_adult',   maxKg: 1000 };
     const birthDate = animal.birth_date ? new Date(animal.birth_date) : null;
     const ageMonths = birthDate ? Math.floor((today - birthDate) / (1000 * 60 * 60 * 24 * 30.44)) : null;
 
     if (ageMonths === null) {
         // Unknown age: guess from weight or default
         if (sex === 'F' && calvings > 0) return { key: 'cow', label: 'Kühe', gainKey: 'cow_adult', maxKg: 550 };
-        if (sex === 'M') return { key: 'bull_young', label: 'Jungbullen', gainKey: 'bull_young', maxKg: 800 };
+        if (sex === 'M') return isCastrated ? OX : { key: 'bull_young', label: 'Jungbullen', gainKey: 'bull_young', maxKg: 800 };
         return { key: 'heifer', label: 'Färsen', gainKey: 'heifer_18plus', maxKg: 480 };
     }
 
@@ -1328,8 +1357,10 @@ function categorizeAnimal(animal, today) {
         return { key: 'heifer', label: 'Färsen', gainKey: 'heifer_18plus', maxKg: 480 };
     }
 
+    // Männlich, ≥18 Mon: kastriert => Ochse; intakt 18-24 => Jungbulle; intakt ≥24 => Bulle
+    if (isCastrated) return OX;
     if (ageMonths < 24) return { key: 'bull_young', label: 'Jungbullen', gainKey: 'bull_young', maxKg: 800 };
-    return { key: 'ox_bull', label: 'Ochsen/Bullen', gainKey: 'ox_fattening', maxKg: 800 };
+    return BULL;
 }
 
 function estimateWeight(animal, category, gainConfig, today) {
@@ -1355,7 +1386,7 @@ function estimateWeight(animal, category, gainConfig, today) {
     }
 
     // Fallback: category average
-    const defaults = { calf: 120, weaner: 200, young: 280, heifer: 350, cow: 450, bull_young: 400, ox_bull: 500 };
+    const defaults = { calf: 120, weaner: 200, young: 280, heifer: 350, cow: 450, bull_young: 400, ox: 520, bull: 650 };
     return defaults[category.key] || 300;
 }
 
@@ -1493,7 +1524,7 @@ async function loadH6() {
 
         // Category table — pro Kategorie zeigen wir die parallele Berechnung;
         // im Fußzeilen-Total zeigen wir EINEN konsolidierten Wert.
-        const catOrder = ['calf', 'weaner', 'young', 'heifer', 'cow', 'bull_young', 'ox_bull'];
+        const catOrder = ['calf', 'weaner', 'young', 'heifer', 'cow', 'bull_young', 'ox', 'bull'];
         html += '<table class="data-table"><thead><tr>';
         html += '<th>Kategorie</th><th class="num">Anzahl</th><th class="num">&#x2300; Gewicht</th><th class="num">Lebendgewicht</th><th class="num">Schlachtgewicht</th><th class="num">Wert</th>';
         html += '</tr></thead><tbody>';
@@ -1670,6 +1701,86 @@ function setupCSVUpload() {
         // Reset input so the same file can be re-selected
         input.value = '';
     });
+}
+
+// ── Ochsen-Tagging (Ochse=kastriert vs. Bulle=intakt) ───────────
+let _oxenAnimals = null;
+
+async function loadOxenTagging() {
+    const wrap = document.getElementById('ox-table-wrap');
+    if (_oxenAnimals) { renderOxenTable(); return; }   // already loaded
+    wrap.innerHTML = '<span style="color:#9ca3af;">Wird geladen…</span>';
+    const { data, error } = await sb
+        .from('herd_animals')
+        .select('animal_id, birth_date, last_weight_kg, is_castrated')
+        .eq('sex', 'M')
+        .eq('active', true);
+    if (error) {
+        wrap.innerHTML = '<span style="color:#991b1b;">Fehler beim Laden (Details in Konsole).</span>';
+        console.error('loadOxenTagging error', error);
+        return;
+    }
+    const today = new Date();
+    _oxenAnimals = (data || []).map(a => {
+        const months = a.birth_date
+            ? Math.floor((today - new Date(a.birth_date)) / (1000 * 60 * 60 * 24 * 30.44))
+            : null;
+        return { ...a, ageMonths: months };
+    }).sort((x, y) => (y.ageMonths ?? -1) - (x.ageMonths ?? -1));
+    renderOxenTable();
+}
+
+function renderOxenTable() {
+    const wrap = document.getElementById('ox-table-wrap');
+    if (!_oxenAnimals) return;
+    const q = (document.getElementById('ox-filter').value || '').trim().toLowerCase();
+    const rows = _oxenAnimals.filter(a => !q || (a.animal_id || '').toLowerCase().includes(q));
+    const oxCount = _oxenAnimals.filter(a => a.is_castrated === true).length;
+    document.getElementById('ox-msg').textContent =
+        oxCount + ' als Ochse markiert · ' + _oxenAnimals.length + ' Männchen';
+    if (rows.length === 0) { wrap.innerHTML = '<span style="color:#9ca3af;">Keine Treffer.</span>'; return; }
+    const ageStr = m => m === null ? '—' : (m < 24 ? m + ' Mon' : (m / 12).toFixed(1) + ' J');
+    let html = '<table class="data-table" style="width:100%;"><thead><tr>' +
+        '<th>Tier-ID</th><th class="num">Alter</th><th class="num">Letztes Gewicht</th><th>Typ</th></tr></thead><tbody>';
+    rows.forEach(a => {
+        const val = a.is_castrated === true ? 'ox' : (a.is_castrated === false ? 'bull' : '');
+        html += '<tr>' +
+            '<td>' + a.animal_id + '</td>' +
+            '<td class="num">' + ageStr(a.ageMonths) + '</td>' +
+            '<td class="num">' + (a.last_weight_kg ? a.last_weight_kg + ' kg' : '—') + '</td>' +
+            '<td><select data-id="' + a.animal_id + '" onchange="setCastration(this)" ' +
+            'style="padding:5px 8px; border:1px solid #d1d5db; border-radius:5px;">' +
+            '<option value=""' + (val === '' ? ' selected' : '') + '>— ungetaggt</option>' +
+            '<option value="bull"' + (val === 'bull' ? ' selected' : '') + '>Bulle (intakt)</option>' +
+            '<option value="ox"' + (val === 'ox' ? ' selected' : '') + '>Ochse (kastriert)</option>' +
+            '</select></td></tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+}
+
+async function setCastration(sel) {
+    const animalId = sel.getAttribute('data-id');
+    const v = sel.value;
+    const newVal = v === 'ox' ? true : (v === 'bull' ? false : null);
+    sel.disabled = true;
+    const { error } = await sb.from('herd_animals')
+        .update({ is_castrated: newVal })
+        .eq('animal_id', animalId);
+    sel.disabled = false;
+    const msg = document.getElementById('ox-msg');
+    if (error) {
+        msg.textContent = 'Fehler beim Speichern von ' + animalId;
+        console.error('setCastration error', error);
+        return;
+    }
+    const a = _oxenAnimals.find(x => x.animal_id === animalId);
+    if (a) a.is_castrated = newVal;
+    const oxCount = _oxenAnimals.filter(x => x.is_castrated === true).length;
+    msg.textContent = animalId + ' gespeichert · ' + oxCount + ' Ochsen';
+    // H5/H6 neu berechnen, damit die Trennung sofort sichtbar wird
+    if (typeof loadH5 === 'function') loadH5();
+    if (typeof loadH6 === 'function') loadH6();
 }
 
 // ── Quick-Entry: Herdenbewegung ─────────────────────────────────
