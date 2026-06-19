@@ -2461,7 +2461,7 @@ Monat.meldung = {
             }
 
             const childResults = await Promise.allSettled([
-                sb.from('camp_vegetation').delete().eq('observation_date', snapshotDate).select('id'),
+                sb.from('camp_vegetation').delete().eq('snapshot_date', snapshotDate).select('id'),
                 sb.from('incidents').delete().eq('snapshot_date', snapshotDate).select('id'),
                 sb.from('pasture_observations').delete().eq('snapshot_date', snapshotDate).select('id'),
             ]);
@@ -3060,7 +3060,7 @@ Monat.meldung = {
             // Edit mode: alte Kamp-Beobachtungen + Vorfälle löschen (delete-then-insert)
             if (isEdit) {
                 const delResults = await Promise.allSettled([
-                    sb.from('camp_vegetation').delete().eq('observation_date', snapshotDate),
+                    sb.from('camp_vegetation').delete().eq('snapshot_date', snapshotDate),
                     sb.from('incidents').delete().eq('snapshot_date', snapshotDate),
                 ]);
                 for (const r of delResults) {
@@ -3108,6 +3108,7 @@ Monat.meldung = {
                 const idx = card.id.split('_')[1];
                 const { error } = await sb.from('incidents').insert({
                     snapshot_date: snapshotDate,
+                    incident_date: snapshotDate,
                     incident_type: this.val('mm-inc_type_' + idx),
                     severity: this.val('mm-inc_severity_' + idx),
                     affected_count: this.num('mm-inc_count_' + idx),
