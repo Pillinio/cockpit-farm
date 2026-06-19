@@ -1360,8 +1360,12 @@ function estimateWeight(animal, category, gainConfig, today) {
 }
 
 async function loadH6() {
+    // Hinweis: das initiale Placeholder-Element (#placeholder-h6) ist ein Kind von
+    // #herdenwert-body und wird beim ersten erfolgreichen Render durch
+    // `body.innerHTML = html` ENTFERNT. Deshalb dürfen wir es bei erneuten Aufrufen
+    // (z.B. nach dem CSV-Import) nicht mehr referenzieren — sonst NPE. Wir rendern
+    // alle Zustände (leer/Fehler/Daten) direkt in `body`, analog zu loadH8.
     const body = document.getElementById('herdenwert-body');
-    const ph = document.getElementById('placeholder-h6');
     try {
         // Load animals, gain config, and beef price in parallel.
         // Preisbasis: aktuellster Meatco-Carcass-Preis. Wir suchen über das
@@ -1395,8 +1399,8 @@ async function loadH6() {
         const gainConfig = gainRes.data || [];
 
         if (animals.length === 0) {
-            ph.innerHTML = '<span class="placeholder-icon">&#x1F404;</span>' +
-                '<span class="placeholder-text">Keine Tiere in der Datenbank. CSV importieren um zu starten.</span>';
+            body.innerHTML = '<div class="placeholder"><span class="placeholder-icon">&#x1F404;</span>' +
+                '<span class="placeholder-text">Keine Tiere in der Datenbank. CSV importieren um zu starten.</span></div>';
             setBadge('h6', '\u2014');
             return;
         }
@@ -1543,13 +1547,12 @@ async function loadH6() {
         html += ')' + stalePriceBadge + ', umgerechnet ' + beefPricePerKgLive.toFixed(2) + ' NAD/kg Lebendgewicht bei ' + (dressingPct * 100).toFixed(0) + '% Ausschlachtung.';
         html += '</div>';
 
-        ph.style.display = 'none';
         body.innerHTML = html;
 
     } catch (e) {
         console.error('H6 error:', e);
-        ph.innerHTML = '<span class="placeholder-icon">&#x26A0;&#xFE0F;</span>' +
-            '<span class="placeholder-text">Fehler beim Laden (Details in Konsole).</span>';
+        body.innerHTML = '<div class="placeholder"><span class="placeholder-icon">&#x26A0;&#xFE0F;</span>' +
+            '<span class="placeholder-text">Fehler beim Laden (Details in Konsole).</span></div>';
         setBadge('h6', '\u2014');
     }
 }
