@@ -625,19 +625,6 @@
             </div>
         </div>
 
-        <!-- M8 — LPO Benchmark -->
-        <div class="card" id="card-m8">
-            <div class="card-status-bar status-gray"></div>
-            <div class="card-body">
-                <div class="card-top">
-                    <span class="card-icon">&#x1F4C8;</span>
-                    <span class="card-title">M8 — LPO Benchmark vs Meatco</span>
-                    <span class="card-status-dot status-gray"></span>
-                </div>
-                <div class="card-value" data-kpi="m8"><span class="loading-spinner"></span></div>
-                <div class="card-subtitle">Wochenpreisvergleich</div>
-            </div>
-        </div>
 
     </div>
 
@@ -1330,11 +1317,6 @@ async function loadM7() {
     }
 }
 
-// ── M8 — LPO Benchmark (Placeholder) ────────────────────────────
-async function loadM8() {
-    noData('m8', 'LPO-Parser noch nicht implementiert');
-}
-
 // ── Load All ─────────────────────────────────────────────────────
 async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
@@ -1343,7 +1325,7 @@ async function loadAll() {
         loadCarcassPrices(),
         loadLiveAuctionPrices(),
         loadM2(), loadM3(),
-        loadM5(), loadM6(), loadM7(), loadM8()
+        loadM5(), loadM6(), loadM7()
     ]);
 
     const now = new Date();

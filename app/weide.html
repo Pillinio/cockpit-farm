@@ -756,11 +756,11 @@
     </div>
 
     <!-- Quick-Entry: Kamp-Zustand (auch außerhalb Monatsbericht) -->
-    <details class="section" id="quick-camp-section" style="margin-bottom:16px;">
+    <details class="section" id="quick-camp-section" open style="margin-bottom:16px;">
         <summary style="cursor:pointer; padding:14px 20px; font-weight:600; color:#1f4e78; list-style:none;">
             <span style="font-size:1.2em;">&#x270F;&#xFE0F;</span>
-            <span style="margin-left:8px;">Schnell-Eingabe: Kamp-Zustand erfassen</span>
-            <span style="float:right; color:#6b7280; font-size:0.85em; font-weight:normal;">Klick zum Öffnen</span>
+            <span style="margin-left:8px;">Kamp-Zustand erfassen</span>
+            <span style="float:right; color:#6b7280; font-size:0.85em; font-weight:normal;">Hier direkt — kein Monatsbericht nötig</span>
         </summary>
         <div style="padding: 0 20px 20px;">
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:10px; margin-bottom:12px;">
@@ -920,7 +920,6 @@
         <div style="margin-top:24px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
                 <strong style="color:#374151;">Letzte Bewegungen</strong>
-                <button onclick="loadRecentMovements()" style="background:#6b7280; color:white; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:0.82em;">Aktualisieren</button>
             </div>
             <table class="data-table" id="movements-table" style="font-size:0.85em;">
                 <thead>

@@ -594,7 +594,6 @@
                 <h1>Bonussystem &amp; Prognose</h1>
             </div>
             <img src="../namibia-flag.png" alt="Namibia Flag" class="header-logo">
-            <button class="admin-toggle" id="adminToggle" onclick="toggleAdminMode()">🔒 Admin-Modus</button>
         </div>
 
         <!-- Shared Navigation -->
@@ -1260,57 +1259,9 @@
         let bonusChart, comparisonChart;
 
         // ===== Admin Mode Management =====
-        let isAdminMode = false;
-        const ADMIN_PASSWORD = 'farm2025'; // Ändern Sie dieses Passwort!
-
-        function toggleAdminMode() {
-            if (!isAdminMode) {
-                // Passwort abfragen
-                const password = prompt('Bitte geben Sie das Admin-Passwort ein:');
-                if (password === ADMIN_PASSWORD) {
-                    isAdminMode = true;
-                    enableAdminMode();
-                } else if (password !== null) {
-                    alert('❌ Falsches Passwort!');
-                }
-            } else {
-                // Admin-Modus deaktivieren
-                isAdminMode = false;
-                disableAdminMode();
-            }
-        }
-
-        function enableAdminMode() {
-            document.getElementById('adminToggle').textContent = '🔓 Admin-Modus aktiv';
-            document.getElementById('adminToggle').classList.add('active');
-
-            // Admin-only-hide Sektionen anzeigen (Personal, Auszahlung, Prozent)
-            document.querySelectorAll('.admin-only-hide').forEach(section => {
-                section.style.display = 'block';
-            });
-
-            // Wechsel von Display zu Edit Mode für Bonus-Parameter
-            document.querySelectorAll('.admin-display').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.admin-edit').forEach(el => el.style.display = 'block');
-
-            alert('✅ Admin-Modus aktiviert! Alle Parameter sind jetzt sichtbar und editierbar.');
-        }
-
-        function disableAdminMode() {
-            document.getElementById('adminToggle').textContent = '🔒 Admin-Modus';
-            document.getElementById('adminToggle').classList.remove('active');
-
-            // Admin-only-hide Sektionen verstecken (Personal, Auszahlung, Prozent)
-            document.querySelectorAll('.admin-only-hide').forEach(section => {
-                section.style.display = 'none';
-            });
-
-            // Wechsel von Edit zu Display Mode für Bonus-Parameter
-            document.querySelectorAll('.admin-edit').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.admin-display').forEach(el => el.style.display = 'block');
-
-            alert('🔒 Admin-Modus deaktiviert. Sensible Parameter sind versteckt.');
-        }
+        // Bonus-Parameter werden ausschließlich im Admin-Bereich gepflegt.
+        // Diese Seite zeigt sie read-only (CSS-Default: .admin-edit /
+        // .admin-only-hide sind ausgeblendet). Kein zweiter Editier-Modus mehr.
 
         // ===== LocalStorage Functions =====
         function saveToLocalStorage() {
@@ -2421,7 +2372,6 @@
         // Expose DOM-called functions on window (modules don't auto-expose)
         window.calculate = calculate;
         window.switchTab = switchTab;
-        window.toggleAdminMode = toggleAdminMode;
         window.exportToJSON = exportToJSON;
         window.importFromJSON = importFromJSON;
         window.exportToPDF = exportToPDF;

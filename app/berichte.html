@@ -1382,70 +1382,12 @@
                             <textarea id="mm-sickNotes" placeholder="z.B. 2 K&uuml;he mit Durchfall, Kamp 3..."></textarea>
                         </div>
 
-                        <!-- 3. Herdenbewegungen -->
+                        <!-- 3. Herdenbewegungen (read-only; Erfassung auf der Herde-Seite) -->
                         <h3 class="mm-subsection-title" style="margin-top:24px;">&#x1F501; Herdenbewegungen im Monat</h3>
                         <div class="mm-text-muted" style="margin-bottom:10px;">
-                            Bewegungen werden sofort gespeichert, unabh&auml;ngig vom "Absenden"-Button. Kamps ohne Bewegung bleiben beim Vormonat-Stand.
+                            &Uuml;bersicht der Bewegungen dieses Monats. Neue Bewegungen erfasst du laufend auf der
+                            <a href="herde.html#quick-movement-section" style="font-weight:600;">Herde-Seite</a> &mdash; unabh&auml;ngig vom Monatsbericht.
                         </div>
-
-                        <details id="movement-form-details" style="margin-bottom:14px;">
-                            <summary style="cursor:pointer;font-weight:600;color:#2E75B6;font-size:0.95em;padding:6px 0;">
-                                &#x2795; Neue Bewegung erfassen
-                            </summary>
-                            <div class="entry-form" id="movement-form">
-                                <div class="form-group">
-                                    <label for="mv-date">Datum</label>
-                                    <input type="date" id="mv-date">
-                                </div>
-                                <div class="form-group">
-                                    <label for="mv-from">Von Kamp</label>
-                                    <select id="mv-from">
-                                        <option value="">-- Zugang / Geburt --</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="mv-to">Nach Kamp</label>
-                                    <select id="mv-to">
-                                        <option value="">-- Abgang / Verkauf / Tod --</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="mv-count">Anzahl</label>
-                                    <input type="number" id="mv-count" min="1" value="1">
-                                </div>
-                                <div class="form-group">
-                                    <label for="mv-category">Tierkategorie</label>
-                                    <select id="mv-category">
-                                        <option value="cows">K&uuml;he</option>
-                                        <option value="bulls">Bullen</option>
-                                        <option value="heifers">F&auml;rsen</option>
-                                        <option value="calves">K&auml;lber</option>
-                                        <option value="oxen">Ochsen</option>
-                                        <option value="mixed">Gemischt</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="mv-reason">Grund</label>
-                                    <select id="mv-reason">
-                                        <option value="rotation">Rotation</option>
-                                        <option value="birth">Geburt</option>
-                                        <option value="purchase">Zukauf</option>
-                                        <option value="sale">Verkauf</option>
-                                        <option value="death">Tod</option>
-                                        <option value="separation">Separation</option>
-                                        <option value="other">Sonstiges</option>
-                                    </select>
-                                </div>
-                                <div class="form-group full-width">
-                                    <label for="mv-notes">Notizen</label>
-                                    <textarea id="mv-notes" rows="2" placeholder="Optional..."></textarea>
-                                </div>
-                                <div class="form-group full-width" style="flex-direction:row;gap:12px;align-items:center;">
-                                    <button class="btn-save" id="btn-save-movement" onclick="Monat.saveMovement()">Speichern</button>
-                                    <div class="form-msg" id="mv-msg"></div>
-                                </div>
-                            </div>
-                        </details>
 
                         <div id="movements-table-wrap">
                             <div class="loading-placeholder"><span class="loading-spinner"></span> Lade Bewegungen...</div>
@@ -1695,7 +1637,6 @@ async function checkAuth() {
 const Monat = {
     // State
     currentUser: null,
-    campNames: [],
     loaded: false,
 
     // Constants
@@ -1765,116 +1706,8 @@ const Monat = {
     },
 
     // ── Load Kamps ──
-    async loadCamps() {
-        const { data, error } = await sb
-            .from('farm_camps')
-            .select('name')
-            .eq('active', true)
-            .order('name');
-
-        if (error || !data) return;
-        this.campNames = data.map(c => c.name);
-
-        const fromSel = document.getElementById('mv-from');
-        const toSel = document.getElementById('mv-to');
-
-        // Clear any existing options (except defaults) before re-adding
-        // (Safe to call multiple times — but only call once in init)
-        this.campNames.forEach(name => {
-            const opt1 = document.createElement('option');
-            opt1.value = name;
-            opt1.textContent = name;
-            fromSel.appendChild(opt1);
-
-            const opt2 = document.createElement('option');
-            opt2.value = name;
-            opt2.textContent = name;
-            toSel.appendChild(opt2);
-        });
-    },
-
-    // ── Save Movement ──
-    async saveMovement() {
-        const btn = document.getElementById('btn-save-movement');
-        const msg = document.getElementById('mv-msg');
-        msg.className = 'form-msg';
-        msg.style.display = 'none';
-
-        const dateVal = document.getElementById('mv-date').value;
-        const fromVal = document.getElementById('mv-from').value || null;
-        const toVal = document.getElementById('mv-to').value || null;
-        const countVal = parseInt(document.getElementById('mv-count').value, 10);
-        const catVal = document.getElementById('mv-category').value;
-        const reasonVal = document.getElementById('mv-reason').value;
-        const notesVal = document.getElementById('mv-notes').value.trim() || null;
-
-        if (!dateVal || !countVal || countVal < 1) {
-            msg.textContent = 'Bitte Datum und Anzahl angeben.';
-            msg.className = 'form-msg error';
-            return;
-        }
-
-        if (!fromVal && !toVal) {
-            msg.textContent = 'Bitte mindestens Von- oder Nach-Camp angeben.';
-            msg.className = 'form-msg error';
-            return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'Speichern...';
-
-        const { error } = await sb.from('herd_movements').insert({
-            movement_date: dateVal,
-            from_camp: fromVal,
-            to_camp: toVal,
-            head_count: countVal,
-            animal_category: catVal,
-            reason: reasonVal,
-            notes: notesVal,
-            recorded_by: (this.currentUser && this.currentUser.id) || null
-        });
-
-        btn.disabled = false;
-        btn.textContent = 'Speichern';
-
-        if (error) {
-            console.error('saveMovement insert error', error);
-            msg.textContent = 'Fehler beim Speichern (Details in Konsole).';
-            msg.className = 'form-msg error';
-        } else {
-            msg.textContent = 'Bewegung gespeichert.';
-            msg.className = 'form-msg success';
-            document.getElementById('mv-notes').value = '';
-            document.getElementById('mv-count').value = '1';
-            // Wenn das Bewegungsdatum nicht im aktuell sichtbaren Monat liegt,
-            // den Monats-Picker auf den Bewegungs-Monat umstellen — sonst sähe
-            // der User die soeben gespeicherte Zeile nicht in der Tabelle.
-            const ymOfMovement = (dateVal || '').slice(0, 7);
-            const picker = document.getElementById('month-picker');
-            if (picker && ymOfMovement && picker.value !== ymOfMovement) {
-                picker.value = ymOfMovement;
-                msg.textContent = 'Bewegung gespeichert. Monat auf ' + ymOfMovement + ' umgestellt.';
-            }
-            await Promise.allSettled([this.loadMovements(), this.loadOccupancy()]);
-
-            // UX: Form-<details> schließen, Tabelle in den View scrollen und
-            // den neuen Eintrag (oberste Zeile, da DESC sortiert) kurz hervorheben.
-            // Damit der User sicher sieht, dass die Bewegung erschienen ist.
-            const formDetails = document.getElementById('movement-form-details');
-            if (formDetails) formDetails.open = false;
-            const wrap = document.getElementById('movements-table-wrap');
-            if (wrap) {
-                wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                const firstRow = wrap.querySelector('tbody tr');
-                if (firstRow) {
-                    firstRow.style.transition = 'background-color 0.4s';
-                    firstRow.style.backgroundColor = '#fef9c3';
-                    setTimeout(() => { firstRow.style.backgroundColor = ''; }, 2200);
-                }
-            }
-            setTimeout(() => { msg.style.display = 'none'; }, 3500);
-        }
-    },
+    // Bewegungs-Erfassung lebt jetzt nur noch auf der Herde-Seite
+    // (Schnell-Eingabe). Hier wird die Bewegungstabelle read-only angezeigt.
 
     // ── 1a. Load Movements ──
     async loadMovements() {
@@ -2298,10 +2131,6 @@ const Monat = {
         const self = this;
         picker.addEventListener('change', () => self.loadAll());
 
-        // Set default date in form
-        document.getElementById('mv-date').value = now.toISOString().split('T')[0];
-
-        await this.loadCamps();
         await this.loadAll();
 
         // Initialize Monatsmeldung sub-module (data entry form)
