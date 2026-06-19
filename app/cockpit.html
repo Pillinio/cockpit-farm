@@ -656,34 +656,6 @@
             </div>
         </a>
 
-        <!-- Q2 Budget Deviation -->
-        <a class="card" id="card-f2" href="finanzen.html">
-            <div class="card-status-bar status-gray"></div>
-            <div class="card-body">
-                <div class="card-top">
-                    <span class="card-icon">&#x1F4CA;</span>
-                    <span class="card-title">Budgettreue</span>
-                    <span class="card-status-dot status-gray"></span>
-                </div>
-                <div class="card-value" data-kpi="f2"><span class="loading-spinner"></span></div>
-                <div class="card-subtitle">Max. Abweichung Kategorie</div>
-            </div>
-        </a>
-
-        <!-- Q3 Herd Growth -->
-        <a class="card" id="card-h4" href="herde.html">
-            <div class="card-status-bar status-gray"></div>
-            <div class="card-body">
-                <div class="card-top">
-                    <span class="card-icon">&#x1F404;</span>
-                    <span class="card-title">Herdenwachstum</span>
-                    <span class="card-status-dot status-gray"></span>
-                </div>
-                <div class="card-value" data-kpi="h4"><span class="loading-spinner"></span></div>
-                <div class="card-subtitle">Nettoveränderung Herde</div>
-            </div>
-        </a>
-
         <!-- Q4 Stocking Rate -->
         <a class="card" id="card-w1" href="weide.html">
             <div class="card-status-bar status-gray"></div>
@@ -695,20 +667,6 @@
                 </div>
                 <div class="card-value" data-kpi="w1"><span class="loading-spinner"></span></div>
                 <div class="card-subtitle">LSU vs. Kapazität</div>
-            </div>
-        </a>
-
-        <!-- Q5 Cost per kg -->
-        <a class="card" id="card-f4" href="finanzen.html">
-            <div class="card-status-bar status-gray"></div>
-            <div class="card-body">
-                <div class="card-top">
-                    <span class="card-icon">&#x1F4C8;</span>
-                    <span class="card-title">Rentabilität je kg</span>
-                    <span class="card-status-dot status-gray"></span>
-                </div>
-                <div class="card-value" data-kpi="f4"><span class="loading-spinner"></span></div>
-                <div class="card-subtitle">Kosten pro kg verkauft</div>
             </div>
         </a>
 
@@ -878,69 +836,6 @@ async function loadF1() {
 }
 
 // F2 — Budget deviation (max category %)
-async function loadF2() {
-    try {
-        const { data } = await sb
-            .from('budgets')
-            .select('category, planned_nad, actual_nad')
-            .eq('fiscal_year', new Date().getFullYear());
-
-        if (!data?.length) return noData('f2');
-
-        // Aggregate by category
-        const cats = {};
-        data.forEach(r => {
-            if (!cats[r.category]) cats[r.category] = { planned: 0, actual: 0 };
-            cats[r.category].planned += r.planned_nad || 0;
-            cats[r.category].actual += r.actual_nad || 0;
-        });
-
-        let maxDev = 0;
-        Object.values(cats).forEach(c => {
-            if (c.planned > 0) {
-                const dev = Math.abs((c.actual - c.planned) / c.planned) * 100;
-                if (dev > maxDev) maxDev = dev;
-            }
-        });
-
-        const pct = Math.round(maxDev);
-        const status = pct <= 10 ? 'green' : pct <= 25 ? 'yellow' : 'red';
-
-        setCard('f2', {
-            value: pct + ' %',
-            subtitle: 'Max. Abweichung Kategorie',
-            status
-        });
-    } catch { noData('f2'); }
-}
-
-// H4 — Net herd growth
-async function loadH4() {
-    try {
-        const { data } = await sb
-            .from('herd_snapshots')
-            .select('snapshot_date, cows, bulls, heifers, calves, oxen')
-            .order('snapshot_date', { ascending: false })
-            .limit(2);
-
-        if (!data || data.length < 2) return noData('h4');
-
-        const totalHead = r => (r.cows||0) + (r.bulls||0) + (r.heifers||0) + (r.calves||0) + (r.oxen||0);
-        const head0 = totalHead(data[0]);
-        const head1 = totalHead(data[1]);
-        const diff = head0 - head1;
-        const pct = head1 > 0 ? Math.round(diff / head1 * 1000) / 10 : 0;
-        const status = diff > 0 ? 'green' : diff === 0 ? 'yellow' : 'red';
-        const sign = diff > 0 ? '+' : '';
-
-        setCard('h4', {
-            value: sign + diff,
-            subtitle: sign + pct + ' % seit letzter Herdenerfassung',
-            status
-        });
-    } catch { noData('h4'); }
-}
-
 // W1 — Stocking rate vs capacity
 async function loadW1() {
     try {
@@ -978,39 +873,6 @@ async function loadW1() {
             status
         });
     } catch { noData('w1'); }
-}
-
-// F4 — Cost per kg sold
-async function loadF4() {
-    try {
-        const { data: reports } = await sb
-            .from('slaughter_reports')
-            .select('total_cold_mass_kg, total_gross_nad, total_net_nad, report_date')
-            .gte('report_date', new Date().getFullYear() + '-01-01');
-
-        const { data: costs } = await sb
-            .from('budgets')
-            .select('actual_nad')
-            .eq('fiscal_year', new Date().getFullYear());
-
-        if (!reports?.length || !costs?.length) return noData('f4');
-
-        const totalKg = reports.reduce((s, r) => s + (r.total_cold_mass_kg || 0), 0);
-        const totalCost = costs.reduce((s, r) => s + (r.actual_nad || 0), 0);
-
-        if (totalKg <= 0) return noData('f4', 'Keine Verkaufsmengen');
-
-        const costPerKg = Math.round(totalCost / totalKg * 100) / 100;
-        const revenuePerKg = reports.reduce((s, r) => s + (r.total_net_nad || 0), 0) / totalKg;
-        const profitable = revenuePerKg > costPerKg;
-        const status = profitable ? 'green' : 'red';
-
-        setCard('f4', {
-            value: 'N$ ' + costPerKg.toFixed(2),
-            subtitle: 'Kosten pro kg verkauft',
-            status
-        });
-    } catch { noData('f4'); }
 }
 
 // K2 — Seasonal rainfall forecast (from seasonal_forecasts table)
@@ -1323,8 +1185,7 @@ async function loadAll() {
     document.getElementById('last-update').textContent = 'Aktualisiere...';
 
     await Promise.allSettled([
-        loadF1(), loadF2(), loadH4(), loadW1(),
-        loadF4(), loadK2(),
+        loadF1(), loadW1(), loadK2(),
         loadK3(), loadCalendar()
     ]);
 

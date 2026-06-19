@@ -578,8 +578,6 @@
             <div class="form-group">
                 <label for="cal-person">Person</label>
                 <select id="cal-person">
-                    <option value="Werner Jacobi">Werner Jacobi</option>
-                    <option value="Wanda Jacobi">Wanda Jacobi</option>
                     <option value="_custom">Andere Person...</option>
                 </select>
                 <input type="text" id="cal-person-custom" placeholder="Name eingeben" style="display:none; margin-top:4px;">
@@ -1036,7 +1034,8 @@ function editCalendarEntry(entryId) {
     const personSelect = document.getElementById('cal-person');
     const personCustom = document.getElementById('cal-person-custom');
 
-    if (entry.person_name === 'Werner Jacobi' || entry.person_name === 'Wanda Jacobi') {
+    const knownPerson = [...personSelect.options].some(o => o.value === entry.person_name && o.value !== '_custom');
+    if (knownPerson) {
         personSelect.value = entry.person_name;
         personCustom.style.display = 'none';
         personCustom.value = '';
@@ -1067,7 +1066,7 @@ function cancelEditMode() {
     document.getElementById('cal-start').value = '';
     document.getElementById('cal-end').value = '';
     document.getElementById('cal-reason').value = '';
-    document.getElementById('cal-person').value = 'Werner Jacobi';
+    document.getElementById('cal-person').selectedIndex = 0;
     document.getElementById('cal-person-custom').style.display = 'none';
     document.getElementById('cal-person-custom').value = '';
     document.getElementById('cal-type').value = 'leave';
@@ -1214,6 +1213,18 @@ async function loadAll() {
     await loadMonthData();
 }
 
+// Personen-Dropdown aus der Mitarbeiterliste (Admin) statt hardcodiert.
+async function loadPersons() {
+    const sel = document.getElementById('cal-person');
+    if (!sel) return;
+    const current = sel.value;
+    const { data } = await sb.from('farm_employees')
+        .select('name').eq('active', true).order('sort_order');
+    const opts = (data || []).map(e => '<option value="' + escHtml(e.name) + '">' + escHtml(e.name) + '</option>').join('');
+    sel.innerHTML = opts + '<option value="_custom">Andere Person...</option>';
+    if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
 (async function init() {
     const user = await checkAuth();
     if (!user) return;
@@ -1222,6 +1233,8 @@ async function loadAll() {
     // Get role
     const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single();
     _userRole = profile?.role || null;
+
+    await loadPersons();
 
     const now = new Date();
     setMonth(now.getFullYear(), now.getMonth());
