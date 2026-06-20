@@ -21,11 +21,15 @@ export const PAGES = {
   herdEntry: 'berichte.html#monat',
 };
 
-// LSU (Large Stock Unit) conversion factors
+// LSU (Large Stock Unit) Umrechnungsfaktoren — Meissner-Referenz: 450-kg-Ochse = 1,0.
+// Einheitliche 7-Kategorien-Taxonomie (Meat-Board-Handelskategorien). NICHT das
+// EU-/GVE-System (anderes Referenztier). Kanonisch identisch zu categorizeAnimal().
 export const LSU_FACTORS = {
-  cows:    1.0,
-  bulls:   1.2,
-  heifers: 0.8,
-  oxen:    1.0,
-  calves:  0.2,
+  calf:       0.20,  // Kalb 0–7 Mon
+  weaner:     0.40,  // Absetzer 7–12 Mon
+  heifer:     0.60,  // Färse (weibl. ≥12 Mon, nicht gekalbt)
+  cow:        1.00,  // Kuh (hat gekalbt)
+  bull_young: 0.75,  // Jungbulle (männl. intakt 12–24 Mon)
+  bull:       1.30,  // Zuchtbulle (männl. intakt ≥24 Mon)
+  ox:         1.00,  // Ochse (kastriert)
 };

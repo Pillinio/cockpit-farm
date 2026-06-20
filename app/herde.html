@@ -1257,21 +1257,19 @@ async function loadH5() {
         // Identische Kategorien wie H6 — verhindert Drift zwischen den beiden Sichten.
         const today = new Date();
         const buckets = {
-            calves:      { label: 'Kälber (<6 Mon)',  color: '#bfdbfe', count: 0 },
-            weaners:     { label: 'Absetzer (6-12)',  color: '#a5b4fc', count: 0 },
-            youngs:      { label: 'Jungrinder (12-18)', color: '#818cf8', count: 0 },
-            cows:        { label: 'Kühe',              color: '#2E75B6', count: 0 },
-            heifers:     { label: 'Färsen',            color: '#60a5fa', count: 0 },
-            bullsYoung:  { label: 'Jungbullen',        color: '#1F4E78', count: 0 },
-            oxen:        { label: 'Ochsen',            color: '#93c5fd', count: 0 },
-            bulls:       { label: 'Bullen',            color: '#0c4a6e', count: 0 },
+            calves:      { label: 'Kälber',       color: '#bfdbfe', count: 0 },
+            weaners:     { label: 'Absetzer',     color: '#a5b4fc', count: 0 },
+            heifers:     { label: 'Färsen',       color: '#60a5fa', count: 0 },
+            cows:        { label: 'Kühe',         color: '#2E75B6', count: 0 },
+            bullsYoung:  { label: 'Jungbullen',   color: '#1F4E78', count: 0 },
+            bulls:       { label: 'Zuchtbullen',  color: '#0c4a6e', count: 0 },
+            oxen:        { label: 'Ochsen',       color: '#93c5fd', count: 0 },
         };
 
         animals.forEach(a => {
             const cat = categorizeAnimal(a, today);
             if (cat.key === 'calf')        buckets.calves.count++;
             else if (cat.key === 'weaner') buckets.weaners.count++;
-            else if (cat.key === 'young')  buckets.youngs.count++;
             else if (cat.key === 'cow')    buckets.cows.count++;
             else if (cat.key === 'heifer') buckets.heifers.count++;
             else if (cat.key === 'bull_young') buckets.bullsYoung.count++;
@@ -1330,37 +1328,32 @@ async function loadH5() {
 }
 
 // ── H6: Herdenwert ─────────────────────────────────────────────
+// Einheitliche 7-Kategorien-Taxonomie (Meat-Board-Handelskategorien), inkl.
+// Large Stock Unit (LSU)-Faktor pro Kategorie. LSU-Referenz: 450-kg-Ochse = 1,0
+// (Meissner 1982). Gilt durchgängig in Herde/Reporting.
 function categorizeAnimal(animal, today) {
     const sex = animal.sex;
     const calvings = animal.calvings || 0;
-    // Ochse (kastriert) vs. Bulle (intakt). Ungetaggt (null) => als Bulle/intakt
-    // behandelt; der User markiert die Ochsen auf der Herde-Seite.
     const isCastrated = animal.is_castrated === true;
-    const OX   = { key: 'ox',   label: 'Ochsen', gainKey: 'ox_fattening', maxKg: 900 };
-    const BULL = { key: 'bull', label: 'Bullen', gainKey: 'bull_adult',   maxKg: 1000 };
+    const KALB       = { key: 'calf',       label: 'Kälber',      gainKey: 'calf_0_6',      maxKg: 250,  lsu: 0.20 };
+    const ABSETZER   = { key: 'weaner',     label: 'Absetzer',    gainKey: 'young_6_18',    maxKg: 320,  lsu: 0.40 };
+    const FAERSE     = { key: 'heifer',     label: 'Färsen',      gainKey: 'heifer_18plus', maxKg: 480,  lsu: 0.60 };
+    const KUH        = { key: 'cow',        label: 'Kühe',        gainKey: 'cow_adult',     maxKg: 550,  lsu: 1.00 };
+    const JUNGBULLE  = { key: 'bull_young', label: 'Jungbullen',  gainKey: 'bull_young',    maxKg: 800,  lsu: 0.75 };
+    const ZUCHTBULLE = { key: 'bull',       label: 'Zuchtbullen', gainKey: 'bull_adult',    maxKg: 1000, lsu: 1.30 };
+    const OCHSE      = { key: 'ox',         label: 'Ochsen',      gainKey: 'ox_fattening',  maxKg: 900,  lsu: 1.00 };
+
     const birthDate = animal.birth_date ? new Date(animal.birth_date) : null;
     const ageMonths = birthDate ? Math.floor((today - birthDate) / (1000 * 60 * 60 * 24 * 30.44)) : null;
 
-    if (ageMonths === null) {
-        // Unknown age: guess from weight or default
-        if (sex === 'F' && calvings > 0) return { key: 'cow', label: 'Kühe', gainKey: 'cow_adult', maxKg: 550 };
-        if (sex === 'M') return isCastrated ? OX : { key: 'bull_young', label: 'Jungbullen', gainKey: 'bull_young', maxKg: 800 };
-        return { key: 'heifer', label: 'Färsen', gainKey: 'heifer_18plus', maxKg: 480 };
-    }
-
-    if (ageMonths < 6) return { key: 'calf', label: 'Kälber (<6 Mon)', gainKey: 'calf_0_6', maxKg: 250 };
-    if (ageMonths < 12) return { key: 'weaner', label: 'Absetzer (6-12 Mon)', gainKey: 'young_6_18', maxKg: 300 };
-    if (ageMonths < 18) return { key: 'young', label: 'Jungrinder (12-18 Mon)', gainKey: 'young_6_18', maxKg: 400 };
-
-    if (sex === 'F') {
-        if (calvings > 0) return { key: 'cow', label: 'Kühe', gainKey: 'cow_adult', maxKg: 550 };
-        return { key: 'heifer', label: 'Färsen', gainKey: 'heifer_18plus', maxKg: 480 };
-    }
-
-    // Männlich, ≥18 Mon: kastriert => Ochse; intakt 18-24 => Jungbulle; intakt ≥24 => Bulle
-    if (isCastrated) return OX;
-    if (ageMonths < 24) return { key: 'bull_young', label: 'Jungbullen', gainKey: 'bull_young', maxKg: 800 };
-    return BULL;
+    // Vorrang: Kuh (hat gekalbt) bzw. Ochse (kastriert) — unabhängig vom Alter
+    if (sex === 'F' && calvings > 0) return KUH;
+    if (sex === 'M' && isCastrated)  return OCHSE;
+    if (ageMonths === null) return sex === 'M' ? ZUCHTBULLE : FAERSE;
+    if (ageMonths < 7)  return KALB;       // 0–7 Mon (Absetzen ~205 Tage)
+    if (ageMonths < 12) return ABSETZER;   // 7–12 Mon
+    if (sex === 'F') return FAERSE;        // weiblich ≥12 Mon, nicht gekalbt
+    return ageMonths < 24 ? JUNGBULLE : ZUCHTBULLE; // männlich intakt
 }
 
 function estimateWeight(animal, category, gainConfig, today) {
@@ -1386,7 +1379,7 @@ function estimateWeight(animal, category, gainConfig, today) {
     }
 
     // Fallback: category average
-    const defaults = { calf: 120, weaner: 200, young: 280, heifer: 350, cow: 450, bull_young: 400, ox: 520, bull: 650 };
+    const defaults = { calf: 120, weaner: 200, heifer: 350, cow: 450, bull_young: 400, bull: 650, ox: 520 };
     return defaults[category.key] || 300;
 }
 
@@ -1455,6 +1448,7 @@ async function loadH6() {
         // Categorize and estimate weights
         const categories = {};
         let totalWeight = 0;
+        let totalLSU = 0;   // Large Stock Units (Großvieheinheiten), live aus dem Bestand
         let latestWeighDate = null;
 
         animals.forEach(a => {
@@ -1473,6 +1467,7 @@ async function loadH6() {
             categories[cat.key].count++;
             categories[cat.key].totalWeight += estWeight;
             totalWeight += estWeight;
+            totalLSU += cat.lsu || 0;
 
             // Track latest weigh date
             if (a.last_weigh_date) {
@@ -1519,12 +1514,13 @@ async function loadH6() {
         html += '<div class="summary-card"><div class="card-value">' + fmtKG(totalWeight) + '</div><div class="card-label">Gesamt-Lebendgewicht</div></div>';
         html += '<div class="summary-card"><div class="card-value">' + fmtKG(totalCarcassWeight) + '</div><div class="card-label">Gesamt-Schlachtgewicht</div></div>';
         html += '<div class="summary-card"><div class="card-value">' + Math.round(avgWeight) + ' kg</div><div class="card-label">ø Lebendgewicht / Tier</div></div>';
+        html += '<div class="summary-card"><div class="card-value">' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 }).format(totalLSU) + '</div><div class="card-label">Large Stock Units (LSU)</div></div>';
         html += '<div class="summary-card"><div class="card-value">' + fmtNAD(valueCarcass) + '</div><div class="card-label">Gesamtwert (Schlachtbasis)</div></div>';
         html += '</div>';
 
         // Category table — pro Kategorie zeigen wir die parallele Berechnung;
         // im Fußzeilen-Total zeigen wir EINEN konsolidierten Wert.
-        const catOrder = ['calf', 'weaner', 'young', 'heifer', 'cow', 'bull_young', 'ox', 'bull'];
+        const catOrder = ['calf', 'weaner', 'heifer', 'cow', 'bull_young', 'bull', 'ox'];
         html += '<table class="data-table"><thead><tr>';
         html += '<th>Kategorie</th><th class="num">Anzahl</th><th class="num">&#x2300; Gewicht</th><th class="num">Lebendgewicht</th><th class="num">Schlachtgewicht</th><th class="num">Wert</th>';
         html += '</tr></thead><tbody>';
