@@ -104,9 +104,21 @@ const rules = [
   ['AMMUNITION',      'contains', 'Ammunition',                      0.95],
   ['SAFARI DEN',      'contains', 'Ammunition',                      0.85],
 
-  // --- Livestock - Cattle (income / purchases) ---
-  ['MEATCO',          'contains', 'Livestock - Cattle',              0.95],
-  ['AUCTION',         'contains', 'Livestock - Cattle',              0.80],
+  // --- Einnahmen / Income (Caspar-Zuordnung 22.06.2026) ---
+  ['MEATCO',          'contains', 'Rinderverkauf (Meatco)',          0.95],
+  ['AUCTION',         'contains', 'Rinderverkauf (Meatco)',          0.80],
+  ['GIERSCH',         'contains', 'Fleischverkauf direkt',           0.95],
+  ['DU RAND',         'contains', 'Fleischverkauf direkt',           0.95],
+  ['CLOSWA',          'contains', 'Fleischverkauf direkt',           0.95],
+  ['BACKSTROM',       'contains', 'Fleischverkauf direkt',           0.90],
+  ['MEAT MARKET',     'contains', 'Fleischverkauf direkt',           0.85],
+  ['KOU KUAS',        'contains', 'Jagd & Tourismus',                0.95],
+  ['HAASE',           'contains', 'Jagd & Tourismus',                0.85],
+  ['POWERCOM',        'contains', 'Verpachtung',                     0.95],
+  ['COM005',          'contains', 'Verpachtung',                     0.90],
+  ['VATREF',          'contains', 'MwSt-Erstattung',                 0.95],
+  ['POINTBREAK',      'contains', 'Interne Umbuchung',               0.90],
+  ['WANDA',           'contains', 'Rückerstattung privat',           0.85],
 
   // --- Household Farm und Gäste ---
   ['HOUSEHOLD',       'contains', 'Household Farm und Gäste',       0.85],

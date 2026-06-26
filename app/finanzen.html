@@ -1005,56 +1005,55 @@ async function loadF3() {
         // kommen aus bank_transactions ohne befüllte category (income-Patterns
         // fehlen typischerweise in category_rules) und müssen über den
         // Beschreibungstext eingeordnet werden.
-        const PATTERNS = [
-            { bucket: 'Rinderverkauf', re: /meatco|beefcor|rmaa|savanna|rinder|cattle|livestock|schlacht|kuh|kühe|kuehe|ochse|bull|kalb|kälber|kaelber|färse|färsen|faerse|verkauf.*rind|sale.*cattle|auction/i },
-            { bucket: 'Jagd',          re: /jagd|hunt|trophy|wild|safari|game/i },
-            { bucket: 'Pacht',         re: /pacht|lease|miete|rent|verpacht/i },
-            { bucket: 'Gras-Verkauf',  re: /gras|grazing|weide|hay|heu|silage|hayfield|grass.sale/i },
+        // Einnahmen werden über die saubere `category` (von Caspar bestätigt, 22.06.)
+        // gruppiert. Reine Geld-Umbuchungen zwischen eigenen Konten, private
+        // Rückerstattungen und die MwSt-Erstattung sind KEIN operativer Umsatz und
+        // werden ausgeschlossen — genau dieser Block hatte den Umsatz aufgebläht.
+        const NON_INCOME = new Set(['Interne Umbuchung', 'Rückerstattung privat', 'MwSt-Erstattung']);
+        const INCOME_ORDER = ['Rinderverkauf (Meatco)', 'Fleischverkauf direkt', 'Jagd & Tourismus', 'Verpachtung', 'Sonstiges'];
+        // Fallback für noch nicht sauber kategorisierte Buchungen (Alt-/Neu-Importe).
+        const FALLBACK = [
+            { bucket: 'Rinderverkauf (Meatco)', re: /meatco|beefcor|rmaa|savanna|auction/i },
+            { bucket: 'Fleischverkauf direkt',  re: /giersch|du rand|closwa|biltong|backstrom|meat market|fleisch/i },
+            { bucket: 'Jagd & Tourismus',       re: /jagd|hunt|trophy|safari|game|kou kuas|adventure|haase|tourism/i },
+            { bucket: 'Verpachtung',            re: /powercom|com005|pacht|lease|miete|rent|verpacht/i },
         ];
         function bucketFor(cat, description) {
-            const c = (cat || '').toString();
+            const c = (cat || '').toString().trim();
             const d = (description || '').toString();
-            // 1. Wenn category-String ein deutliches Pattern enthält → direkt mappen
-            for (const p of PATTERNS) {
-                if (c && p.re.test(c)) return p.bucket;
-            }
-            // 2. Fallback: description-Text auswerten
-            for (const p of PATTERNS) {
-                if (d && p.re.test(d)) return p.bucket;
-            }
+            if (NON_INCOME.has(c)) return null;               // kein operativer Umsatz
+            if (INCOME_ORDER.includes(c)) return c;           // bereits sauber kategorisiert
+            for (const p of FALLBACK) { if (p.re.test(c) || p.re.test(d)) return p.bucket; }
+            if (/pointbreak|vatref|wanda|sylvanus|interne|umbuchung/i.test(d)) return null;
             return 'Sonstiges';
-        }
-        // Diagnose: welche Roh-Kategorien/Descriptions landen unter Sonstiges?
-        const unmatched = [];
-        data.forEach(r => {
-            if (bucketFor(r.category, r.description) === 'Sonstiges') {
-                unmatched.push({ category: r.category || '(leer)', description: r.description || '(leer)', amount: r.credit_nad });
-            }
-        });
-        if (unmatched.length > 0) {
-            console.warn('F3 (Umsatz): nicht zuordenbare Einnahmen →', unmatched.slice(0, 20));
         }
 
         const CAT_COLORS = {
-            'Rinderverkauf': '#16a34a',
-            'Jagd': '#f59e0b',
-            'Pacht': '#8b5cf6',
-            'Gras-Verkauf': '#06b6d4',
+            'Rinderverkauf (Meatco)': '#16a34a',
+            'Fleischverkauf direkt': '#22c55e',
+            'Jagd & Tourismus': '#f59e0b',
+            'Verpachtung': '#8b5cf6',
             'Sonstiges': '#6b7280'
         };
-        const CAT_ORDER = ['Rinderverkauf', 'Jagd', 'Pacht', 'Gras-Verkauf', 'Sonstiges'];
+        const CAT_ORDER = INCOME_ORDER;
 
-        // Group by month × category
+        // Group by month × category; ausgeschlossene Einzahlungen separat erfassen.
         const byMonthCat = {};
         CAT_ORDER.forEach(c => { byMonthCat[c] = new Array(12).fill(0); });
+        const excluded = {};
 
         data.forEach(r => {
-            const m = new Date(r.transaction_date).getMonth();
             const bucket = bucketFor(r.category, r.description);
+            if (bucket === null) {
+                const k = (r.category || 'Sonstige Einzahlung').toString().trim();
+                excluded[k] = (excluded[k] || 0) + parseFloat(r.credit_nad || 0);
+                return;
+            }
+            const m = new Date(r.transaction_date).getMonth();
             byMonthCat[bucket][m] += parseFloat(r.credit_nad || 0);
         });
 
-        const total = data.reduce((s, r) => s + parseFloat(r.credit_nad || 0), 0);
+        const total = CAT_ORDER.reduce((s, c) => s + byMonthCat[c].reduce((a, b) => a + b, 0), 0);
         setBadge('f3', 'N$ ' + fmtInt(total), 'green');
 
         // Category summary for display
@@ -1071,20 +1070,23 @@ async function loadF3() {
         });
         summaryHtml += '</div>';
 
-        // Warnung wenn "Sonstiges" dominiert — meist heißt das: category_rules
-        // für Einnahmen sind nicht gepflegt oder description-Pattern fehlen.
-        const sonstigesTotal = byMonthCat['Sonstiges'].reduce((a, b) => a + b, 0);
-        if (total > 0 && sonstigesTotal / total > 0.3) {
-            summaryHtml += '<div style="margin:0 0 12px; padding:10px 14px; background:#fef3c7; border:1px solid #fbbf24; border-radius:8px; color:#92400e; font-size:0.88em;">' +
-                '<strong>Hinweis:</strong> ' + (sonstigesTotal / total * 100).toFixed(0) + ' % der Einnahmen sind nicht kategorisiert. ' +
-                'Konsole öffnen (F12) → siehe Warnung „F3 (Umsatz): nicht zuordenbare Einnahmen" — entweder ' +
-                '<a href="admin.html#category-rules" style="color:#92400e; font-weight:600; text-decoration:underline;">category_rules</a> ergänzen ' +
-                'oder Patterns in bucketFor (finanzen.html:loadF3) erweitern.' +
+        // Transparenz: was wurde NICHT als Umsatz gezählt (interne Umbuchungen,
+        // private Rückerstattungen, MwSt-Erstattung)?
+        const exEntries = Object.entries(excluded).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+        if (exEntries.length > 0) {
+            const exTotal = exEntries.reduce((s, [, v]) => s + v, 0);
+            summaryHtml += '<div style="margin:0 0 12px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; color:#1e40af; font-size:0.85em;">' +
+                '<strong>Nicht als Umsatz gezählt</strong> (N$ ' + fmtInt(exTotal) + '): ' +
+                exEntries.map(([k, v]) => k + ' N$ ' + fmtInt(v)).join(' · ') +
+                ' — Konto-Umbuchungen, private Rückerstattungen und MwSt-Erstattung sind kein operativer Umsatz.' +
                 '</div>';
         }
 
-        // Top income items table (sorted by amount desc)
-        const sortedData = [...data].sort((a, b) => parseFloat(b.credit_nad) - parseFloat(a.credit_nad));
+        // Top income items table — nur operativer Umsatz (ausgeschlossene
+        // Einzahlungen erscheinen oben im "Nicht als Umsatz gezählt"-Hinweis).
+        const sortedData = data
+            .filter(r => bucketFor(r.category, r.description) !== null)
+            .sort((a, b) => parseFloat(b.credit_nad) - parseFloat(a.credit_nad));
         let tableHtml = '<table class="data-table" style="margin-top:12px;"><thead><tr>' +
             '<th>Datum</th><th>Beschreibung</th><th>Kategorie</th><th class="num">Betrag (N$)</th>' +
             '</tr></thead><tbody>';
@@ -1105,7 +1107,7 @@ async function loadF3() {
         tableHtml += '</tbody></table>';
 
         document.getElementById('body-f3').innerHTML =
-            '<div class="kpi-detail" style="margin-bottom:12px;">Gesamteinnahmen YTD: N$ ' + fmt(total) + '</div>' +
+            '<div class="kpi-detail" style="margin-bottom:12px;">Operativer Umsatz YTD: N$ ' + fmt(total) + '</div>' +
             summaryHtml +
             '<div class="chart-container"><canvas id="chart-f3"></canvas></div>' +
             tableHtml;
@@ -1237,13 +1239,17 @@ async function loadF5() {
         // Use bank_transactions as single source of truth for both revenue and costs
         const { data: txns } = await sb
             .from('bank_transactions')
-            .select('credit_nad, debit_nad, transaction_date')
+            .select('credit_nad, debit_nad, transaction_date, category')
             .eq('active', true)
             .gte('transaction_date', YEAR + '-01-01');
 
         if (!txns?.length) return showNoData('f5');
 
-        const totalRevenue = txns.reduce((s, t) => s + Number(t.credit_nad || 0), 0);
+        // Reine Konto-Umbuchungen, private Rückerstattungen und MwSt-Erstattung
+        // sind kein operativer Umsatz — sonst ist die EBIT-Marge stark verzerrt.
+        const NON_INCOME = new Set(['Interne Umbuchung', 'Rückerstattung privat', 'MwSt-Erstattung']);
+        const totalRevenue = txns.reduce((s, t) =>
+            s + (NON_INCOME.has((t.category || '').trim()) ? 0 : Number(t.credit_nad || 0)), 0);
         const totalCost = txns.reduce((s, t) => s + Number(t.debit_nad || 0), 0);
 
         if (totalRevenue <= 0 && totalCost <= 0) return showNoData('f5');
