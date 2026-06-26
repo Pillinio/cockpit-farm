@@ -490,7 +490,8 @@
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                     <button class="btn btn-secondary btn-sm" onclick="toggleBankFilter()">Nur offene</button>
                     <button class="btn btn-secondary btn-sm" onclick="toggleBankInactive()">Deaktivierte anzeigen</button>
-                    <button class="btn btn-primary btn-sm" onclick="loadBankTransactions()">Aktualisieren</button>
+                    <button class="btn btn-primary btn-sm" onclick="autoCategorizeAll()" title="Wendet alle gespeicherten Erkennungs-Regeln auf noch offene Buchungen an">⚡ Alle offenen automatisch kategorisieren</button>
+                    <button class="btn btn-secondary btn-sm" onclick="loadBankTransactions()">Aktualisieren</button>
                 </div>
             </div>
             <p style="color:#6b7280; font-size:0.9em; margin-bottom:12px;">
@@ -1399,7 +1400,11 @@ const BUDGET_CATEGORIES = [
     'Repairs Water Installation', 'Rep. & Maint. Vehicles',
     'Salaries Farm Workers & Welfare', 'Salaries Jacobi Family', 'Security Costs',
     'Small Tools', 'Social Security', 'Staff Training & Consulting', 'Transport',
-    'Unexpected', 'Veterinary Expenses', 'Einnahme', 'Transfer (intern)', 'Darlehen/Loan'
+    'Unexpected', 'Veterinary Expenses',
+    // Einnahmen-Taxonomie (Caspar-Zuordnung 22.06.2026)
+    'Rinderverkauf (Meatco)', 'Fleischverkauf direkt', 'Jagd & Tourismus', 'Verpachtung',
+    'MwSt-Erstattung', 'Interne Umbuchung', 'Rückerstattung privat',
+    'Einnahme', 'Transfer (intern)', 'Darlehen/Loan'
 ];
 
 let bankShowOnlyOpen = true;
@@ -1496,6 +1501,54 @@ async function reactivateBankTx(id) {
     loadBankTransactions();
 }
 
+// Wendet alle gespeicherten category_rules auf noch offene (category_confirmed=false)
+// Buchungen an. Matching-Logik identisch zur ingest-Edge-Function: contains =
+// Teilstring (case-insensitiv), exact = Volltreffer, regex = RegExp.
+async function autoCategorizeAll() {
+    // 1. Regeln laden, spezifischste/sicherste zuerst (höhere confidence, längeres pattern).
+    const { data: rules, error: rErr } = await sb.from('category_rules')
+        .select('pattern, pattern_type, category_name, confidence');
+    if (rErr) return showError('Fehler beim Laden der Regeln', rErr);
+    if (!rules?.length) return showStatus('Keine Regeln vorhanden.');
+    rules.sort((a, b) =>
+        (b.confidence || 0) - (a.confidence || 0) ||
+        (b.pattern || '').length - (a.pattern || '').length);
+
+    // 2. Offene Buchungen laden.
+    const { data: open, error: oErr } = await sb.from('bank_transactions')
+        .select('id, description')
+        .eq('active', true)
+        .eq('category_confirmed', false)
+        .limit(1000);
+    if (oErr) return showError('Fehler beim Laden der Buchungen', oErr);
+    if (!open?.length) return showStatus('Keine offenen Buchungen.');
+
+    const matchRule = (desc) => {
+        const d = (desc || '').toString();
+        return rules.find(r => {
+            try {
+                if (r.pattern_type === 'contains') return d.toUpperCase().includes(r.pattern.toUpperCase());
+                if (r.pattern_type === 'exact')    return d.toUpperCase() === r.pattern.toUpperCase();
+                if (r.pattern_type === 'regex')    return new RegExp(r.pattern, 'i').test(d);
+            } catch (_e) { return false; }
+            return false;
+        });
+    };
+
+    // 3. Treffer aktualisieren.
+    let updated = 0, unmatched = 0;
+    for (const tx of open) {
+        const rule = matchRule(tx.description);
+        if (!rule) { unmatched++; continue; }
+        const { error } = await sb.from('bank_transactions')
+            .update({ category: rule.category_name, category_confirmed: true })
+            .eq('id', tx.id);
+        if (!error) updated++;
+    }
+    showStatus(updated + ' Buchung(en) automatisch kategorisiert, ' + unmatched + ' ohne passende Regel offen.');
+    loadBankTransactions();
+}
+
 async function assignCategory(txId, category) {
     if (!category) return;
 
@@ -1527,7 +1580,7 @@ async function assignCategory(txId, category) {
             // Auto-create a contains rule
             await sb.from('category_rules').insert({
                 pattern: keyword,
-                type: 'contains',
+                pattern_type: 'contains',
                 category_name: category,
                 confidence: 0.8,
             });
